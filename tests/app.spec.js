@@ -29,12 +29,14 @@ test('known training and daily ciphers use guided decoding instructions', async 
     ]);
     return {
       guided: buildSeekPrompt({ mode: 'daily', scheme: TRAIN[8].s }),
+      own: buildSeekPrompt({ mode: 'own', scheme: TRAIN[8].s }),
       blind: buildSeekPrompt({ mode: 'duel', scheme: TRAIN[8].s }),
       retry: buildSeekPrompt({ mode: 'duel', scheme: TRAIN[8].s }, { retry: true })
     };
   });
   expect(prompts.guided).toContain('Petal count');
   expect(prompts.guided).toContain('One petal is A');
+  expect(prompts.own).toContain('Petal count');
   expect(prompts.blind).not.toContain('DECODING RULE:');
   expect(prompts.retry).toContain('Second-pass visual cryptanalysis');
 });
