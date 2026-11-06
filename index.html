@@ -7,7 +7,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@pollinations/ui@0.1.0-alpha.20/dist/connect.js"></script>
 </head><body><div class="wrap">
 <header><div><h1>Night <span>Cipher</span></h1><p class="sub">Ten ways to hide a message in one picture. Can you spot the pattern?</p></div>
-<polli-connect app-key="pk_zERtArHJHymnUbNl" budget="3" expiry="7" models="text,image"></polli-connect></header>
+<polli-connect app-key="pk_zERtArHJHymnUbNl" budget="3" expiry="7" models="text"></polli-connect></header>
 <div id="setup" class="warn" hidden><b>Setup:</b> replace <code>pk_REPLACE_ME</code> (twice: the &lt;polli-connect&gt; tag and <code>APP_KEY</code>) with your App Key and add this page's URL as a Redirect URI.</div>
 <nav id="tabs"></nav>
 <main>
@@ -21,7 +21,7 @@
 <label>Seeker model (sees only a PNG, cannot run code)</label><select id="seeker"></select>
 <label style="display:flex;align-items:center;gap:6px;text-transform:none"><input type="checkbox" id="judge" style="width:auto;margin:0"> Stealth judge — a second AI rates how innocent the picture looks (+1 call, your Pollen)</label>
 <label>Judge model (needs vision)</label><select id="judgeModel"></select>
-<small>Seeker and judge list models whose catalog metadata confirms image input. The Connect authorization includes both text and image model categories. If you were already connected before this update, disconnect and reconnect once to issue a key with the new image scope. Premium models cost more Pollen per round. Your key's budget caps the spending.</small>
+<small>Seeker and judge list models whose catalog metadata confirms image input. Vision-capable chat models are still text models; the app filters them by the catalog's image-input metadata. Premium models cost more Pollen per round. Your key's budget caps the spending.</small>
 <p><button id="hide" class="pri" style="width:100%">Hide the message</button></p>
 </div>
 <div id="own" hidden><label>Your word (letters A–Z, up to 10)</label><input id="omsg" maxlength="10" value="LANTERN"><label>Hiding scheme</label><select id="osch"></select><label>Seeker model (vision-capable only)</label><select id="seeker2"></select><small>You pick the code, a vision model tries to read it from a PNG. Which schemes can it crack?</small><p><button id="ohide" class="pri" style="width:100%">Challenge the AI</button></p></div>
