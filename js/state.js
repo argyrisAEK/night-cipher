@@ -1,0 +1,13 @@
+const DEFAULT_STATE={you:0,n:0,ai:0,an:0,rb:{},xp:0,xpEvents:{},achievements:{},bestTimes:{},dailyWins:[]};
+export function loadState(){try{const saved=JSON.parse(localStorage.getItem('nc'))||{};return {...DEFAULT_STATE,...saved,rb:{...DEFAULT_STATE.rb,...(saved.rb||{})},xpEvents:{...DEFAULT_STATE.xpEvents,...(saved.xpEvents||{})},achievements:{...DEFAULT_STATE.achievements,...(saved.achievements||{})},bestTimes:{...DEFAULT_STATE.bestTimes,...(saved.bestTimes||{})},dailyWins:[...(saved.dailyWins||DEFAULT_STATE.dailyWins)]}}catch{return {...DEFAULT_STATE,rb:{},xpEvents:{},achievements:{},bestTimes:{},dailyWins:[]}}}
+export function saveState(state){try{localStorage.setItem('nc',JSON.stringify(state))}catch{}}
+export function createProgression(getState){
+ const RANKS=[{name:'Novice Codebreaker',xp:0},{name:'Apprentice Cryptanalyst',xp:250},{name:'Cipher Analyst',xp:600},{name:'Cryptographer',xp:1100},{name:'Master Cryptanalyst',xp:1800},{name:'Grand Ciphermaster',xp:2800}];
+ const ACHIEVEMENTS=[['first_decode','🔓','First Decode','Solve your first cipher.'],['first_try','🎯','Flawless Read','Solve a cipher on your first guess.'],['daily_1','🌙','Daily Operative','Solve your first Daily Cipher.'],['daily_10','🗓️','Ten Nights','Solve 10 Daily Ciphers.'],['streak_3','🔥','On a Streak','Reach a 3-day Daily streak.'],['all_training','🎓','Knowledge Seeker','Complete all 10 training levels.'],['no_hints','🧠','Cold Reading','Solve a cipher without using hints.'],['night_owl','🦉','Night Owl','Solve a cipher between midnight and 5 AM local time.']];
+ const rankFor=x=>RANKS.reduce((a,r)=>x>=r.xp?r:a,RANKS[0]);
+ const grantXP=(id,amount,label)=>{const T=getState();T.xpEvents=T.xpEvents||{};if(T.xpEvents[id])return 0;T.xpEvents[id]={amount,label,at:Date.now()};T.xp=(T.xp||0)+amount;return amount};
+ const unlock=id=>{const T=getState();T.achievements=T.achievements||{};if(T.achievements[id])return false;T.achievements[id]=Date.now();return true};
+ const evaluateAchievements=TRAIN=>{const T=getState(),levels=Object.values(T.levels||{}).filter(Boolean).length,wins=(T.dailyWins||[]).length;if((T.solves||0)>=1)unlock('first_decode');if((T.firstTry||0)>=1)unlock('first_try');if(wins>=1)unlock('daily_1');if(wins>=10)unlock('daily_10');if((T.streak||0)>=3)unlock('streak_3');if(levels>=TRAIN.length)unlock('all_training');if((T.noHintSolves||0)>=1)unlock('no_hints');if((T.nightSolves||0)>=1)unlock('night_owl')};
+ const fmtTime=ms=>{if(!Number.isFinite(ms))return '—';const sec=ms/1000;return `${Math.floor(sec/60)}:${(sec%60).toFixed(1).padStart(4,'0')}`};
+ return {RANKS,ACHIEVEMENTS,rankFor,grantXP,unlock,evaluateAchievements,fmtTime};
+}
