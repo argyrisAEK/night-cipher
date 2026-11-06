@@ -120,19 +120,19 @@ const polygons=(m,sd=29)=>{
 const petals=(m,sd=31)=>{
   const r=rng(sd),L=[...m],n=L.length,cols=Math.min(5,n),cellW=154,cellH=158;
   const x0=(800-cols*cellW)/2+cellW/2,y0=150;let s=sky(r);
-  // Six positions per ring keep each petal individually countable.
+  // Every flower uses one evenly spaced ring: no stacked rings or hidden/overlapping petals.
+  // Narrow tangential width keeps all 1–26 petals separately countable.
   L.forEach((c,i)=>{
     const cx=x0+(i%cols)*cellW,cy=y0+Math.floor(i/cols)*cellH,v=idx(c);
     s+='<g data-cipher="petals">';
-    s+=E('circle',{cx,cy,r:5,fill:'#fff2c2',stroke:'#d4a84d','stroke-width':1});
+    s+=E('circle',{cx,cy,r:4.5,fill:'#fff2c2',stroke:'#d4a84d','stroke-width':1,'data-cipher':'flower-center'});
     for(let k=0;k<v;k++){
-      const ring=Math.floor(k/6),slot=k%6;
-      const a=slot*Math.PI/3-Math.PI/2+(ring%2)*Math.PI/6;
-      const radius=16+ring*16,px=cx+Math.cos(a)*radius,py=cy+Math.sin(a)*radius;
+      const a=k*2*Math.PI/v-Math.PI/2;
+      const radius=39,px=cx+Math.cos(a)*radius,py=cy+Math.sin(a)*radius;
       s+=E('ellipse',{
-        cx:px.toFixed(2),cy:py.toFixed(2),rx:4.2,ry:7.2,
+        cx:px.toFixed(2),cy:py.toFixed(2),rx:2.2,ry:7.2,
         transform:'rotate('+((a*180/Math.PI+90).toFixed(1))+' '+px.toFixed(2)+' '+py.toFixed(2)+')',
-        fill:'#ffd166',stroke:'#8f6829','stroke-width':.7,opacity:.98,
+        fill:'#ffd166',stroke:'#8f6829','stroke-width':.65,opacity:1,
         'data-cipher':'petal'
       });
     }
