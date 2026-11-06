@@ -114,7 +114,7 @@ const MSGS=['MEET ME AT MIDNIGHT','THE BEES KNOW THE WAY','HONEY IS A MAP','TRUS
 const rnd=()=>{$('#msg').value=MSGS[Math.random()*MSGS.length|0]};$('#dice').onclick=rnd;rnd();
 $('#hide').onclick=async()=>{
   if(hideInFlight)return;
-  const secret=$('#msg').value.trim(),ns=norm(secret);if(!/^[A-Z ]{3,60}$/i.test(secret)||!/[A-Z]/i.test(secret))return say('Use 3–60 characters: English letters A–Z and spaces only. Digits and Greek characters are not supported by the current visual encodings.','bad');
+  const secret=$('#msg').value.trim(),ns=norm(secret);if(!/^[A-Z ]{3,60}$/i.test(secret)||ns.length<3)return say('Use 3–60 characters with at least 3 letters: English letters A–Z and spaces only. Digits and Greek characters are not supported by the current visual encodings.','bad');
   if(!conn||!conn.apiKey)return say('Connect your Pollinations account first (button, top right).','bad');
   hideInFlight=true;busy(true,'The hider is drawing… premium models can take a minute or two.');
   try{
