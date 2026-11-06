@@ -110,21 +110,22 @@ $('#robustness').onclick=async()=>{
   }finally{robustnessInFlight=false;busy(false)}
 };
 
-const MSGS=['MEET ME AT MIDNIGHT','THE BEES KNOW THE WAY','HONEY IS A MAP','TRUST THE QUIET STARS','OPEN THE BLUE DOOR','ΤΟ ΜΕΛΙ ΕΙΝΑΙ ΧΑΡΤΗΣ'];
+const MSGS=['MEET ME AT MIDNIGHT','THE BEES KNOW THE WAY','HONEY IS A MAP','TRUST THE QUIET STARS','OPEN THE BLUE DOOR','THE HONEY IS A MAP'];
 const rnd=()=>{$('#msg').value=MSGS[Math.random()*MSGS.length|0]};$('#dice').onclick=rnd;rnd();
 $('#hide').onclick=async()=>{
   if(hideInFlight)return;
-  const secret=$('#msg').value.trim(),ns=norm(secret);if(ns.length<3)return say('Use a message with at least 3 letters.','bad');
+  const secret=$('#msg').value.trim(),ns=norm(secret);if(!/^[A-Z ]{3,60}$/i.test(secret)||!/[A-Z]/i.test(secret))return say('Use 3–60 characters: English letters A–Z and spaces only. Digits and Greek characters are not supported by the current visual encodings.','bad');
   if(!conn||!conn.apiKey)return say('Connect your Pollinations account first (button, top right).','bad');
   hideInFlight=true;busy(true,'The hider is drawing… premium models can take a minute or two.');
   try{
-    const out=await chat($('#hider').value,[{role:'system',content:'You are a creative SVG artist and steganographer. Output only what is asked.'},{role:'user',content:HIDE(secret,$('#diff').value=='1')}],16000,120000);
+    const out=await chat($('#hider').value,[{role:'system',content:'You are a creative SVG artist and steganographer. Output only what is asked.'},{role:'user',content:HIDE(secret,$('#diff').value=='1')}],16000,120000,{requestType:'hider'});
     const m=out.match(/<svg[\s\S]*?<\/svg>/i);if(!m)throw Error('No complete SVG came back (the model may have run out of tokens). Try again or use another model.');
-    if(hasSecretLeak(m[0],secret))throw Error('The hider leaked the secret in SVG text or attributes, so the round was voided. Try again.');
-    const safe=clean(m[0]),sc=(out.split(/SCHEME:/i)[1]||'').trim().slice(0,400),words=secret.split(/\s+/).length;
+    const safe=clean(m[0]);
+    if(hasSecretLeak(safe,secret))throw Error('The hider leaked the secret in SVG text or attributes, so the round was voided. Try again.');
+    const sc=(out.split(/SCHEME:/i)[1]||'').trim().slice(0,400),words=secret.split(/\s+/).length;
     if(!sc)throw Error('The hider did not provide a SCHEME explanation. Try again.');
     if(hasSecretLeak(sc,secret))throw Error('The SCHEME explanation reveals the secret. The round was voided; try again.');
-    start({mode:'duel',schemeIdx:null,hider:$('#hider').value,secret,svg:safe,scheme:sc,hints:[`${ns.length} letters/digits in ${words} word${words>1?'s':''}.`,`It starts with “${[...secret][0]}”.`,`The hider confessed: ${sc}`]});
+    start({mode:'duel',schemeIdx:null,hider:$('#hider').value,secret,svg:safe,scheme:sc,hints:[`${ns.length} letters in ${words} word${words>1?'s':''}.`,`It starts with “${[...secret][0]}”.`,`The hider confessed: ${sc}`]});
     if($('#judge').checked&&conn.apiKey)judgeStealth(R);
   }catch(e){say(e.message,'bad')}
   finally{hideInFlight=false;busy(false)}
