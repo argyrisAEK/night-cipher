@@ -1,13 +1,13 @@
 # Night Cipher v6 — modular edition
 
-A vanilla JavaScript cipher-puzzle game refactored into ES modules. The original v5 single-file application is preserved as `Night-Cipher-v5-reference.html`.
+A vanilla JavaScript cipher-puzzle game built with ES modules and Vite.
 
 ## Stack
 
 - Vanilla JavaScript (ES modules)
 - Vite for local development and production builds
-- Browser LocalStorage for local progress
-- Pollinations API integration with browser-side BYOP flow
+- Browser LocalStorage for local progress (`nc`)
+- Pollinations API integration with browser-side BYOP
 
 ## Run locally
 
@@ -31,13 +31,9 @@ Do not open `index.html` directly with `file://`; run it through Vite.
 
 Configure the Pollinations App Key in the `<polli-connect>` element in `index.html` and in `APP_KEY` in `js/app.js`. Use the same key in both places and register the served application URL as a Redirect URI. No server-side key storage is introduced.
 
-## Regression tests
+## Data
 
-Run the app through Vite and open `/?selftest`. The in-browser test suite includes a mocked transport test and does not make a live Pollinations API request.
-
-## Data compatibility
-
-The application retains the `nc` LocalStorage key and merges existing v5 state with defaults. Progress remains local to the browser profile and is user-editable.
+Progress is stored locally in the browser under the `nc` LocalStorage key. It is device/browser-local and user-editable.
 
 ## Project structure
 
@@ -51,7 +47,10 @@ js/
   ciphers.js
   security.js
   selftest.js
-Night-Cipher-v5-reference.html
 ```
 
-See the source files for implementation details and known limitations.
+The self-test module is included as a regression-test foundation; the current UI does not automatically launch it from a query parameter.
+
+## Current scope
+
+The UI currently includes training levels, a daily cipher, AI-vs-human hiding, and a user-created cipher challenge. The modular split keeps API transport, state/progression, cipher definitions, and SVG security logic separate.
