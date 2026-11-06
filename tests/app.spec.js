@@ -54,3 +54,20 @@ test('legacy nc LocalStorage progression remains readable', async ({ page }) => 
   await expect(page.locator('#profile')).toContainText('Cryptographer');
   await expect(page.locator('#codexPreview')).toContainText('Skyline');
 });
+
+test('all ten deterministic cipher generators still round-trip through their decoders', async ({ page }) => {
+  const results = await page.evaluate(async () => {
+    const [{ TRAIN, P }, { DEC }] = await Promise.all([
+      import('/js/ciphers.js'),
+      import('/js/selftest.js')
+    ]);
+    return TRAIN.map((cipher, index) => {
+      const svg = cipher.g(cipher.m, 20261106 + index);
+      return { name: cipher.n, expected: cipher.m, actual: DEC[index](P(svg)) };
+    });
+  });
+  expect(results).toHaveLength(10);
+  for (const result of results) {
+    expect(result.actual, result.name).toBe(result.expected);
+  }
+});
