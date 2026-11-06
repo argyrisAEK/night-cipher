@@ -15,7 +15,6 @@ const score=()=>{const xp=T.xp||0,rank=rankFor(xp),next=RANKS.find(r=>r.xp>xp),b
 const say=(m,c='')=>{const s=$('#status');s.textContent=m;s.className=c};
 
 
-
 /* ---------- game flow ---------- */
 let uiBusy=false,aiInFlight=false,aiAttempted=false,hideInFlight=false;
 function syncButtons(){
