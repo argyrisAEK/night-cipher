@@ -1,6 +1,5 @@
-import { TRAIN, MORSE, BR } from './ciphers.js';
+import { BR, INV, P, L, CH } from './ciphers.js';
 
-/*DEC*/const INV=Object.fromEntries(Object.entries(MORSE).map(([k,v])=>[v,k])),P=x=>new DOMParser().parseFromString(x,'image/svg+xml'),L=(d,q)=>[...d.querySelectorAll(q)],CH=n=>String.fromCharCode(n);
 const DEC=[
 d=>L(d,'rect[height]').filter(r=>r.getAttribute('fill')==='url(#bldgG)'||r.getAttribute('fill')==='#10142b').map(r=>CH(64+(r.getAttribute('height')-10)/12)).join(''),
 d=>{let o='',c='',nx=0,py=-1;L(d,'circle[fill="#ffd166"],rect[fill="#ffd166"]').forEach(e=>{const dot=e.tagName=='circle',x=dot?e.getAttribute('cx')-6:+e.getAttribute('x'),y=dot?+e.getAttribute('cy'):+e.getAttribute('y')+4;if(c&&(y!=py||x-nx>10)){o+=INV[c]||'?';c=''}c+=dot?'.':'-';nx=x+(dot?22:44);py=y});return o+(INV[c]||'?')},
