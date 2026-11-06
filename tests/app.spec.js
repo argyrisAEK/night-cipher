@@ -72,3 +72,24 @@ test('all ten deterministic cipher generators still round-trip through their dec
     expect(result.actual, result.name).toBe(result.expected);
   }
 });
+
+test('Bloom petals form one evenly spaced, non-overlapping ring per letter', async ({ page }) => {
+  const data = await page.evaluate(async () => {
+    const { TRAIN } = await import('/js/ciphers.js');
+    const doc = new DOMParser().parseFromString(TRAIN[8].g('MEADOW', 31), 'image/svg+xml');
+    return [...doc.querySelectorAll('g[data-cipher="petals"]')].map(group => {
+      const center = group.querySelector('[data-cipher="flower-center"]');
+      const cx = Number(center.getAttribute('cx')), cy = Number(center.getAttribute('cy'));
+      const petals = [...group.querySelectorAll('ellipse[data-cipher="petal"]')];
+      return {
+        count: petals.length,
+        radii: petals.map(p => Math.hypot(Number(p.getAttribute('cx'))-cx, Number(p.getAttribute('cy'))-cy))
+      };
+    });
+  });
+  expect(data.map(x => x.count)).toEqual([13, 5, 1, 4, 15, 23]);
+  for (const flower of data) {
+    for (const radius of flower.radii) expect(radius).toBeGreaterThan(38.5);
+    for (const radius of flower.radii) expect(radius).toBeLessThan(39.5);
+  }
+});
