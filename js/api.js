@@ -2,7 +2,7 @@ const API='https://gen.pollinations.ai/v1';
 
 
 export function createChat({getConnection,getTokenCount,setTokenCount,onUsage}){
-  return async function chat(model,messages,max,timeoutMs=90000){
+  return async function chat(model,messages,max,timeoutMs=90000,{requestType='chat'}={}){
     const connection=getConnection();
     const key=connection&&connection.apiKey;
     if(!key)throw Error('Connect your Pollinations account first (button, top right).');
@@ -31,15 +31,11 @@ export function createChat({getConnection,getTokenCount,setTokenCount,onUsage}){
       const text=content==null?'':Array.isArray(content)
         ?content.map(part=>part.text||'').join('')
         :String(content);
-      const isHideRequest=messages.some(m=>
-        typeof m.content==='string'&&m.content.includes('as ONE SVG (viewBox 0 0 800 500)')
-      );
-      if(isHideRequest&&!/<svg[\s\S]*?<\/svg>/i.test(text)){
-        console.warn('[Night Cipher] Hider API response (may contain your secret):',j);
+      if(requestType==='hider'&&!/<svg[\\s\\S]*?<\\/svg>/i.test(text)){
         const finishReason=choice?.finish_reason||'not provided';
         const completionTokens=j.usage?.completion_tokens??'not provided';
         const responseModel=j.model||model;
-        throw Error(`No complete SVG came back (model: ${responseModel}; finish_reason: ${finishReason}; completion_tokens: ${completionTokens}). Inspect DevTools → Console for diagnostics.`);
+        throw Error(`Hider returned no complete SVG (model: ${responseModel}; finish_reason: ${finishReason}; completion_tokens: ${completionTokens}). Try a faster model or a shorter message.`);
       }
       if(content==null)throw Error('The API returned no message content.');
       return text;
@@ -55,7 +51,7 @@ const HIDE=(msg,easy)=>`Draw an ordinary-looking, attractive scene as ONE SVG (v
 
 ${msg}
 
-Rules: the message, or any of its words or letters, must NOT appear as text, labels, ids, comments or metadata. Choose ONE simple, consistent visual encoding that a vision model can recover from the rendered image alone. Prefer an unambiguous A=1…Z=26 count/geometry mapping, binary pattern, or Morse. Arrange exactly one clearly separated group per letter/digit, in left-to-right reading order; do not create a group for spaces, and use a noticeably larger gap between words. If you encode by counting (for example, flower petals), every counted item must be individually visible, evenly sized and spaced, non-overlapping, and large enough to count; the central hub and decorative scene details must not be mistaken for counted items. Keep all groups well separated, avoid perspective/occlusion/tiny details, and do not add extra objects that resemble code symbols. Verify that every group encodes exactly one character and that the whole message fits the canvas. ${easy?'Include a subtle visual key (a ruler, legend or reference marks) so a careful viewer can work out how to read it.':'Do not include any legend; the scheme must be inferable from the picture alone.'}
+Rules: the message, or any of its words or letters, must NOT appear as text, labels, ids, comments or metadata. Choose ONE simple, consistent visual encoding that a vision model can recover from the rendered image alone. Prefer an unambiguous A=1…Z=26 count/geometry mapping, binary pattern, or Morse. Arrange exactly one clearly separated group per letter, in left-to-right reading order; do not create a group for spaces, and use a noticeably larger gap between words. If you encode by counting (for example, flower petals), every counted item must be individually visible, evenly sized and spaced, non-overlapping, and large enough to count; the central hub and decorative scene details must not be mistaken for counted items. Keep all groups well separated, avoid perspective/occlusion/tiny details, and do not add extra objects that resemble code symbols. Verify that every group encodes exactly one character and that the whole message fits the canvas. ${easy?'Include a subtle visual key (a ruler, legend or reference marks) so a careful viewer can work out how to read it.':'Do not include any legend; the scheme must be inferable from the picture alone.'}
 
 Reply with the raw <svg>...</svg> first, then one final line starting with SCHEME: that honestly says how you hid it.`;
 
