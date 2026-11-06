@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Night Cipher — find the message hidden in the picture</title>
+<!-- Quest #18367 · expanded 10-scheme edition -->
+<meta name="description" content="A steganography game: an AI hides a secret in a picture it draws, you and a second AI try to find it. Pay with your own Pollen.">
+<link rel="stylesheet" href="/styles.css">
+<script defer src="https://cdn.jsdelivr.net/npm/@pollinations/ui@0.1.0-alpha.20/dist/connect.js"></script>
+</head><body><div class="wrap">
+<header><div><h1>Night <span>Cipher</span></h1><p class="sub">Ten ways to hide a message in one picture. Can you spot the pattern?</p></div>
+<polli-connect app-key="pk_REPLACE_ME" budget="3" expiry="7" models="text"></polli-connect></header>
+<div id="setup" class="warn" hidden><b>Setup:</b> replace <code>pk_REPLACE_ME</code> (twice: the &lt;polli-connect&gt; tag and <code>APP_KEY</code>) with your App Key and add this page's URL as a Redirect URI.</div>
+<nav id="tabs"></nav>
+<main>
+<section class="card"><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div></section>
+<aside class="card">
+<div id="duel" hidden>
+<label>Secret message (the hider must never write it as text)</label>
+<div class="row"><input id="msg" maxlength="60"><button id="dice" title="Random message" style="flex:0">🎲</button></div>
+<label>Difficulty</label><select id="diff"><option value="0">Paper mode: no legend, scheme is a mystery</option><option value="1">Friendly: hider adds a visual key</option></select>
+<label>Hider model (draws the SVG)</label><select id="hider"></select>
+<label>Seeker model (sees only a PNG, cannot run code)</label><select id="seeker"></select>
+<label style="display:flex;align-items:center;gap:6px;text-transform:none"><input type="checkbox" id="judge" style="width:auto;margin:0"> Stealth judge — a second AI rates how innocent the picture looks (+1 call, your Pollen)</label>
+<label>Judge model (needs vision)</label><select id="judgeModel"></select>
+<small>Seeker and judge list only vision-capable models (<code>max_reference_images &gt; 0</code>). Premium models cost more Pollen per round. Your key's budget caps the spending.</small>
+<p><button id="hide" class="pri" style="width:100%">Hide the message</button></p>
+</div>
+<div id="own" hidden><label>Your word (letters A–Z, up to 10)</label><input id="omsg" maxlength="10" value="LANTERN"><label>Hiding scheme</label><select id="osch"></select><label>Seeker model (vision-capable only)</label><select id="seeker2"></select><small>You pick the code, a vision model tries to read it from a PNG. Which schemes can it crack?</small><p><button id="ohide" class="pri" style="width:100%">Challenge the AI</button></p></div>
+<div id="game" hidden>
+<label>Your guess</label><input id="guess" autocomplete="off" placeholder="What is the hidden message?">
+<div class="row"><button id="go" class="pri">Guess</button><button id="hint">Hint (−20)</button></div>
+<ol id="hints"></ol>
+<div class="row" style="margin-top:10px"><button id="ai">Let the AI try</button><button id="giveup">Give up</button></div>
+<div class="row" style="margin-top:8px"><button id="revealHow" hidden>✨ How was it hidden?</button></div>
+<div class="row" style="margin-top:8px"><button id="save">Save PNG</button><button id="next" hidden>Next ▶</button></div>
+<div class="row" style="margin-top:8px"><button id="robustness" title="Runs three additional vision-model calls; uses Pollen">🧪 Test image robustness (3 calls)</button></div>
+<div id="robustnessReport" aria-live="polite"></div>
+</div>
+<div id="profile" class="profile" aria-live="polite"></div>
+<div class="meta-grid"><div class="meta-tile"><b id="bestTime">—</b><small>Fastest solve</small></div><div class="meta-tile"><b id="achievementCount">0/8</b><small>Achievements</small></div></div>
+<details open><summary>🏅 <b>Achievements</b></summary><div id="achievements"></div></details>
+<details><summary>📚 <b>Cipher Codex</b> <small>(unlocked by training)</small></summary><div id="codexPreview"></div></details>
+<p id="score"><small></small></p><details><summary><small>Seeker report card</small></summary><ul id="report"></ul></details>
+<small>Daily modifiers may change the number of tries or disable hints. A guess counts when it is ≥90% similar, the rule used in the study. AIs here cannot run code, so expect them to struggle more than in the paper. Stealth rating is shown for information only; it does not affect your score.</small>
+</aside></main>
+<footer>Made for <a href="https://github.com/pollinations/pollinations/issues/18367">Pollinations quest #18367</a>, inspired by <a href="https://www.lesswrong.com/posts/WHEQps5PK8LrrcTAb/how-does-fable-5-1-hide-messages-in-images">How does Fable 5.1 hide messages in images?</a>. Your Pollen pays for every AI call; nothing is stored on a server.</footer>
+</div>
+<script type="module" src="/js/app.js"></script></body></html>
