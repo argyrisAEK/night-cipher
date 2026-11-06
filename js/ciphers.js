@@ -118,11 +118,27 @@ const polygons=(m,sd=29)=>{
   });return wrap(s)
 };
 const petals=(m,sd=31)=>{
-  const r=rng(sd),L=[...m],n=L.length,step=Math.min(145,700/n),x0=400-(n-1)*step/2;let s=sky(r);
-  L.forEach((c,i)=>{const cx=x0+i*step,cy=255,v=idx(c);s+='<g data-cipher="petals">';
-    for(let k=0;k<v;k++){const a=k*2*Math.PI/v;s+=E('ellipse',{cx:(cx+Math.cos(a)*28).toFixed(2),cy:(cy+Math.sin(a)*28).toFixed(2),rx:7,ry:17,transform:`rotate(${(a*180/Math.PI+90).toFixed(1)} ${(cx+Math.cos(a)*28).toFixed(2)} ${(cy+Math.sin(a)*28).toFixed(2)})`,fill:'#ffd166',opacity:.9})}
-    s+=E('circle',{cx,cy,r:7,fill:'#fff2c2'});s+='</g>';
-  });return wrap(s)
+  const r=rng(sd),L=[...m],n=L.length,cols=Math.min(6,n),cellW=126,cellH=158;
+  const x0=(800-cols*cellW)/2+cellW/2,y0=150;let s=sky(r);
+  // Six positions per ring keep each petal individually countable.
+  L.forEach((c,i)=>{
+    const cx=x0+(i%cols)*cellW,cy=y0+Math.floor(i/cols)*cellH,v=idx(c);
+    s+='<g data-cipher="petals">';
+    s+=E('circle',{cx,cy,r:5,fill:'#fff2c2',stroke:'#d4a84d','stroke-width':1});
+    for(let k=0;k<v;k++){
+      const ring=Math.floor(k/6),slot=k%6;
+      const a=slot*Math.PI/3-Math.PI/2+(ring%2)*Math.PI/6;
+      const radius=14+ring*11,px=cx+Math.cos(a)*radius,py=cy+Math.sin(a)*radius;
+      s+=E('ellipse',{
+        cx:px.toFixed(2),cy:py.toFixed(2),rx:4.2,ry:7.2,
+        transform:'rotate('+((a*180/Math.PI+90).toFixed(1))+' '+px.toFixed(2)+' '+py.toFixed(2)+')',
+        fill:'#ffd166',stroke:'#8f6829','stroke-width':.7,opacity:.98,
+        'data-cipher':'petal'
+      });
+    }
+    s+='</g>';
+  });
+  return wrap(s)
 };
 const rhythm=(m,sd=37)=>{
   const r=rng(sd),L=[...m],n=L.length,step=Math.min(125,700/n),x0=400-(n-1)*step/2;let s=sky(r);
