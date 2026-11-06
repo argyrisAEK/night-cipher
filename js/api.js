@@ -31,7 +31,7 @@ export function createChat({getConnection,getTokenCount,setTokenCount,onUsage}){
       const text=content==null?'':Array.isArray(content)
         ?content.map(part=>part.text||'').join('')
         :String(content);
-      if(requestType==='hider'&&!/<svg[\\s\\S]*?<\\/svg>/i.test(text)){
+      if(requestType==='hider'&&!/<svg[\s\S]*?<\/svg>/i.test(text)){
         const finishReason=choice?.finish_reason||'not provided';
         const completionTokens=j.usage?.completion_tokens??'not provided';
         const responseModel=j.model||model;
