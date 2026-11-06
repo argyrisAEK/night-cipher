@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('loads all game modes and the BYOP connect control', async ({ page }) => {
-  await expect(page.locator('polli-connect')).toHaveAttribute('models', 'text,image');
+  await expect(page.locator('polli-connect')).toHaveAttribute('models', 'text');
   await expect(page.locator('#tabs button')).toHaveCount(13);
   await expect(page.locator('#status')).not.toBeEmpty();
 });
