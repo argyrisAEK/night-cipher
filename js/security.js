@@ -5,16 +5,31 @@ const toRaster=(svg,type='image/png',quality)=>new Promise((ok,no)=>{const i=new
 const toPng=svg=>toRaster(svg,'image/png');
 const clean=raw=>{
   if(typeof raw!=='string'||raw.length>500000)throw Error('SVG is too large or invalid.');
-  if(!/xmlns\s*=/.test(raw))raw=raw.replace(/<svg\b/i,'<svg xmlns="http://www.w3.org/2000/svg"');
-  const d=new DOMParser().parseFromString(raw,'image/svg+xml');
-  if(d.querySelector('parsererror'))throw Error('The hider returned broken SVG. Try again or pick another model.');
-  const s=d.documentElement,NS='http://www.w3.org/2000/svg';
-  if(!s||s.localName.toLowerCase()!=='svg'||s.namespaceURI!==NS)throw Error('The response must have an SVG root element.');
+  let d=new DOMParser().parseFromString(raw,'image/svg+xml');
+  if(d.querySelector('parsererror'))throw Error('The hider returned malformed SVG/XML. Try again or pick another model.');
+  let s=d.documentElement,NS='http://www.w3.org/2000/svg';
+  if(!s||s.localName.toLowerCase()!=='svg')throw Error('The response must have an SVG root element.');
+  if(!s.namespaceURI){
+    raw=raw.replace(/<svg\b/i,'<svg xmlns="http://www.w3.org/2000/svg"');
+    d=new DOMParser().parseFromString(raw,'image/svg+xml');
+    if(d.querySelector('parsererror'))throw Error('The hider returned malformed SVG/XML. Try again or pick another model.');
+    s=d.documentElement;
+  }
+  if(s.namespaceURI!==NS)throw Error('The SVG root must use the SVG namespace.');
   s.querySelectorAll('script,foreignObject,image,metadata,title,desc').forEach(e=>e.remove());
-  const allowed=new Set(['svg','g','defs','rect','circle','ellipse','line','polyline','polygon','path','text','tspan','linearGradient','radialGradient','stop','filter','feGaussianBlur','feMerge','feMergeNode','feColorMatrix','feOffset','feBlend','feComposite','clipPath','mask']);
-  const attrs=new Set(('xmlns viewBox width height x y x1 y1 x2 y2 cx cy r rx ry d points fill fill-opacity fill-rule stroke stroke-width stroke-opacity stroke-linecap stroke-linejoin stroke-dasharray stroke-dashoffset opacity transform id class offset stop-color stop-opacity gradientUnits gradientTransform spreadMethod fx fy fr filterUnits primitiveUnits stdDeviation result in in2 type values operator k1 k2 k3 k4 dx dy mode color-interpolation-filters clip-path clip-rule mask maskUnits maskContentUnits preserveAspectRatio text-anchor dominant-baseline font-family font-size font-weight font-style letter-spacing word-spacing').split(' '));
+  const allowed=new Set(['svg','g','defs','rect','circle','ellipse','line','polyline','polygon','path','text','tspan','linearGradient','radialGradient','stop','filter','feGaussianBlur','feMerge','feMergeNode','feColorMatrix','feOffset','feBlend','feComposite','clipPath','mask','use']);
+  const attrs=new Set(('xmlns viewBox width height x y x1 y1 x2 y2 cx cy r rx ry d points fill fill-opacity fill-rule stroke stroke-width stroke-opacity stroke-linecap stroke-linejoin stroke-dasharray stroke-dashoffset opacity transform id class offset stop-color stop-opacity gradientUnits gradientTransform spreadMethod fx fy fr filterUnits primitiveUnits stdDeviation result in in2 type values operator k1 k2 k3 k4 dx dy mode color-interpolation-filters clip-path clip-rule mask maskUnits maskContentUnits preserveAspectRatio text-anchor dominant-baseline font-family font-size font-weight font-style letter-spacing word-spacing href style').split(' '));
+  const styleProps=new Set(['fill','fill-opacity','fill-rule','stroke','stroke-width','stroke-opacity','stroke-linecap','stroke-linejoin','stroke-dasharray','stroke-dashoffset','opacity','color','font-family','font-size','font-weight','font-style','letter-spacing','word-spacing','text-anchor','dominant-baseline','stop-color','stop-opacity','clip-path','clip-rule','mask','filter']);
+  const safeStyle=value=>value.split(';').map(part=>{
+    const at=part.indexOf(':');if(at<1)return '';
+    const prop=part.slice(0,at).trim().toLowerCase(),v=part.slice(at+1).trim();
+    if(!styleProps.has(prop)||!v||v.length>1000||/[\\{}<>@]/.test(v)||/(?:javascript:|data:|https?:|expression\s*\(|var\s*\(|@import)/i.test(v))return '';
+    if(/url\s*\(/i.test(v)&&!/^url\(\s*#[\w.-]+\s*\)$/i.test(v))return '';
+    return prop+':'+v;
+  }).filter(Boolean).join(';');
   const elements=[...d.getElementsByTagName('*')];
   if(elements.length>2500)throw Error('SVG contains too many elements.');
+  const useRefs=[];
   for(const el of elements){
     if(el.namespaceURI!==NS)throw Error('SVG contains a foreign namespace element.');
     if(!allowed.has(el.localName))throw Error(`Unsupported SVG element: ${el.localName}`);
@@ -22,12 +37,19 @@ const clean=raw=>{
       const name=a.name,value=a.value.trim();
       if(!attrs.has(name)){el.removeAttribute(name);continue}
       if(value.length>10000)throw Error('SVG attribute is too large.');
+      if(name==='style'){const v=safeStyle(value);if(v)el.setAttribute('style',v);else el.removeAttribute('style');continue}
+      if(name==='href'){
+        if(el.localName!=='use'||!/^#[\w.-]{1,80}$/.test(value)){el.removeAttribute(name);continue}
+        useRefs.push({el,id:value.slice(1)});continue;
+      }
       if(/\b(?:nan|infinity)\b/i.test(value)){el.removeAttribute(name);continue}
       if(/url\s*\(/i.test(value)&&!/^url\(\s*#[\w.-]+\s*\)$/i.test(value)){el.removeAttribute(name);continue}
       if(name!=='xmlns'&&/(?:javascript:|data:|https?:|\/\/|@import|expression\s*\()/i.test(value)){el.removeAttribute(name);continue}
       if(name==='id'&&!/^[\w.-]{1,80}$/.test(value))el.removeAttribute(name);
     }
   }
+  const ids=new Set([...s.querySelectorAll('[id]')].map(el=>el.getAttribute('id')));
+  useRefs.forEach(({el,id})=>{if(!ids.has(id))el.remove()});
   const walker=d.createTreeWalker(s,NodeFilter.SHOW_COMMENT),comments=[];
   while(walker.nextNode())comments.push(walker.currentNode);
   comments.forEach(n=>n.remove());
