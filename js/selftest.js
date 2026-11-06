@@ -43,7 +43,7 @@ export async function runSelfTest(ctx){
     t('SVG sanitizer preserves safe local use references and allowlisted CSS',/<use[^>]*href="#shape"/.test(referenced)&&/fill:#456/.test(referenced)&&!/position/.test(referenced));
     const external=clean('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><use href="https://example.com/a.svg#x"/></svg>');
     t('SVG sanitizer strips external use references',!/<use[^>]*href=/.test(external));
-    let malformed=false;try{clean('<svg viewBox="0 0 10 10"><g></svg>')}catch(e){malformed=/malformed SVG\\/XML/.test(e.message)}
+    let malformed=false;try{clean('<svg viewBox="0 0 10 10"><g></svg>')}catch(e){malformed=/malformed SVG\/XML/.test(e.message)}
     t('SVG sanitizer reports malformed XML before namespace repair',malformed);
     const leaked='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text>SECRET WORD</text></svg>';
     t('Leakage detector catches visible text',hasSecretLeak(leaked,'SECRET WORD'));
