@@ -54,7 +54,7 @@ const HIDE=(msg,easy)=>`Draw an ordinary-looking, attractive scene as ONE SVG (v
 
 ${msg}
 
-Rules: the message, or any of its words or letters, must NOT appear as text, labels, ids, comments or metadata. Pick your own encoding (shapes, heights, counts, colours, angles, patterns...). ${easy?'Include a subtle visual key (a ruler, legend or reference marks) so a careful viewer can work out how to read it.':'Do not include any legend; the scheme must be inferable from the picture alone.'}
+Rules: the message, or any of its words or letters, must NOT appear as text, labels, ids, comments or metadata. Choose ONE simple, consistent visual encoding that a vision model can recover from the rendered image alone. Prefer an unambiguous A=1…Z=26 count/geometry mapping, binary pattern, or Morse. Arrange exactly one clearly separated group per character, in left-to-right reading order; use a noticeably larger gap between words. If you encode by counting (for example, flower petals), every counted item must be individually visible, evenly sized and spaced, non-overlapping, and large enough to count; the central hub and decorative scene details must not be mistaken for counted items. Keep all groups well separated, avoid perspective/occlusion/tiny details, and do not add extra objects that resemble code symbols. Verify that every group encodes exactly one character and that the whole message fits the canvas. ${easy?'Include a subtle visual key (a ruler, legend or reference marks) so a careful viewer can work out how to read it.':'Do not include any legend; the scheme must be inferable from the picture alone.'}
 
 Reply with the raw <svg>...</svg> first, then one final line starting with SCHEME: that honestly says how you hid it.`;
 
