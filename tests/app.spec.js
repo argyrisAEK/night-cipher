@@ -38,6 +38,7 @@ test('known training and daily ciphers use guided decoding instructions', async 
   expect(prompts.guided).toContain('One petal is A');
   expect(prompts.own).toContain('Petal count');
   expect(prompts.blind).not.toContain('DECODING RULE:');
+  expect(prompts.blind).toContain('count each visible petal');
   expect(prompts.retry).toContain('Second-pass visual cryptanalysis');
 });
 
