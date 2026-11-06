@@ -1,7 +1,7 @@
 
 import { TRAIN, annotate } from './ciphers.js';
 import { uri, toRaster, toPng, clean, utf8Base64, hasSecretLeak } from './security.js';
-import { createChat, HIDE, SEEK } from './api.js';
+import { createChat, HIDE, SEEK, buildSeekPrompt } from './api.js';
 import { loadState, saveState, createProgression } from './state.js';
 import { runSelfTest } from './selftest.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
@@ -22,7 +22,7 @@ function syncButtons(){
   if(!uiBusy&&R){
     $('#go').disabled=R.done;$('#giveup').disabled=R.done;
     $('#hint').disabled=R.done||R.used>=R.hints.length;
-    $('#ai').disabled=(R.done&&R.mode!=='own')||aiInFlight||aiAttempted;
+    $('#ai').disabled=(R.done&&R.mode!=='own'&&aiAttempted)||aiInFlight||aiAttempted;$('#ai').textContent=aiAttempted?'AI answer locked':'Let the AI try';
     $('#next').disabled=!R.done;
   }else if(!uiBusy){
     $('#go').disabled=true;$('#giveup').disabled=true;$('#hint').disabled=true;$('#ai').disabled=true;$('#next').disabled=true;
@@ -62,12 +62,13 @@ $('#ai').onclick=async()=>{
   const round=R;if(!round||(round.done&&round.mode!=='own')||aiInFlight||aiAttempted)return;
   aiInFlight=true;aiAttempted=true;busy(true,'The AI seeker is studying the picture…');
   try{
-    const png=await toPng(round.svg),out=await chat($(round.mode=='own'?'#seeker2':'#seeker').value,[{role:'user',content:[{type:'text',text:SEEK},{type:'image_url',image_url:{url:png}}]}],4000,90000);
+    const png=await toPng(round.svg),out=await chat($(round.mode=='own'?'#seeker2':'#seeker').value,[{role:'user',content:[{type:'text',text:buildSeekPrompt(round,{retry:!!round.aiHistory?.length})},{type:'image_url',image_url:{url:png}}]}],4000,90000);
     if(round!==R)return;
-    const g=(out.match(/MESSAGE:\s*(.*)/i)||[,'NONE'])[1].trim(),mt=(out.match(/METHOD:\s*(.*)/i)||[,'(none given)'])[1].trim(),s=sim(g,round.secret);
-    round.ai={guess:g,method:mt,s,ok:s>=.9};
+    const gm=out.match(/^MESSAGE:\s*(.*)$/im);if(!gm)throw Error('The model returned no valid MESSAGE line. Try again or select another vision model.');
+    const g=gm[1].trim(),mt=(out.match(/^METHOD:\s*(.*)$/im)||[,'(none given)'])[1].trim(),s=sim(g,round.secret);
+    round.ai={guess:g,method:mt,s,ok:s>=.9};round.aiHistory=round.aiHistory||[];round.aiHistory.push({...round.ai,model:$(round.mode=='own'?'#seeker2':'#seeker').value,at:Date.now()});
     if(round.mode=='duel'||round.mode=='own'){T.an++;if(round.ai.ok)T.ai++;const k=(round.mode=='own'?'your '+round.sname:'hider '+round.hider)+' → '+$(round.mode=='own'?'#seeker2':'#seeker').value,v=(T.s=T.s||{})[k]=T.s[k]||{n:0,ok:0};v.n++;if(round.ai.ok)v.ok++;save();score()}
-    if(round.done){$('#res').innerHTML+=aiLine();say('')}else say('The AI has locked in an answer. Finish your round to see it.');
+    if(round.done){$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();if(g.toUpperCase()==='NONE'||s<.9){aiAttempted=false;say('The AI could not decode this image. You can retry or choose another vision model.','bad')}else say('The AI recovered the message.')}else say('The AI has locked in an answer. Finish your round to see it.');
   }catch(e){if(round===R){aiAttempted=false;say(e.message,'bad')}}
   finally{aiInFlight=false;busy(false)}
 };
