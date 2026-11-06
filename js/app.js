@@ -1,7 +1,7 @@
 
 import { TRAIN, annotate } from './ciphers.js';
 import { uri, toRaster, toPng, clean, utf8Base64, hasSecretLeak } from './security.js';
-import { createChat, HIDE, SEEK, buildSeekPrompt } from './api.js';
+import { createChat, HIDE, buildSeekPrompt } from './api.js';
 import { loadState, saveState, createProgression } from './state.js';
 import { runSelfTest } from './selftest.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
