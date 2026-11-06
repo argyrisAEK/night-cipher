@@ -82,6 +82,6 @@ The application is static; no server-side API route is required.
 
 The App Key is a public OAuth client identifier, not an API credential. The user-authorized temporary secret key is read from `polli-connect.apiKey` and sent as a Bearer token.
 
-The Connect widget requests both `text` and `image` model categories because the seeker and stealth judge submit PNG images to vision-capable chat models. Register the exact deployed URL (for example, `https://night-cipher.vercel.app/`) as a Redirect URI for the App Key.
+The Connect widget requests the `text` model category. Vision-capable chat models are text models that advertise `image` in `input_modalities`; the app filters the catalog accordingly. The separate `image` category is for image-generation models and is not required for these chat-completion vision requests. Register the exact deployed URL (for example, `https://night-cipher.vercel.app/`) as a Redirect URI for the App Key.
 
 Do not commit a user `sk_` key. The existing `nc` LocalStorage key and game progression schema are retained.
