@@ -171,8 +171,10 @@ $('#res').innerHTML=`<b>Your puzzle: “${esc(w)}” hidden with ${esc(nm)}.</b>
 /* ---------- tabs & models ---------- */
 function train(i){const t=TRAIN[i],w=DW[hash32('training-word-'+i+'-'+localDay())%DW.length],tier=i<3?'Easy':i<7?'Medium':'Hard';$('#duel').hidden=true;start({mode:'train',schemeIdx:i,difficulty:tier,secret:w,svg:t.g(w,hash32('training-art-'+i+'-'+localDay())),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});say(`Level ${i+1} · ${tier}. Find the hidden message. You have 3 tries.`)}
 const tabs=$('#tabs');
+function learn(){const lv=[...tabs.children].filter(x=>x.dataset.kind==='training'),i=Math.max(0,TRAIN.findIndex((_,k)=>!(T.levels&&T.levels[k])));lv[i].click()}
 const tabDefs=[
   ['📅 Daily',daily,'daily'],
+  ['🎓 Learn',learn,'learn'],
   ...TRAIN.map((t,i)=>['🎓 Level '+(i+1)+(T.levels&&T.levels[i]?' ✓':''),()=>train(i),'training']),
   ['⚔ Duel vs AI (Pollen)',()=>{$('#duel').hidden=false;$('#game').hidden=!(R&&R.mode=='duel');say('Choose a message and models, then hide it.')},'duel'],
   ['🕵 You hide, AI seeks',()=>{$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own']
@@ -185,8 +187,8 @@ tabDefs.forEach(([label,fn,kind])=>{
     [...tabs.children].forEach(x=>x.classList.remove('on'));
     b.classList.add('on');
     $('#duel').hidden=$('#own').hidden=true;
-    const hideTraining=kind==='daily';
-    [...tabs.children].forEach(x=>{if(x.dataset.kind==='training')x.style.display=hideTraining?'none':''});
+    const inLearn=kind==='training'||kind==='learn';
+    [...tabs.children].forEach(x=>{if(x.dataset.kind==='training')x.style.display=inLearn?'':'none';if(x.dataset.kind==='learn')x.classList.toggle('on',inLearn)});
     fn();
   };
   tabs.append(b);
