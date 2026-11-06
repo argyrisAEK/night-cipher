@@ -21,7 +21,7 @@
 <label>Seeker model (sees only a PNG, cannot run code)</label><select id="seeker"></select>
 <label style="display:flex;align-items:center;gap:6px;text-transform:none"><input type="checkbox" id="judge" style="width:auto;margin:0"> Stealth judge — a second AI rates how innocent the picture looks (+1 call, your Pollen)</label>
 <label>Judge model (needs vision)</label><select id="judgeModel"></select>
-<small>Seeker and judge list only vision-capable models (<code>max_reference_images &gt; 0</code>). Premium models cost more Pollen per round. Your key's budget caps the spending.</small>
+<small>Seeker and judge list models whose catalog metadata confirms image input. The Connect authorization includes both text and image model categories. Premium models cost more Pollen per round. Your key's budget caps the spending.</small>
 <p><button id="hide" class="pri" style="width:100%">Hide the message</button></p>
 </div>
 <div id="own" hidden><label>Your word (letters A–Z, up to 10)</label><input id="omsg" maxlength="10" value="LANTERN"><label>Hiding scheme</label><select id="osch"></select><label>Seeker model (vision-capable only)</label><select id="seeker2"></select><small>You pick the code, a vision model tries to read it from a PNG. Which schemes can it crack?</small><p><button id="ohide" class="pri" style="width:100%">Challenge the AI</button></p></div>
