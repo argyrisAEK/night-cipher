@@ -68,7 +68,7 @@ $('#ai').onclick=async()=>{
     const g=gm[1].trim(),mt=(out.match(/^METHOD:\s*(.*)$/im)||[,'(none given)'])[1].trim(),s=sim(g,round.secret);
     round.ai={guess:g,method:mt,s,ok:s>=.9};round.aiHistory=round.aiHistory||[];round.aiHistory.push({...round.ai,model:$(round.mode=='own'?'#seeker2':'#seeker').value,at:Date.now()});
     if(round.mode=='duel'||round.mode=='own'){T.an++;if(round.ai.ok)T.ai++;const k=(round.mode=='own'?'your '+round.sname:'hider '+round.hider)+' → '+$(round.mode=='own'?'#seeker2':'#seeker').value,v=(T.s=T.s||{})[k]=T.s[k]||{n:0,ok:0};v.n++;if(round.ai.ok)v.ok++;save();score()}
-    if(round.done){$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();if(g.toUpperCase()==='NONE'||s<.9){aiAttempted=false;say('The AI could not decode this image. You can retry or choose another vision model.','bad')}else say('The AI recovered the message.')}else say('The AI has locked in an answer. Finish your round to see it.');
+    if(g.toUpperCase()==='NONE'||s<.9){aiAttempted=false;if(round.done)$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say('The AI could not decode this image. You can retry or choose another vision model.','bad')}else if(round.done){$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say('The AI recovered the message.')}else say('The AI has locked in an answer. Finish your round to see it.');
   }catch(e){if(round===R){aiAttempted=false;say(e.message,'bad')}}
   finally{aiInFlight=false;busy(false)}
 };
@@ -94,7 +94,7 @@ $('#robustness').onclick=async()=>{
       try{
         const image=await toRaster(round.svg,variant.mime,variant.quality);
         row.imageKB=Math.round((image.length- image.indexOf(',')-1)*.75/1024*10)/10;
-        const out=await chat(model,[{role:'user',content:[{type:'text',text:SEEK},{type:'image_url',image_url:{url:image}}]}],4000,90000);
+        const out=await chat(model,[{role:'user',content:[{type:'text',text:buildSeekPrompt(round)},{type:'image_url',image_url:{url:image}}]}],4000,90000);
         const g=(out.match(/MESSAGE:\s*(.*)/i)||[,'NONE'])[1].trim();
         row.guess=g;row.method=(out.match(/METHOD:\s*(.*)/i)||[,''])[1].trim();row.s=sim(g,round.secret);row.ok=row.s>=.9;row.tokens=tok-before;
       }catch(e){row.error=e.message;row.tokens=tok-before}
