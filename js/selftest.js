@@ -39,6 +39,12 @@ export async function runSelfTest(ctx){
     t('SVG sanitizer strips unsafe attributes/elements',!/script|onload|ignored/.test(safe)&&/viewBox/.test(safe),safe.slice(0,100));
     let rejected=false;try{clean('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><animate attributeName="x"/></svg>')}catch{rejected=true}
     t('SVG sanitizer rejects unsupported active content',rejected);
+    const referenced=clean('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><defs><rect id="shape" width="5" height="5" fill="#123"/></defs><use href="#shape" style="fill:#456;stroke-width:2;position:fixed;"/></svg>');
+    t('SVG sanitizer preserves safe local use references and allowlisted CSS',/<use[^>]*href="#shape"/.test(referenced)&&/fill:#456/.test(referenced)&&!/position/.test(referenced));
+    const external=clean('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><use href="https://example.com/a.svg#x"/></svg>');
+    t('SVG sanitizer strips external use references',!/<use[^>]*href=/.test(external));
+    let malformed=false;try{clean('<svg viewBox="0 0 10 10"><g></svg>')}catch(e){malformed=/malformed SVG\\/XML/.test(e.message)}
+    t('SVG sanitizer reports malformed XML before namespace repair',malformed);
     const leaked='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text>SECRET WORD</text></svg>';
     t('Leakage detector catches visible text',hasSecretLeak(leaked,'SECRET WORD'));
     t('Leakage detector catches split text nodes',hasSecretLeak('<svg xmlns="http://www.w3.org/2000/svg"><text>SEC</text><text>RET</text></svg>','SECRET'));
