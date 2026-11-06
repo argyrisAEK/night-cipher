@@ -54,3 +54,34 @@ The self-test module is included as a regression-test foundation; the current UI
 ## Current scope
 
 The UI currently includes training levels, a daily cipher, AI-vs-human hiding, and a user-created cipher challenge. The modular split keeps API transport, state/progression, cipher definitions, and SVG security logic separate.
+
+
+## Development and verification
+
+```bash
+npm install
+npm run dev
+npm run build
+npx playwright install chromium
+npm test
+```
+
+The Playwright regression suite checks the game shell and BYOP vision scope, the Bloom petal-count encoding, guided versus blind seeker prompts, and backward compatibility with the existing `nc` LocalStorage record.
+
+## Vercel
+
+- Framework preset: **Vite**
+- Build command: `npm run build`
+- Output directory: `dist`
+- Install command: `npm install`
+- Root directory: repository root
+
+The application is static; no server-side API route is required.
+
+## Pollinations BYOP
+
+The App Key is a public OAuth client identifier, not an API credential. The user-authorized temporary secret key is read from `polli-connect.apiKey` and sent as a Bearer token.
+
+The Connect widget requests both `text` and `image` model categories because the seeker and stealth judge submit PNG images to vision-capable chat models. Register the exact deployed URL (for example, `https://night-cipher.vercel.app/`) as a Redirect URI for the App Key.
+
+Do not commit a user `sk_` key. The existing `nc` LocalStorage key and game progression schema are retained.
