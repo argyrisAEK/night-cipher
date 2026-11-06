@@ -1,5 +1,6 @@
 const API='https://gen.pollinations.ai/v1';
 
+
 export function createChat({getConnection,getTokenCount,setTokenCount,onUsage}){
   return async function chat(model,messages,max,timeoutMs=90000){
     const connection=getConnection();
