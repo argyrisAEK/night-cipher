@@ -23,7 +23,7 @@ const clean=raw=>{
   const safeStyle=value=>value.split(';').map(part=>{
     const at=part.indexOf(':');if(at<1)return '';
     const prop=part.slice(0,at).trim().toLowerCase(),v=part.slice(at+1).trim();
-    if(!styleProps.has(prop)||!v||v.length>1000||/[\\{}<>@]/.test(v)||/(?:javascript:|data:|https?:|expression\s*\(|var\s*\(|@import)/i.test(v))return '';
+    if(!styleProps.has(prop)||!v||v.length>1000||/[\{}<>@]/.test(v)||/(?:javascript:|data:|https?:|expression\s*\(|var\s*\(|@import)/i.test(v))return '';
     if(/url\s*\(/i.test(v)&&!/^url\(\s*#[\w.-]+\s*\)$/i.test(v))return '';
     return prop+':'+v;
   }).filter(Boolean).join(';');
