@@ -27,21 +27,25 @@ export function createChat({getConnection,getTokenCount,setTokenCount,onUsage}){
       setTokenCount(getTokenCount()+(j.usage?.total_tokens||0));
       onUsage();
       const choice=j.choices?.[0],content=choice?.message?.content;
-      if(content==null)throw Error('The API returned no message content.');
-      const text=Array.isArray(content)
-        ?content.map(part=>part.text||'').join('')
-        :String(content);
+      const text=content==null
+        ?''
+        :Array.isArray(content)
+          ?content.map(part=>part.text||'').join('')
+          :String(content);
 
-      // Give a useful, privacy-conscious diagnostic for the Hide-message call:
-      // report completion metadata without echoing the secret or model output.
+      // A failed hider response is useful to diagnose. The raw API response is
+      // logged only in the user's local console, and may contain their secret.
       const isHideRequest=messages.some(m=>
         typeof m.content==='string'&&m.content.includes('as ONE SVG (viewBox 0 0 800 500)')
       );
       if(isHideRequest&&!/<svg[\s\S]*?<\/svg>/i.test(text)){
-        const finishReason=choice.finish_reason||'not provided';
+        console.warn('[Night Cipher] Hider API response JSON (may contain your secret):',j);
+        const finishReason=choice?.finish_reason||'not provided';
         const completionTokens=j.usage?.completion_tokens??'not provided';
-        throw Error(`No complete SVG came back (finish_reason: ${finishReason}; completion_tokens: ${completionTokens}). To inspect the exact model output, open browser DevTools → Network → chat/completions → Response. The response is not copied into the page because it may contain your secret.`);
+        const responseModel=j.model||model;
+        throw Error(`No complete SVG came back (model: ${responseModel}; finish_reason: ${finishReason}; completion_tokens: ${completionTokens}). The full response was logged in the browser console. To inspect it, open DevTools → Console. It may contain your secret message.`);
       }
+      if(content==null)throw Error('The API returned no message content.');
       return text;
     }catch(e){
       throw e.name=='AbortError'
