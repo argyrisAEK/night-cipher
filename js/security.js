@@ -67,19 +67,31 @@ const utf8Base64=s=>{
   for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));
   return btoa(binary);
 };
-const hasSecretLeak=(svg,secret)=>{
-  const d=new DOMParser().parseFromString(svg,'image/svg+xml');if(d.querySelector('parsererror'))return true;
-  const values=[d.documentElement.textContent||'',...([...d.querySelectorAll('*')].flatMap(e=>[...e.attributes].filter(a=>a.name!=='xmlns'&&!a.name.startsWith('xmlns:')).map(a=>a.value)))];
-  const walker=d.createTreeWalker(d.documentElement,NodeFilter.SHOW_COMMENT),comments=[];
-  while(walker.nextNode())comments.push(walker.currentNode.nodeValue||'');
-  const raw=[...values,...comments].join(' '),hay=norm(raw);
+const hasSecretLeak=(input,secret)=>{
+  const source=String(input??''),isSvg=/^\\s*<svg(?:\\s|>)/i.test(source);
+  let raw=source,values=[];
+  if(isSvg){
+    const d=new DOMParser().parseFromString(source,'image/svg+xml');
+    if(d.querySelector('parsererror'))return true;
+    values=[d.documentElement.textContent||'',...([...d.querySelectorAll('*')].flatMap(e=>[...e.attributes].filter(a=>a.name!=='xmlns'&&!a.name.startsWith('xmlns:')).map(a=>a.value)))];
+    const walker=d.createTreeWalker(d.documentElement,NodeFilter.SHOW_COMMENT),comments=[];
+    while(walker.nextNode())comments.push(walker.currentNode.nodeValue||'');
+    raw=[...values,...comments].join(' ');
+  }
   const stopwords=new Set(['THE','AND','FOR','ARE','BUT','NOT','YOU','ALL','CAN','HER','WAS','ONE','OUR','OUT','DAY','GET','HAS','HIM','HIS','HOW','ITS','NEW','NOW','OLD','SEE','TWO','WAY','WHO','BOY','DID','SHE','USE','THIS','THAT','WITH','FROM','HAVE','WILL','YOUR','THEM','THEN','THAN','WHEN','WHAT','HERE','BEEN','WERE','SOME','MORE','JUST','LIKE','OVER','ONLY','INTO','BACK','DOWN','EACH']);
-  const candidates=[secret,...secret.split(/\s+/).filter(w=>{const n=norm(w);return n.length>=4&&!stopwords.has(n)})];
-  for(const c of candidates){
-    const n=norm(c);if(n.length>=3&&hay.includes(n))return true;
+  const words=x=>String(x).toUpperCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').match(/[\\p{L}\\p{N}]+/gu)||[];
+  const secretWords=words(secret),hayWords=words(raw),haySet=new Set(hayWords);
+  const phrase=secretWords.join(' '),hayPhrase=words(raw).join(' ');
+  if(phrase.length>=3&&(' '+hayPhrase+' ').includes(' '+phrase+' '))return true;
+  for(const word of secretWords){
+    if(word.length>=4&&!stopwords.has(word)&&haySet.has(word))return true;
+  }
+  // Also detect literal transport encodings, but only as complete tokens.
+  const rawLower=raw.toLowerCase(),tokens=rawLower.split(/[^a-z0-9%+/_=-]+/i);
+  for(const word of secretWords.filter(w=>w.length>=4&&!stopwords.has(w))){
     try{
-      const encoded=encodeURIComponent(c),base64=utf8Base64(c),hex=[...new TextEncoder().encode(c)].map(x=>x.toString(16).padStart(2,'0')).join('');
-      if((encoded.length>=6&&raw.includes(encoded))||(base64.length>=6&&raw.includes(base64))||(hex.length>=6&&raw.toLowerCase().includes(hex)))return true;
+      const encoded=encodeURIComponent(word),base64=utf8Base64(word),hex=[...new TextEncoder().encode(word)].map(x=>x.toString(16).padStart(2,'0')).join('');
+      if(tokens.includes(encoded.toLowerCase())||tokens.includes(base64.toLowerCase())||tokens.includes(hex))return true;
     }catch{}
   }
   return false;
