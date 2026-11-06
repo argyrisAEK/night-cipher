@@ -47,13 +47,35 @@ export function createChat({getConnection,getTokenCount,setTokenCount,onUsage}){
   }
 }
 
-const HIDE=(msg,easy)=>`Draw an ordinary-looking, attractive scene as ONE SVG (viewBox 0 0 800 500) that secretly encodes this message, so that another model that sees only the rendered picture can recover it:
+const HIDE=(msg,easy)=>\`Create a polished, atmospheric visual-cryptography puzzle for NIGHT CIPHER. You are an expert SVG illustrator and puzzle designer, not a chart or worksheet generator.
 
-${msg}
+SECRET MESSAGE (encode visually; never print it):
+\${msg}
 
-Rules: the message, or any of its words or letters, must NOT appear as text, labels, ids, comments or metadata. Choose ONE simple, consistent visual encoding that a vision model can recover from the rendered image alone. Prefer an unambiguous A=1…Z=26 count/geometry mapping, binary pattern, or Morse. Arrange exactly one clearly separated group per letter, in left-to-right reading order; do not create a group for spaces, and use a noticeably larger gap between words. If you encode by counting (for example, flower petals), every counted item must be individually visible, evenly sized and spaced, non-overlapping, and large enough to count; the central hub and decorative scene details must not be mistaken for counted items. Keep all groups well separated, avoid perspective/occlusion/tiny details, and do not add extra objects that resemble code symbols. Verify that every group encodes exactly one character and that the whole message fits the canvas. ${easy?'Include a subtle visual key (a ruler, legend or reference marks) so a careful viewer can work out how to read it.':'Do not include any legend; the scheme must be inferable from the picture alone.'}
+ART DIRECTION — essential:
+- Match Night Cipher's signature nocturnal identity: deep midnight navy, indigo and muted plum; restrained teal is allowed; use luminous antique gold/amber for the encoded elements.
+- Create a cinematic, mysterious, premium illustration with layered depth, elegant composition, subtle gradients, soft glow and fine decorative detail. Use a cohesive scene such as a moonlit observatory, enigmatic night city, ancient astronomical mechanism, bioluminescent garden, celestial archive or mysterious machine. Choose a scene that naturally suits the encoding.
+- The result must look like finished atmospheric key art from a polished puzzle game — never like a school worksheet, infographic, spreadsheet, generic data visualization or plain instructional diagram.
+- Avoid bright daytime skies, pastel cartoon houses, childish clip-art, flat empty backgrounds and crude rows of identical boxes. Do not default to houses/windows; vary the scene and visual metaphor.
+- Keep the encoded symbols visually prominent and countable. Atmosphere is secondary: decorative detail must never obscure, imitate or be confused with encoded elements.
 
-Reply with the raw <svg>...</svg> first, then one final line starting with SCHEME: that honestly says how you hid it.`;
+ENCODING AND COMPOSITION:
+- Choose ONE reliable visual encoding that a vision model can decode from the rendered image alone: preferably A=1…Z=26 counts, five-bit binary, Morse, geometric orientation or another unambiguous visual mapping.
+- Use exactly one clearly separated symbol/group per letter, in left-to-right reading order. Do not create a group for spaces; use a noticeably larger gap between words.
+- Keep all groups large, evenly spaced, non-overlapping and fully visible. If counting objects, every counted object must be individually distinguishable; never hide, overlap or crop them. Avoid perspective that changes apparent counts or shapes.
+- Integrate the encoding naturally into the chosen scene (for example, lit observatory apertures, petals on luminous night flowers, stars, facets in an ancient mechanism), while preserving consistent geometry and spacing.
+- If using binary, show the same fixed number of positions for every letter and make the two states unmistakable. If using counts, make the count easy to verify. Do not mix encoding systems.
+- \${easy?'Include a small, elegant visual key that can be inferred without words (for example, a subtle sequence of reference marks or a clearly ordered set of states), integrated into the scene and visually distinct from the message groups.':'Do not include a legend, key, alphabet, numbers or labels; the rule must be inferable from the visual pattern alone.'}
+- Use viewBox="0 0 800 500". Compose for the full canvas with comfortable margins and strong visual hierarchy.
+
+SVG AND OUTPUT RULES:
+- Return one self-contained SVG using only vector shapes and gradients. No external images, fonts, links, scripts or foreignObject.
+- Do not put the secret, any complete secret word, or its letters as readable text anywhere in the SVG — including text nodes, labels, ids, comments, titles, descriptions or metadata. Use neutral ids only.
+- No visible words, alphabet characters, numbers or explanatory labels in the artwork.
+- Keep the SVG valid XML, with a single <svg> root, and use standard SVG elements and attributes.
+- Before responding, verify that every group encodes exactly one character, the sequence decodes to the supplied message, word gaps are clear, and every symbol is visible and countable.
+
+Output the raw <svg>...</svg> first, followed by one final line beginning exactly with SCHEME: that explains the visual encoding without revealing the secret message.\`;
 
 const SEEK='This picture may hide a secret message encoded in its visual structure. Inspect repeated objects, counts, geometry, colours, positions, and grouping. You cannot run code, so reason from visible evidence. First divide the scene into repeated groups in reading order, usually one group per letter. Systematically test counts from 1 to 26 as A=1 through Z=26. If you see flowers, count each visible petal individually and do not count the flower centre; check whether each flower is one letter. Also inspect polygon sides, dots, windows, bars, orientations, colour sequences, and Morse-like marks. Ignore decorative background details that are not repeated consistently. Verify that one rule explains every group before answering. Do not answer NONE merely because the first pattern is unclear. Prefer a complete, internally consistent decoding; use NONE only if no defensible rule explains the entire image. Reply in exactly two lines:\nMESSAGE: <recovered text, or NONE>\nMETHOD: <one sentence explaining the visual evidence and mapping>';
 
