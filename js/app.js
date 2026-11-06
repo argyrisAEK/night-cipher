@@ -59,7 +59,7 @@ $('#revealHow').onclick=async()=>{
 };
 $('#save').onclick=async()=>{if(!R)return;const a=document.createElement('a');a.href=await toPng(R.svg);a.download='night-cipher.png';a.click()};
 $('#ai').onclick=async()=>{
-  const round=R;if(!round||(round.done&&round.mode!=='own')||aiInFlight||aiAttempted)return;
+  const round=R;if(!round||(round.done&&round.mode!=='own'&&aiAttempted)||aiInFlight||aiAttempted)return;
   aiInFlight=true;aiAttempted=true;busy(true,'The AI seeker is studying the picture…');
   try{
     const png=await toPng(round.svg),out=await chat($(round.mode=='own'?'#seeker2':'#seeker').value,[{role:'user',content:[{type:'text',text:buildSeekPrompt(round,{retry:!!round.aiHistory?.length})},{type:'image_url',image_url:{url:png}}]}],4000,90000);
