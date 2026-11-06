@@ -52,6 +52,9 @@ export async function runSelfTest(ctx){
     t('Leakage detector ignores common short words in attributes',!hasSecretLeak('<svg xmlns="http://www.w3.org/2000/svg"><g id="the-path" class="this-route"/></svg>','THE WAY'));
     t('Leakage detector catches UTF-8 Base64 text',hasSecretLeak(`<svg xmlns="http://www.w3.org/2000/svg"><g data-code="${utf8Base64('ΜΕΛΙ')}"/></svg>`,'ΜΕΛΙ'));
     t('Leakage detector ignores SVG tag-name false positives',!hasSecretLeak('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#123"/></svg>','SVG'));
+    t('Leakage detector accepts plain-text SCHEME explanations',!hasSecretLeak('One flower per letter; petals encode A=1 through Z=26.','THE BEES KNOW THE WAY'));
+    t('Leakage detector catches a complete secret phrase in plain text',hasSecretLeak('The decoded message is THE BEES KNOW THE WAY.','THE BEES KNOW THE WAY'));
+    t('Leakage detector avoids substring false positives in prose',!hasSecretLeak('Use a honeycomb-like arrangement of petals.','HONEY'));
     for(let i=0;i<TRAIN.length;i++){const q=TRAIN[i],a=annotate(q.g(q.m),i);t(`Reveal ${q.n}: highlights the encoded letters`,DEC[i](P(a))===q.m&&[...q.m].every(c=>a.includes('>'+c+'<')))}
     if(conn){
       Object.defineProperty(conn,'apiKey',{value:'sk_test_only',configurable:true});
