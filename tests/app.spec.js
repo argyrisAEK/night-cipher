@@ -163,8 +163,8 @@ test('Duel vs AI switches to a hider view and reveals the AI seeker result immed
     const body = route.request().postDataJSON();
     const isHider = body.messages.some(m => JSON.stringify(m).includes('SECRET MESSAGE'));
     const content = isHider
-      ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="#ffd166"/></svg>\\nSCHEME: The circle contains a sequence of visual marks.'
-      : 'MESSAGE: LANTERN\\nMETHOD: Count the marks in the central symbol.';
+      ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="#ffd166"/></svg>\nSCHEME: The circle contains a sequence of visual marks.'
+      : 'MESSAGE: LANTERN\nMETHOD: Count the marks in the central symbol.';
     await route.fulfill({ json: { choices: [{ message: { content } }], usage: { total_tokens: 12 } } });
   });
   await page.reload();
