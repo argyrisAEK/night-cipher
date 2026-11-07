@@ -19,7 +19,7 @@ const renderDiagnostics=()=>{
   if(!diagnostics){root.innerHTML='<small>No AI output captured yet. Start an AI vs AI Duel to inspect the Hider and Seeker responses.</small>';return}
   const d=diagnostics,h=d.hider||{},q=d.seeker||{},v=h.validation||{};
   const report=JSON.stringify({roundId:d.roundId,timestamp:d.timestamp,encoding:d.encoding,
-    hider:{model:h.model,prompt:h.prompt,rawResponse:h.rawResponse,svg:h.svg,durationMs:h.durationMs,validation:v},
+    hider:{model:h.model,responseModel:h.responseModel,finishReason:h.finishReason,completionTokens:h.completionTokens,prompt:h.prompt,rawResponse:h.rawResponse,svg:h.svg,durationMs:h.durationMs,validation:v},
     seeker:q?{model:q.model,prompt:q.prompt,rawResponse:q.rawResponse,decodedMessage:q.decodedMessage,durationMs:q.durationMs,tokens:q.tokens,error:q.error}:null,
     result:d.result,errors:d.errors||[]},null,2);
   root.innerHTML=\`<div class="diag-summary">
