@@ -13,7 +13,7 @@
 <nav id="tabs"></nav>
 <nav id="levels" hidden aria-label="Training levels"></nav>
 <main>
-<section class="card"><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div></section>
+<section class="card"><p id="intro" class="intro"></p><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div></section>
 <aside class="card">
   
 <div id="duel" hidden>
@@ -30,7 +30,7 @@
 </div>
 <div id="own" hidden><label>Your word (letters A–Z, up to 10)</label><input id="omsg" maxlength="10" value="LANTERN"><label>Hiding scheme</label><select id="osch"></select><label>Seeker model (vision-capable only)</label><select id="seeker2"></select><small>You pick the code, a vision model tries to read it from a PNG. Which schemes can it crack?</small><p><button id="ohide" class="pri" style="width:100%">Challenge the AI</button></p></div>
 <div id="game" hidden>
-<label>Your guess</label><input id="guess" autocomplete="off" placeholder="What is the hidden message?">
+<label>Your guess <span id="tries" class="tries"></span></label><input id="guess" autocomplete="off" placeholder="What is the hidden message?">
 <div class="row"><button id="go" class="pri">Guess</button><button id="hint">Hint (−20)</button></div>
 <ol id="hints"></ol>
 <div class="row" style="margin-top:10px"><button id="ai">Let the AI try 💰</button><button id="giveup">Give up</button></div>
