@@ -1,4 +1,3 @@
-
 import { TRAIN, annotate } from './ciphers.js';
 import { uri, toRaster, toPng, clean, utf8Base64, hasSecretLeak } from './security.js';
 import { createChat, HIDE, buildSeekPrompt } from './api.js';
@@ -113,10 +112,11 @@ $('#robustness').onclick=async()=>{
 };
 
 const MSGS=['MEET ME AT MIDNIGHT','THE BEES KNOW THE WAY','HONEY IS A MAP','TRUST THE QUIET STARS','OPEN THE BLUE DOOR','THE HONEY IS A MAP'];
-const rnd=()=>{$('#msg').value=MSGS[Math.random()*MSGS.length|0]};$('#dice').onclick=rnd;rnd();
+const updCount=()=>{const m=$('#msg');$('#msgCount').textContent=`${m.value.length} / ${m.maxLength}`};
+const rnd=()=>{$('#msg').value=MSGS[Math.random()*MSGS.length|0];updCount()};$('#dice').onclick=rnd;$('#msg').addEventListener('input',updCount);rnd();
 $('#hide').onclick=async()=>{
   if(hideInFlight)return;
-  const secret=$('#msg').value.trim(),ns=norm(secret);if(!/^[A-Z ]{3,60}$/i.test(secret)||ns.length<3)return say('Use 3–60 characters with at least 3 letters: English letters A–Z and spaces only. Digits and Greek characters are not supported by the current visual encodings.','bad');
+  const secret=$('#msg').value.trim(),ns=norm(secret);if(!/^[A-Z ]{3,24}$/i.test(secret)||ns.length<3)return say('Use 3–24 characters with at least 3 letters: English letters A–Z and spaces only. Digits and Greek characters are not supported by the current visual encodings.','bad');
   if(!conn||!conn.apiKey)return say('Connect your Pollinations account first (button, top right).','bad');
   hideInFlight=true;busy(true,'AI Hider is creating the image… this may take a minute or two.');
   if(!$('#imgbox img'))$('#imgbox').textContent='🎨 AI Hider is creating an image containing your chosen message…';
