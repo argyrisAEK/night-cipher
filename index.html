@@ -38,15 +38,14 @@
 <label>Secret message (3–60 characters; English letters A–Z and spaces only)</label>
 <div class="row"><input id="msg" maxlength="60"><button id="dice" title="Random message" style="flex:0">🎲</button></div>
 <label>Difficulty</label><select id="diff"><option value="0">Paper mode: no legend, scheme is a mystery</option><option value="1">Friendly: hider adds a visual key</option></select>
-<details class="adv"><summary>⚙ Advanced · AI models &amp; stealth judge</summary><label>Hider model (draws the SVG)</label><select id="hider"></select>
-<label>Seeker model (sees only a PNG, cannot run code)</label><select id="seeker"></select>
+<details class="adv" open><summary>⚙ Advanced · AI models &amp; stealth judge</summary><label title="Your key’s budget caps the spending.">Hider model (draws the SVG)</label><select id="hider" title="Your key’s budget caps the spending."></select>
+<label title="Your key’s budget caps the spending.">Seeker model (sees only a PNG, cannot run code)</label><select id="seeker" title="Your key’s budget caps the spending."></select>
 <label style="display:flex;align-items:center;gap:6px;text-transform:none"><input type="checkbox" id="judge" style="width:auto;margin:0"> Stealth judge — a second AI rates how innocent the picture looks 💰 (+1 call)</label>
-<label>Judge model (needs vision)</label><select id="judgeModel"></select>
-<small>Seeker and judge list models whose catalog metadata confirms image input. Vision-capable chat models are still text models; the app filters them by the catalog's image-input metadata. Premium models cost more Pollen per round. Your key's budget caps the spending.</small>
+<label title="Your key’s budget caps the spending.">Judge model (needs vision)</label><select id="judgeModel" title="Your key’s budget caps the spending."></select>
 </details>
 <p><button id="hide" class="pri" style="width:100%">Hide the message 💰</button></p>
 </div>
-<div id="own" hidden><label>Your word (letters A–Z, up to 10)</label><input id="omsg" maxlength="10" value="LANTERN"><label>Hiding scheme</label><select id="osch"></select><label>Seeker model (vision-capable only)</label><select id="seeker2"></select><small>You pick the code, a vision model tries to read it from a PNG. Which schemes can it crack?</small><p><button id="ohide" class="pri" style="width:100%">Challenge the AI 💰</button></p></div>
+<div id="own" hidden><label>Your word (letters A–Z, up to 10)</label><input id="omsg" maxlength="10" value="LANTERN"><label>Hiding scheme</label><select id="osch"></select><label title="Your key’s budget caps the spending.">Seeker model (vision-capable only)</label><select id="seeker2" title="Your key’s budget caps the spending."></select><small>You pick the code, a vision model tries to read it from a PNG. Which schemes can it crack?</small><p><button id="ohide" class="pri" style="width:100%">Challenge the AI 💰</button></p></div>
 <div id="game" hidden>
 <label>Your guess <span id="tries" class="tries"></span></label><input id="guess" autocomplete="off" placeholder="What is the hidden message?">
 <div class="row"><button id="go" class="pri">Guess</button><button id="hint">Hint (−20)</button></div>
