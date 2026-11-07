@@ -2,7 +2,7 @@ const API='https://gen.pollinations.ai/v1';
 
 
 export function createChat({getConnection,getTokenCount,setTokenCount,onUsage}){
-  return async function chat(model,messages,max,timeoutMs=90000,{requestType='chat'}={}){
+  return async function chat(model,messages,max,timeoutMs=90000,{requestType='chat',onRawResponse}={}){
     const connection=getConnection();
     const key=connection&&connection.apiKey;
     if(!key)throw Error('Connect your Pollinations account first (button, top right).');
@@ -31,6 +31,7 @@ export function createChat({getConnection,getTokenCount,setTokenCount,onUsage}){
       const text=content==null?'':Array.isArray(content)
         ?content.map(part=>part.text||'').join('')
         :String(content);
+      onRawResponse?.({text,model:j.model||model,finishReason:choice?.finish_reason||null,completionTokens:j.usage?.completion_tokens??null});
       if(requestType==='hider'&&!/<svg[\s\S]*?<\/svg>/i.test(text)){
         const finishReason=choice?.finish_reason||'not provided';
         const completionTokens=j.usage?.completion_tokens??'not provided';
