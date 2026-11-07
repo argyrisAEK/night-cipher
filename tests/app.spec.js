@@ -151,3 +151,36 @@ test('AI model settings are open by default, collapsible, and carry the budget t
   await page.locator('details.adv > summary').click();
   await expect(page.locator('#hider')).toBeVisible();
 });
+
+test('Duel vs AI switches to a hider view and reveals the AI seeker result immediately', async ({ page }) => {
+  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
+    json: { data: [
+      { id: 'test-hider' },
+      { id: 'test-vision-seeker', input_modalities: ['image'] }
+    ] }
+  }));
+  await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    const body = route.request().postDataJSON();
+    const isHider = body.messages.some(m => JSON.stringify(m).includes('SECRET MESSAGE'));
+    const content = isHider
+      ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="#ffd166"/></svg>\nSCHEME: The circle contains a sequence of visual marks.'
+      : 'MESSAGE: LANTERN\nMETHOD: Count the marks in the central symbol.';
+    await route.fulfill({ json: { choices: [{ message: { content } }], usage: { total_tokens: 12 } } });
+  });
+  await page.reload();
+  await page.waitForFunction(() => [...document.querySelectorAll('#hider option')].some(option => option.value === 'test-hider'));
+  await page.evaluate(() => { Object.defineProperty(document.querySelector('polli-connect'), 'apiKey', { value: 'test-key', configurable: true }); });
+  await page.locator('#tabs button', { hasText: 'Duel' }).click();
+  await page.fill('#msg', 'LANTERN');
+  await page.click('#hide');
+  await expect(page.locator('#imgbox img')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#guess')).toBeHidden();
+  await expect(page.locator('#go')).toBeHidden();
+  await expect(page.locator('#hint')).toBeHidden();
+  await expect(page.locator('#giveup')).toBeHidden();
+  await expect(page.locator('#ai')).toContainText('Ask AI seeker to decode');
+  await expect(page.locator('#revealHow')).toBeVisible();
+  await page.click('#ai');
+  await expect(page.locator('#res')).toContainText('AI seeker said: “LANTERN”', { timeout: 10000 });
+  await expect(page.locator('#status')).toContainText('recovered your secret');
+});
