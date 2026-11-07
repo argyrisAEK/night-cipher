@@ -16,7 +16,7 @@ const say=(m,c='')=>{const s=$('#status');s.textContent=m;s.className=c};
 
 /* ---------- game flow ---------- */
 let uiBusy=false,aiInFlight=false,aiAttempted=false,hideInFlight=false;
-function renderTries(){const t=$('#tries');if(!R||R.mode==='own'){t.textContent='';t.removeAttribute('aria-label');return}const left=Math.max(0,R.maxTries-R.tries);t.textContent='●'.repeat(left)+'○'.repeat(R.maxTries-left);t.setAttribute('aria-label',`${left} of ${R.maxTries} tries left`);t.title=`${left} tries left`}
+function renderTries(){const t=$('#tries');if(!R||R.mode==='own'||R.done){t.textContent='';t.removeAttribute('aria-label');return}const left=Math.max(0,R.maxTries-R.tries);t.textContent='●'.repeat(left)+'○'.repeat(R.maxTries-left);t.setAttribute('aria-label',`${left} of ${R.maxTries} tries left`);t.title=`${left} tries left`}
 function syncButtons(){
   renderTries();
   document.querySelectorAll('button').forEach(b=>{b.disabled=uiBusy});
@@ -82,7 +82,7 @@ const ROBUST_VARIANTS=[
   {id:'jpg55',label:'JPEG · quality 55%',mime:'image/jpeg',quality:.55}
 ];
 const robustnessModel=round=>$(round.mode==='own'?'#seeker2':'#seeker').value;
-const robustnessHtml=rows=>`<section class="card" style="margin-top:10px;padding:10px"><b>Image robustness results</b><small>Same SVG, same seeker model, three image encodings. Success = ≥90% normalized text similarity.</small><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:.88rem"><thead><tr><th align="left">Image</th><th align="left">AI guess</th><th>Similarity</th><th>Status</th><th>Image KB</th><th>Tokens</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.label)}</td><td>${esc(r.guess||'—')}</td><td align="center">${r.s==null?'—':Math.round(r.s*100)+'%'}</td><td align="center" class="${r.ok?'ok':'bad'}">${r.error?'Error':r.ok?'Recovered':'Missed'}</td><td align="center">${r.imageKB??'—'}</td><td align="center">${r.tokens??'—'}</td></tr>`).join('')}</tbody></table></div><small>JPEG quality is the browser canvas encoder setting, not a guaranteed file-size or perceptual-quality percentage. Results depend on model, prompt, and image content.</small></section>`;
+const robustnessHtml=rows=>`<section class="card" style="margin-top:10px;padding:10px"><b>Image robustness results</b><br><small>Same SVG, same seeker model, three image encodings. Success = ≥90% normalized text similarity.</small><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:.88rem"><thead><tr><th align="left">Image</th><th align="left">AI guess</th><th>Similarity</th><th>Status</th><th>Image KB</th><th>Tokens</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.label)}</td><td>${esc(r.guess||'—')}</td><td align="center">${r.s==null?'—':Math.round(r.s*100)+'%'}</td><td align="center" class="${r.ok?'ok':'bad'}">${r.error?'Error':r.ok?'Recovered':'Missed'}</td><td align="center">${r.imageKB??'—'}</td><td align="center">${r.tokens??'—'}</td></tr>`).join('')}</tbody></table></div><small>JPEG quality is the browser canvas encoder setting, not a guaranteed file-size or perceptual-quality percentage. Results depend on model, prompt, and image content.</small></section>`;
 $('#robustness').onclick=async()=>{
   const round=R;if(!round||robustnessInFlight||aiInFlight)return;
   if(!conn||!conn.apiKey)return say('Connect your Pollinations account first. This experiment makes 3 additional paid vision requests.','bad');
@@ -174,14 +174,15 @@ $('#res').innerHTML=`<b>Your puzzle: “${esc(w)}” hidden with ${esc(nm)}.</b>
 /* ---------- tabs & models ---------- */
 function train(i){const t=TRAIN[i],w=DW[hash32('training-word-'+i+'-'+localDay())%DW.length],tier=i<3?'Easy':i<7?'Medium':'Hard';$('#duel').hidden=true;start({mode:'train',schemeIdx:i,difficulty:tier,secret:w,svg:t.g(w,hash32('training-art-'+i+'-'+localDay())),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});say(`Level ${i+1} · ${tier}. Find the hidden message. You have 3 tries.`)}
 const tabs=$('#tabs'),levels=$('#levels'),allTabs=[];
+function stageIdle(m){$('#imgbox').textContent=m;$('#res').innerHTML='';$('#robustnessReport').innerHTML=''}
 const INTRO={daily:'Every picture hides a word. Spot the pattern, then type the word on the right. One puzzle a day, the same for everyone.',learn:'Every picture hides a word. Spot the pattern, then type it on the right. Hints cost points.',duel:'An AI hider draws your secret message into a picture. Can you and an AI seeker read it back?',own:'Choose a word and a hiding scheme, then see whether an AI seeker can read your picture.'};
 function learn(){const lv=allTabs.filter(x=>x.dataset.kind==='training'),i=Math.max(0,TRAIN.findIndex((_,k)=>!(T.levels&&T.levels[k])));lv[i].click()}
 const tabDefs=[
   ['📅 Daily',daily,'daily'],
   ['🎓 Learn',learn,'learn'],
   ...TRAIN.map((t,i)=>['🎓 Level '+(i+1)+(T.levels&&T.levels[i]?' ✓':''),()=>train(i),'training']),
-  ['⚔ Duel vs AI 💰',()=>{$('#duel').hidden=false;$('#game').hidden=!(R&&R.mode=='duel');say('Choose a message and models, then hide it.')},'duel'],
-  ['🕵 You hide, AI seeks 💰',()=>{$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own']
+  ['⚔ Duel vs AI 💰',()=>{if(!(R&&R.mode==='duel'))stageIdle('Your picture will appear here.');$('#duel').hidden=false;$('#game').hidden=!(R&&R.mode=='duel');say('Choose a message and models, then hide it.')},'duel'],
+  ['🕵 You hide, AI seeks 💰',()=>{if(!(R&&R.mode==='own'))stageIdle('Your picture will appear here.');$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own']
 ];
 tabDefs.forEach(([label,fn,kind])=>{
   const b=document.createElement('button');
