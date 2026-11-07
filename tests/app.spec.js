@@ -140,3 +140,14 @@ test('built-in self-test passes completely, including the secret-leak detector',
   await expect(page.locator('#st')).toContainText(/\b(\d+)\/\1 passed/, { timeout: 45000 });
   await expect(page.locator('#st')).not.toContainText('❌');
 });
+
+test('AI model settings are open by default, collapsible, and carry the budget tooltip', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Duel' }).click();
+  await expect(page.locator('#hider')).toBeVisible();
+  await expect(page.locator('#hider')).toHaveAttribute('title', /budget caps the spending/);
+  await expect(page.locator('details.adv')).not.toContainText('catalog metadata');
+  await page.locator('details.adv > summary').click();
+  await expect(page.locator('#hider')).toBeHidden();
+  await page.locator('details.adv > summary').click();
+  await expect(page.locator('#hider')).toBeVisible();
+});
