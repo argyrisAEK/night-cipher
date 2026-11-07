@@ -4,7 +4,8 @@ import { pickPlan, decodePlan } from '../server/encoding.mjs';
 const API='https://gen.pollinations.ai/v1/chat/completions';
 const SVG_TAGS=new Set(['svg','g','defs','rect','circle','ellipse','line','polyline','polygon','path','linearGradient','radialGradient','stop','filter','feGaussianBlur','feMerge','feMergeNode','feColorMatrix','feOffset','feBlend','feComposite','clipPath','mask']);
 const SVG_ATTRS=new Set(('xmlns viewBox width height x y x1 y1 x2 y2 cx cy r rx ry d points fill fill-opacity fill-rule stroke stroke-width stroke-opacity stroke-linecap stroke-linejoin stroke-dasharray stroke-dashoffset opacity transform id class offset stop-color stop-opacity gradientUnits gradientTransform spreadMethod fx fy fr filterUnits primitiveUnits stdDeviation result in in2 type values operator k1 k2 k3 k4 dx dy mode color-interpolation-filters clip-path clip-rule mask maskUnits maskContentUnits preserveAspectRatio').split(' '));
-const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+const send=(res,data,status=200)=>{res.statusCode=status;res.setHeader('content-type','application/json; charset=utf-8');res.setHeader('cache-control','no-store');res.end(JSON.stringify(data))};
+const readBody=async req=>{if(req.body&&typeof req.body==='object')return req.body;if(typeof req.body==='string')return JSON.parse(req.body);let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>1000000)throw Error('Request body is too large.')}return JSON.parse(raw||'{}')};
 const normalize=s=>String(s).toUpperCase().replace(/[^A-Z ]/g,' ').trim().replace(/ +/g,' ');
 const secretKey=()=>{const raw=process.env.NIGHT_CIPHER_ROUND_SECRET;if(!raw||raw.length<32)throw Error('Vercel environment variable NIGHT_CIPHER_ROUND_SECRET must contain at least 32 characters.');return createHash('sha256').update(raw).digest()};
 const seal=value=>{const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',secretKey(),iv),data=Buffer.concat([cipher.update(JSON.stringify(value),'utf8'),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),data]).toString('base64url')};
@@ -72,11 +73,11 @@ const renderOverlay=(plan,nonce)=>{
  return {markup,layout};
 };
 const makePrompt=scene=>`Create a premium, atmospheric SVG illustration for NIGHT CIPHER. Scene: ${scene}. It must look like an ordinary cinematic night landscape or place, not a puzzle worksheet, infographic, chart, or diagram. Deep midnight navy, indigo and muted plum, restrained antique-gold lighting, layered depth, subtle gradients and fine natural detail. Use viewBox="0 0 800 500". Keep the central upper/middle sky visually calm and relatively uncluttered so a few tiny distant lights can naturally belong there. Do not draw constellations, repeated groups, rows, dots, bars, symbols, letters, numbers, labels, text, legends or any encoded pattern; those will be added separately. Return only one self-contained SVG using vector shapes and gradients; no external images, fonts, links, scripts, foreignObject, text, metadata or comments.`;
-export default async function handler(req){
- if(req.method!=='POST')return json({error:'Method not allowed.'},405);
+export default async function handler(req,res){
+ if(req.method!=='POST')return send(res,{error:'Method not allowed.'},405);
  try{
-  const body=await req.json(),secret=normalize(body.secret),model=String(body.model||'').trim(),apiKey=String(body.pollinationsKey||'');
-  if(!/^[A-Z ]{3,24}$/.test(secret)||secret.replace(/ /g,'').length<3)return json({error:'Secret must contain 3–24 A–Z characters.'},400);
+  const body=await readBody(req),secret=normalize(body.secret),model=String(body.model||'').trim(),apiKey=String(body.pollinationsKey||'');
+  if(!/^[A-Z ]{3,24}$/.test(secret)||secret.replace(/ /g,'').length<3)return send(res,{error:'Secret must contain 3–24 A–Z characters.'},400);
   if(!model||model.length>160||!apiKey||apiKey.length>4096)return json({error:'A Hider model and Pollinations connection are required.'},400);
   const previous=body.previousRoundToken?openToken(body.previousRoundToken):null;
   const plan=pickPlan(secret,{lastMethod:previous?.plan?.method||'',lastScene:previous?.plan?.scene||'',round:Date.now()});
