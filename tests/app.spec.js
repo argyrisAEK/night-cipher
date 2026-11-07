@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('nc-howto-seen', '1'); } catch {} });
   await page.goto('/');
 });
 
@@ -120,4 +121,16 @@ test('AI modes start with an empty stage and the counter clears when a round end
   await expect(page.locator('#imgbox')).toContainText('Your picture will appear here');
   await expect(page.locator('#hide')).toContainText('💰');
   await expect(page.locator('section.card #robustnessReport')).toHaveCount(1);
+});
+
+test('first visit shows How to play once, and it can be reopened', async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.removeItem('nc-howto-seen'); } catch {} });
+  await page.reload();
+  await expect(page.locator('#howto')).toBeVisible();
+  await expect(page.locator('#howto')).toContainText('Study the picture');
+  await page.click('#howtoClose');
+  await expect(page.locator('#howto')).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('nc-howto-seen'))).toBe('1');
+  await page.click('#howtoBtn');
+  await expect(page.locator('#howto')).toBeVisible();
 });
