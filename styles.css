@@ -27,6 +27,11 @@ details.adv[open]>summary,details.me[open]>summary{margin-bottom:8px}
 nav[hidden]{display:none}#levels{margin:-6px 0 14px}#levels button{padding:4px 10px;font-size:.9rem}
 #tabs button.in{background:transparent;border-color:var(--acc);color:var(--acc);font-weight:600}
 .legend{margin:6px 0 0;color:var(--mut)}
+.mode-note,.duel-roles{background:#0e1430;border:1px solid #38427a;border-radius:10px;padding:10px 12px;color:var(--mut)}
+.mode-note{font-size:.9rem;margin:8px 0 12px}
+.duel-roles{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;text-align:center}
+.duel-roles b{color:var(--acc)}
+.duel-roles small{flex-basis:100%}
 .intro{margin:0 0 10px;color:var(--mut)}.tries{margin-left:8px;color:var(--acc);letter-spacing:.15em}
 polli-connect button,polli-connect button *{color:var(--ink)!important}
 dialog{background:var(--card);color:var(--ink);border:1px solid #38427a;border-radius:16px;padding:22px 24px;width:min(540px,92vw);max-height:88vh;overflow:auto}
