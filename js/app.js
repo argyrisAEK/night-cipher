@@ -13,6 +13,36 @@ let R=null,T=loadState(),tok=0;const save=()=>saveState(T);const {RANKS,ACHIEVEM
 const chat=createChat({getConnection:()=>conn,getTokenCount:()=>tok,setTokenCount:v=>tok=v,onUsage:()=>score()});
 const score=()=>{const xp=T.xp||0,rank=rankFor(xp),next=RANKS.find(r=>r.xp>xp),base=rank.xp,progress=next?Math.min(100,(xp-base)/(next.xp-base)*100):100;$('#profile').innerHTML=`<div><strong>${rank.name}</strong><div><small>Rank ${RANKS.indexOf(rank)+1} · ${xp} XP${next?` / ${next.xp} XP`:' · MAX RANK'}</small><div class="xpbar"><i style="width:${progress}%"></i></div></div></div><b>🌙</b>`;const bests=Object.values(T.bestTimes||{});$('#bestTime').textContent=bests.length?fmtTime(Math.min(...bests)):'—';const earned=Object.keys(T.achievements||{}).length;$('#achievementCount').textContent=`${earned}/${ACHIEVEMENTS.length}`;$('#achievements').innerHTML=ACHIEVEMENTS.map(([id,ico,name,desc])=>`<div class="achievement ${T.achievements?.[id]?'':'locked'}"><span class="ico">${ico}</span><div><b>${name}</b><br><small>${desc}${T.achievements?.[id]?' · Unlocked':' · Locked'}</small></div></div>`).join('');$('#codexPreview').innerHTML=TRAIN.map((t,i)=>`<div class="achievement ${T.levels?.[i]?'':'locked'}"><span class="ico">${T.levels?.[i]?'📖':'🔒'}</span><div><b>${T.levels?.[i]?esc(t.n):`Unknown Cipher #${i+1}`}</b><br><small>${T.levels?.[i]?esc(t.s):'Complete this training level to reveal its entry.'}</small></div></div>`).join('');$('#score small').textContent=`Daily streak ${T.streak||0} · Levels ${Object.values(T.levels||{}).filter(Boolean).length}/${TRAIN.length} · Duels: you ${T.you}/${T.n} · AI seeker ${T.ai}/${T.an} · tokens: ${tok}${T.st&&T.st.n?` · avg stealth ${(T.st.s/T.st.n).toFixed(1)}/10 (${T.st.n})`:''}`;const seek=Object.entries(T.s||{}).map(([k,v])=>`<li>${esc(k)}: ${v.ok}/${v.n} read</li>`),stl=Object.entries(T.sh||{}).map(([k,v])=>`<li>${esc(k)}: avg stealth ${(v.s/v.n).toFixed(1)}/10 (${v.n})</li>`),rb=Object.entries(T.rb||{}).map(([k,v])=>`<li>Robustness · ${esc(k)}: ${v.ok}/${v.n} recovered, mean similarity ${Math.round(100*v.sim/v.n)}%</li>`);$('#report').innerHTML=[...seek,...stl,...rb].join('')||'<li>Play a Duel or hide a word yourself to fill this in.</li>'};
 const say=(m,c='')=>{const s=$('#status');s.textContent=m;s.className=c};
+let diagnostics=null;
+const renderDiagnostics=()=>{
+  const root=$('#diagnosticsContent');if(!root)return;
+  if(!diagnostics){root.innerHTML='<small>No AI output captured yet. Start an AI vs AI Duel to inspect the Hider and Seeker responses.</small>';return}
+  const d=diagnostics,h=d.hider||{},q=d.seeker||{},v=h.validation||{};
+  const report=JSON.stringify({roundId:d.roundId,timestamp:d.timestamp,encoding:d.encoding,
+    hider:{model:h.model,prompt:h.prompt,rawResponse:h.rawResponse,svg:h.svg,durationMs:h.durationMs,validation:v},
+    seeker:q?{model:q.model,prompt:q.prompt,rawResponse:q.rawResponse,decodedMessage:q.decodedMessage,durationMs:q.durationMs,tokens:q.tokens,error:q.error}:null,
+    result:d.result,errors:d.errors||[]},null,2);
+  root.innerHTML=\`<div class="diag-summary">
+    <div><b>Encoding</b><small>\${esc(d.encoding?.method||'—')} · \${esc(d.encoding?.scene||'—')}</small></div>
+    <div><b>Hider</b><small>\${esc(h.model||'—')} · \${h.durationMs==null?'pending':h.durationMs+' ms'}</small></div>
+    <div><b>Seeker</b><small>\${esc(q.model||'—')} · \${q.durationMs==null?'not run':q.durationMs+' ms'}</small></div>
+    <div><b>SVG / XML</b><small class="\${v.svgValid===true?'ok':v.svgValid===false?'bad':''}">\${v.svgValid===true?'Valid':v.svgValid===false?'Invalid':'Not checked'}</small></div>
+    <div><b>Encoding fidelity</b><small>Not verified automatically</small></div>
+    <div><b>Result</b><small>\${d.result?.exactMatch==null?'Pending':d.result.exactMatch?'Exact match':'Mismatch'}</small></div>
+  </div>
+  <div class="diag-actions"><button type="button" id="copyDiagnostics">Copy diagnostic JSON</button></div>
+  <details><summary>Hider raw SVG</summary><pre>\${esc(h.svg||'No validated SVG captured.')}</pre></details>
+  <details><summary>Hider raw response</summary><pre>\${esc(h.rawResponse||'No response captured.')}</pre></details>
+  <details><summary>Hider prompt</summary><pre>\${esc(h.prompt||'No prompt captured.')}</pre></details>
+  <details><summary>Seeker raw response</summary><pre>\${esc(q.rawResponse||'Seeker has not run yet.')}</pre></details>
+  <details><summary>Seeker prompt</summary><pre>\${esc(q.prompt||'Seeker has not run yet.')}</pre></details>
+  <details><summary>Complete diagnostic JSON</summary><pre>\${esc(report)}</pre></details>
+  \${(d.errors||[]).length?'<p class="bad"><b>Errors</b><br>'+d.errors.map(esc).join('<br>')+'</p>':''}\`;
+  $('#copyDiagnostics')?.addEventListener('click',async()=>{
+    try{await navigator.clipboard.writeText(report);say('Diagnostic JSON copied. Review it before sharing.','ok')}
+    catch{say('Clipboard access was blocked. Open Complete diagnostic JSON and copy it manually.','bad')}
+  });
+};
 
 /* ---------- game flow ---------- */
 let uiBusy=false,aiInFlight=false,aiAttempted=false,hideInFlight=false;
@@ -31,7 +61,7 @@ function syncButtons(){
   }
 }
 function busy(b,m){uiBusy=!!b;syncButtons();if(m)say(m)}
-function start(r){R=Object.assign({tries:0,used:0,done:false,ai:null,maxTries:3,noHints:false},r);R.startedAt=performance.now();aiInFlight=false;aiAttempted=false;$('#imgbox').innerHTML=`<img alt="Puzzle picture" src="${uri(R.svg)}">`;$('#res').innerHTML='';$('#robustnessReport').innerHTML='';$('#hints').innerHTML='';$('#guess').value='';$('#game').hidden=false;const hiderDuel=R.mode==='duel';$('#game').classList.toggle('hider-duel',hiderDuel);$('#duelRoles').hidden=!hiderDuel;$('#guess').hidden=hiderDuel;$('#guess').previousElementSibling.hidden=hiderDuel;$('#go').parentElement.hidden=hiderDuel;$('#hints').hidden=hiderDuel;$('#giveup').hidden=hiderDuel;$('#next').hidden=true;$('#hint').hidden=hiderDuel||!!R.noHints;$('#hint').disabled=hiderDuel||!!R.noHints;$('#ai').hidden=false;$('#revealHow').hidden=false;$('#revealHow').textContent=R.schemeIdx==null?'✨ How was it hidden? (1 paid call)':'✨ How was it hidden?';syncButtons();say(hiderDuel?'AI Hider has hidden your chosen message. Now watch the AI Seeker try to decode it.':'Find the hidden message. '+R.maxTries+' tries.');if(!hiderDuel)$('#guess').focus()}
+function start(r){R=Object.assign({tries:0,used:0,done:false,ai:null,maxTries:3,noHints:false},r);if(R.diagnostics)diagnostics=R.diagnostics;renderDiagnostics();R.startedAt=performance.now();aiInFlight=false;aiAttempted=false;$('#imgbox').innerHTML=`<img alt="Puzzle picture" src="${uri(R.svg)}">`;$('#res').innerHTML='';$('#robustnessReport').innerHTML='';$('#hints').innerHTML='';$('#guess').value='';$('#game').hidden=false;const hiderDuel=R.mode==='duel';$('#game').classList.toggle('hider-duel',hiderDuel);$('#duelRoles').hidden=!hiderDuel;$('#guess').hidden=hiderDuel;$('#guess').previousElementSibling.hidden=hiderDuel;$('#go').parentElement.hidden=hiderDuel;$('#hints').hidden=hiderDuel;$('#giveup').hidden=hiderDuel;$('#next').hidden=true;$('#hint').hidden=hiderDuel||!!R.noHints;$('#hint').disabled=hiderDuel||!!R.noHints;$('#ai').hidden=false;$('#revealHow').hidden=false;$('#revealHow').textContent=R.schemeIdx==null?'✨ How was it hidden? (1 paid call)':'✨ How was it hidden?';syncButtons();say(hiderDuel?'AI Hider has hidden your chosen message. Now watch the AI Seeker try to decode it.':'Find the hidden message. '+R.maxTries+' tries.');if(!hiderDuel)$('#guess').focus()}
 function finish(ok){if(!R||R.done)return;R.done=true;R.elapsedMs=Math.max(0,performance.now()-(R.startedAt||performance.now()));syncButtons();let earned=0;if(ok&&(R.mode==='train'||R.mode==='daily')){T.solves=(T.solves||0)+1;if(R.tries===1)T.firstTry=(T.firstTry||0)+1;if(R.used===0)T.noHintSolves=(T.noHintSolves||0)+1;const hr=new Date().getHours();if(hr>=0&&hr<5)T.nightSolves=(T.nightSolves||0)+1;const timeKey=R.mode==='daily'?`daily-${R.day}`:`training-${R.schemeIdx}`;T.bestTimes=T.bestTimes||{};if(!T.bestTimes[timeKey]||R.elapsedMs<T.bestTimes[timeKey])T.bestTimes[timeKey]=R.elapsedMs;if(R.mode==='train'){T.levels=T.levels||{};const first=!T.levels[R.schemeIdx];T.levels[R.schemeIdx]=true;if(first)earned+=grantXP(`training-${R.schemeIdx}`,50,'Training level completed');const tb=[...$('#tabs').children].find(x=>x.dataset.kind==='training'&&x.textContent.includes(`Level ${R.schemeIdx+1}`));if(tb)tb.textContent=`🎓 Level ${R.schemeIdx+1} ✓`}else{T.dailyWins=T.dailyWins||[];if(!T.dailyWins.includes(R.day)){T.dailyWins.push(R.day);earned+=grantXP(`daily-${R.day}`,75,'Daily cipher solved');if(R.used===0)earned+=grantXP(`daily-no-hints-${R.day}`,25,'Daily solved without hints');if(R.tries===1)earned+=grantXP(`daily-first-try-${R.day}`,25,'Daily solved on first try');}if(T.last!==R.day){T.streak=T.last===R.day-1?(T.streak||0)+1:1;T.last=R.day}}evaluateAchievements(TRAIN)}const pts=ok?Math.max(10,100-20*R.used-15*(R.tries-1)):0;$('#res').innerHTML=`<b class="${ok?'ok':'bad'}">${ok?'Found it! +'+pts+' points':'Out of tries.'}</b> The message was “${esc(R.secret)}”.<br><small>How it was hidden: ${esc(R.scheme||'unknown')}</small>${ok&&(R.mode==='train'||R.mode==='daily')?`<br><small>Time: ${fmtTime(R.elapsedMs)} · ${earned?`+${earned} XP`:'No new XP (already claimed)'}</small>`:''}`+stealthLine()+(R.ai?aiLine():'');if(R.mode==='duel'){T.n++;if(ok)T.you++;save();score()}if(R.mode==='daily'){$('#res').innerHTML+='<p><button id="sh">Copy result</button></p>';$('#sh').onclick=()=>{navigator.clipboard.writeText(`Night Cipher #${R.day-20000} ${ok?'✅':'❌'} ${R.tries}/${R.maxTries} tries · ${R.used} hints\n${location.href}`);say('Result copied!')}}if(ok){evaluateAchievements(TRAIN);save();score()}$('#next').hidden=false;say(ok?'Cipher solved. Progress saved locally.':'Round finished.')}
 const aiLine=()=>`<p>🤖 AI seeker said: “${esc(R.ai.guess)}” — <b class="${R.ai.ok?'ok':'bad'}">${R.ai.ok?'it found it':'it missed it'}</b> (${Math.round(R.ai.s*100)}% similar).<br><small>Model: ${esc(R.ai.model||'unknown')} · ${R.ai.durationMs??'—'} ms · ${R.ai.tokens??'—'} tokens<br>Its method: ${esc(R.ai.method)}${R.method?`<br>Method fixed by the game: ${esc(R.methodLabel)} · Scene: ${esc(R.scene)}`:''}</small></p>`;
 $('#go').onclick=()=>{if(!R||R.done)return;const g=$('#guess').value.trim();if(!g)return;R.tries++;renderTries();const s=sim(g,R.secret);
@@ -64,14 +94,18 @@ $('#ai').onclick=async()=>{
   const round=R;if(!round||(round.done&&round.mode!=='own'&&aiAttempted)||aiInFlight||aiAttempted)return;
   aiInFlight=true;aiAttempted=true;const attemptStarted=Date.now(),tokensBefore=tok,model=$(round.mode=='own'?'#seeker2':'#seeker').value;busy(true,'The AI seeker is studying the picture…');
   try{
-    const png=await toPng(round.svg),out=await chat(model,[{role:'user',content:[{type:'text',text:buildSeekPrompt(round,{retry:!!round.aiHistory?.length})},{type:'image_url',image_url:{url:png}}]}],4000,90000);
+    const seekerPrompt=buildSeekPrompt(round,{retry:!!round.aiHistory?.length}),seekerStarted=Date.now();
+    if(diagnostics){diagnostics.seeker={model,prompt:seekerPrompt,rawResponse:'',decodedMessage:'',durationMs:null,tokens:null};renderDiagnostics()}
+    const png=await toPng(round.svg),out=await chat(model,[{role:'user',content:[{type:'text',text:seekerPrompt},{type:'image_url',image_url:{url:png}}]}],4000,90000);
     if(round!==R)return;
+    if(diagnostics){diagnostics.seeker.rawResponse=out;diagnostics.seeker.durationMs=Date.now()-seekerStarted;diagnostics.seeker.tokens=tok-tokensBefore}
     const gm=out.match(/^MESSAGE:\s*(.*)$/im);if(!gm)throw Error('The model returned no valid MESSAGE line. Try again or select another vision model.');
     const g=gm[1].trim(),mt=(out.match(/^METHOD:\s*(.*)$/im)||[,'(none given)'])[1].trim(),s=sim(g,round.secret);
+    if(diagnostics){diagnostics.seeker.decodedMessage=g;diagnostics.result={success:s>=.9,exactMatch:norm(g)===norm(round.secret),similarity:s};renderDiagnostics()}
     round.ai={guess:g,method:mt,s,ok:s>=.9,model,durationMs:Date.now()-attemptStarted,tokens:tok-tokensBefore};round.aiHistory=round.aiHistory||[];round.aiHistory.push({...round.ai,at:Date.now()});
     if(round.mode=='duel'||round.mode=='own'){T.an++;if(round.ai.ok)T.ai++;const k=(round.mode=='own'?'your '+round.sname:'hider '+round.hider)+' → '+$(round.mode=='own'?'#seeker2':'#seeker').value+(round.method?' · '+METHODS[round.method].short:''),v=(T.s=T.s||{})[k]=T.s[k]||{n:0,ok:0};v.n++;if(round.ai.ok)v.ok++;save();score()}
     if(round.mode==='duel'){$('#res').innerHTML=aiLine();if(round.ai.ok){aiAttempted=true;say('AI Seeker decoded the message chosen for this duel.','ok')}else{aiAttempted=false;say(g.toUpperCase()==='NONE'?'AI Seeker could not produce a defensible decoding. You can retry or change the model.':'AI Seeker failed to recover the message. You can retry or change the model.','bad')}}else if(g.toUpperCase()==='NONE'||s<.9){aiAttempted=false;if(round.done)$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say(g.toUpperCase()==='NONE'?'The AI found no defensible decoding. Retry or choose another vision model.':'The AI returned an incorrect answer. Retry or choose another vision model.','bad')}else if(round.done){$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say('The AI recovered the message.')}else say('The AI has locked in an answer. Finish your round to see it.');
-  }catch(e){if(round===R){aiAttempted=false;say(e.message,'bad')}}
+  }catch(e){if(round===R){if(diagnostics){diagnostics.errors.push(e.message);if(diagnostics.seeker&&!diagnostics.seeker.rawResponse)diagnostics.seeker.error=e.message;renderDiagnostics()}aiAttempted=false;say(e.message,'bad')}}
   finally{aiInFlight=false;busy(false)}
 };
 /* ---------- image degradation & robustness experiment ---------- */
@@ -123,17 +157,21 @@ $('#hide').onclick=async()=>{
   if(!$('#imgbox img'))$('#imgbox').textContent='🎨 AI Hider is creating an image containing your chosen message…';
   try{
     const dl=T.duelLog=T.duelLog||{n:0},plan=pickPlan(secret,{lastMethod:dl.method,lastScene:dl.scene,round:dl.n});
-    const out=await chat($('#hider').value,[{role:'system',content:'You are a creative SVG artist and steganographer. Output only what is asked.'},{role:'user',content:HIDE(secret,$('#diff').value=='1',plan)}],16000,120000,{requestType:'hider'});
-    const m=out.match(/<svg[\s\S]*?<\/svg>/i);if(!m)throw Error('No complete SVG came back (the model may have run out of tokens). Try again or use another model.');
-    const safe=clean(m[0]);
-    if(hasSecretLeak(safe,secret))throw Error('The hider leaked the secret in SVG text or attributes, so the round was voided. Try again.');
+    const hiderModel=$('#hider').value,hiderPrompt=HIDE(secret,$('#diff').value=='1',plan),hiderStarted=Date.now();
+    diagnostics={roundId:(globalThis.crypto?.randomUUID?.()||String(hiderStarted)),timestamp:new Date().toISOString(),encoding:{method:plan.method,label:plan.label,scene:plan.scene,expectedMessage:secret},hider:{model:hiderModel,prompt:hiderPrompt,rawResponse:'',svg:'',durationMs:null,validation:{xmlValid:null,svgValid:null,encodingValid:null,errors:[]}},seeker:null,result:null,errors:[]};
+    renderDiagnostics();
+    const out=await chat(hiderModel,[{role:'system',content:'You are a creative SVG artist and steganographer. Output only what is asked.'},{role:'user',content:hiderPrompt}],16000,120000,{requestType:'hider'});
+    diagnostics.hider.rawResponse=out;diagnostics.hider.durationMs=Date.now()-hiderStarted;renderDiagnostics();
+    const m=out.match(/<svg[\s\S]*?<\/svg>/i);if(!m){diagnostics.hider.validation.errors.push('No complete SVG found in Hider response.');throw Error('No complete SVG came back (the model may have run out of tokens). Try again or use another model.')}
+    let safe;try{safe=clean(m[0]);diagnostics.hider.validation.xmlValid=true;diagnostics.hider.validation.svgValid=true;diagnostics.hider.svg=safe}catch(e){diagnostics.hider.validation.xmlValid=false;diagnostics.hider.validation.svgValid=false;diagnostics.hider.validation.errors.push(e.message);throw e}
+    renderDiagnostics();
+    if(hasSecretLeak(safe,secret)){diagnostics.hider.validation.errors.push('Secret leakage detected in SVG text or attributes.');throw Error('The hider leaked the secret in SVG text or attributes, so the round was voided. Try again.')}
     const sc=(out.split(/SCHEME:/i)[1]||'').trim().slice(0,400),words=secret.split(/\s+/).length;
-    if(!sc)throw Error('The hider did not provide a SCHEME explanation. Try again.');
-    if(hasSecretLeak(sc,secret,{strictWords:false}))throw Error('The SCHEME explanation reveals the complete secret message. The round was voided; try again.');
-    start({mode:'duel',schemeIdx:null,hider:$('#hider').value,secret,svg:safe,scheme:sc,method:plan.method,methodLabel:plan.label,scene:plan.scene,hints:[`${ns.length} letters in ${words} word${words>1?'s':''}.`,`It starts with “${[...secret][0]}”.`,`The hider confessed: ${sc}`]});
-    dl.n++;dl.method=plan.method;dl.scene=plan.scene;save();
-    if($('#judge').checked&&conn.apiKey)judgeStealth(R);
-  }catch(e){say(e.message,'bad');if(!$('#imgbox img'))$('#imgbox').textContent=IDLE.duel}
+    if(!sc){diagnostics.hider.validation.errors.push('Missing SCHEME explanation.');throw Error('The hider did not provide a SCHEME explanation. Try again.')}
+    if(hasSecretLeak(sc,secret,{strictWords:false})){diagnostics.hider.validation.errors.push('SCHEME explanation reveals the complete secret message.');throw Error('The SCHEME explanation reveals the complete secret message. The round was voided; try again.')}
+    start({mode:'duel',schemeIdx:null,hider:hiderModel,secret,svg:safe,scheme:sc,method:plan.method,methodLabel:plan.label,scene:plan.scene,diagnostics,hints:[ns.length+' letters in '+words+' words.','It starts with “'+[...secret][0]+'”.','The hider confessed: '+sc]});
+    dl.n++;dl.method=plan.method;dl.scene=plan.scene;save();    if($('#judge').checked&&conn.apiKey)judgeStealth(R);
+  }catch(e){if(diagnostics){diagnostics.errors.push(e.message);renderDiagnostics()}say(e.message,'bad');if(!$('#imgbox img'))$('#imgbox').textContent=IDLE.duel}
   finally{hideInFlight=false;busy(false)}
 }
 $('#next').onclick=()=>{
