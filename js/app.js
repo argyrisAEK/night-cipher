@@ -11,17 +11,18 @@ const lev=(a,b)=>{const d=Array.from({length:a.length+1},(_,i)=>[i,...Array(b.le
 const sim=(a,b)=>{a=norm(a);b=norm(b);const m=Math.max(a.length,b.length);return m?1-lev(a,b)/m:0};
 let R=null,T=loadState(),tok=0;const save=()=>saveState(T);const {RANKS,ACHIEVEMENTS,rankFor,grantXP,unlock,evaluateAchievements,fmtTime}=createProgression(()=>T);
 const chat=createChat({getConnection:()=>conn,getTokenCount:()=>tok,setTokenCount:v=>tok=v,onUsage:()=>score()});
-const score=()=>{const xp=T.xp||0,rank=rankFor(xp),next=RANKS.find(r=>r.xp>xp),base=rank.xp,progress=next?Math.min(100,(xp-base)/(next.xp-base)*100):100;$('#profile').innerHTML=`<div><strong>${rank.name}</strong><div><small>Level ${RANKS.indexOf(rank)+1} · ${xp} XP${next?` / ${next.xp} XP`:' · MAX RANK'}</small><div class="xpbar"><i style="width:${progress}%"></i></div></div></div><b>🌙</b>`;const bests=Object.values(T.bestTimes||{});$('#bestTime').textContent=bests.length?fmtTime(Math.min(...bests)):'—';const earned=Object.keys(T.achievements||{}).length;$('#achievementCount').textContent=`${earned}/${ACHIEVEMENTS.length}`;$('#achievements').innerHTML=ACHIEVEMENTS.map(([id,ico,name,desc])=>`<div class="achievement ${T.achievements?.[id]?'':'locked'}"><span class="ico">${ico}</span><div><b>${name}</b><br><small>${desc}${T.achievements?.[id]?' · Unlocked':' · Locked'}</small></div></div>`).join('');$('#codexPreview').innerHTML=TRAIN.map((t,i)=>`<div class="achievement ${T.levels?.[i]?'':'locked'}"><span class="ico">${T.levels?.[i]?'📖':'🔒'}</span><div><b>${T.levels?.[i]?esc(t.n):`Unknown Cipher #${i+1}`}</b><br><small>${T.levels?.[i]?esc(t.s):'Complete this training level to reveal its entry.'}</small></div></div>`).join('');$('#score small').textContent=`Daily streak ${T.streak||0} · Levels ${Object.values(T.levels||{}).filter(Boolean).length}/${TRAIN.length} · Duels: you ${T.you}/${T.n} · AI seeker ${T.ai}/${T.an} · tokens: ${tok}${T.st&&T.st.n?` · avg stealth ${(T.st.s/T.st.n).toFixed(1)}/10 (${T.st.n})`:''}`;const seek=Object.entries(T.s||{}).map(([k,v])=>`<li>${esc(k)}: ${v.ok}/${v.n} read</li>`),stl=Object.entries(T.sh||{}).map(([k,v])=>`<li>${esc(k)}: avg stealth ${(v.s/v.n).toFixed(1)}/10 (${v.n})</li>`),rb=Object.entries(T.rb||{}).map(([k,v])=>`<li>Robustness · ${esc(k)}: ${v.ok}/${v.n} recovered, mean similarity ${Math.round(100*v.sim/v.n)}%</li>`);$('#report').innerHTML=[...seek,...stl,...rb].join('')||'<li>Play a Duel or hide a word yourself to fill this in.</li>'};
+const score=()=>{const xp=T.xp||0,rank=rankFor(xp),next=RANKS.find(r=>r.xp>xp),base=rank.xp,progress=next?Math.min(100,(xp-base)/(next.xp-base)*100):100;$('#profile').innerHTML=`<div><strong>${rank.name}</strong><div><small>Rank ${RANKS.indexOf(rank)+1} · ${xp} XP${next?` / ${next.xp} XP`:' · MAX RANK'}</small><div class="xpbar"><i style="width:${progress}%"></i></div></div></div><b>🌙</b>`;const bests=Object.values(T.bestTimes||{});$('#bestTime').textContent=bests.length?fmtTime(Math.min(...bests)):'—';const earned=Object.keys(T.achievements||{}).length;$('#achievementCount').textContent=`${earned}/${ACHIEVEMENTS.length}`;$('#achievements').innerHTML=ACHIEVEMENTS.map(([id,ico,name,desc])=>`<div class="achievement ${T.achievements?.[id]?'':'locked'}"><span class="ico">${ico}</span><div><b>${name}</b><br><small>${desc}${T.achievements?.[id]?' · Unlocked':' · Locked'}</small></div></div>`).join('');$('#codexPreview').innerHTML=TRAIN.map((t,i)=>`<div class="achievement ${T.levels?.[i]?'':'locked'}"><span class="ico">${T.levels?.[i]?'📖':'🔒'}</span><div><b>${T.levels?.[i]?esc(t.n):`Unknown Cipher #${i+1}`}</b><br><small>${T.levels?.[i]?esc(t.s):'Complete this training level to reveal its entry.'}</small></div></div>`).join('');$('#score small').textContent=`Daily streak ${T.streak||0} · Levels ${Object.values(T.levels||{}).filter(Boolean).length}/${TRAIN.length} · Duels: you ${T.you}/${T.n} · AI seeker ${T.ai}/${T.an} · tokens: ${tok}${T.st&&T.st.n?` · avg stealth ${(T.st.s/T.st.n).toFixed(1)}/10 (${T.st.n})`:''}`;const seek=Object.entries(T.s||{}).map(([k,v])=>`<li>${esc(k)}: ${v.ok}/${v.n} read</li>`),stl=Object.entries(T.sh||{}).map(([k,v])=>`<li>${esc(k)}: avg stealth ${(v.s/v.n).toFixed(1)}/10 (${v.n})</li>`),rb=Object.entries(T.rb||{}).map(([k,v])=>`<li>Robustness · ${esc(k)}: ${v.ok}/${v.n} recovered, mean similarity ${Math.round(100*v.sim/v.n)}%</li>`);$('#report').innerHTML=[...seek,...stl,...rb].join('')||'<li>Play a Duel or hide a word yourself to fill this in.</li>'};
 const say=(m,c='')=>{const s=$('#status');s.textContent=m;s.className=c};
 
 /* ---------- game flow ---------- */
 let uiBusy=false,aiInFlight=false,aiAttempted=false,hideInFlight=false;
 function syncButtons(){
   document.querySelectorAll('button').forEach(b=>{b.disabled=uiBusy});
+  $('#after').hidden=!(R&&R.done);
   if(!uiBusy&&R){
     $('#go').disabled=R.done;$('#giveup').disabled=R.done;
     $('#hint').disabled=R.done||R.used>=R.hints.length;
-    $('#ai').disabled=(R.done&&R.mode!=='own'&&aiAttempted)||aiInFlight||aiAttempted;$('#ai').textContent=aiAttempted?'AI answer locked':(R.aiHistory?.length?'Retry AI seeker':'Let the AI try');
+    $('#ai').disabled=(R.done&&R.mode!=='own'&&aiAttempted)||aiInFlight||aiAttempted;$('#ai').textContent=aiAttempted?'AI answer locked':(R.aiHistory?.length?'Retry AI seeker 💰':'Let the AI try 💰');
     $('#next').disabled=!R.done;
   }else if(!uiBusy){
     $('#go').disabled=true;$('#giveup').disabled=true;$('#hint').disabled=true;$('#ai').disabled=true;$('#next').disabled=true;
@@ -131,8 +132,8 @@ $('#hide').onclick=async()=>{
 }
 $('#next').onclick=()=>{
   if(R.mode=='duel'){$('#duel').hidden=false;$('#hide').click();return}
-  const all=[...$('#tabs').children],cur=document.querySelector('#tabs .on'),i=all.indexOf(cur);
-  for(let k=1;k<=all.length;k++){const j=(i+k)%all.length;if(all[j].style.display!=='none'){all[j].click();return}}
+  const i=allTabs.findIndex(x=>x.classList.contains('on'));
+  allTabs[(i+1)%allTabs.length].click();
 };
 const DW=['HONEY','NECTAR','HIVE','BLOOM','POLLEN','CLOVER','AMBER','LANTERN','COMET','ORBIT','EMBER','FROST','HARBOR','MIRROR','SIGNAL','WHISPER','COPPER','ANCHOR','VELVET','MARBLE','RIVER','SHADOW','CRYSTAL','MEADOW'];
 /* Daily uses LOCAL midnight (not UTC). Helpers: */
@@ -169,28 +170,29 @@ $('#res').innerHTML=`<b>Your puzzle: “${esc(w)}” hidden with ${esc(nm)}.</b>
 
 /* ---------- tabs & models ---------- */
 function train(i){const t=TRAIN[i],w=DW[hash32('training-word-'+i+'-'+localDay())%DW.length],tier=i<3?'Easy':i<7?'Medium':'Hard';$('#duel').hidden=true;start({mode:'train',schemeIdx:i,difficulty:tier,secret:w,svg:t.g(w,hash32('training-art-'+i+'-'+localDay())),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});say(`Level ${i+1} · ${tier}. Find the hidden message. You have 3 tries.`)}
-const tabs=$('#tabs');
-function learn(){const lv=[...tabs.children].filter(x=>x.dataset.kind==='training'),i=Math.max(0,TRAIN.findIndex((_,k)=>!(T.levels&&T.levels[k])));lv[i].click()}
+const tabs=$('#tabs'),levels=$('#levels'),allTabs=[];
+function learn(){const lv=allTabs.filter(x=>x.dataset.kind==='training'),i=Math.max(0,TRAIN.findIndex((_,k)=>!(T.levels&&T.levels[k])));lv[i].click()}
 const tabDefs=[
   ['📅 Daily',daily,'daily'],
   ['🎓 Learn',learn,'learn'],
   ...TRAIN.map((t,i)=>['🎓 Level '+(i+1)+(T.levels&&T.levels[i]?' ✓':''),()=>train(i),'training']),
-  ['⚔ Duel vs AI (Pollen)',()=>{$('#duel').hidden=false;$('#game').hidden=!(R&&R.mode=='duel');say('Choose a message and models, then hide it.')},'duel'],
-  ['🕵 You hide, AI seeks',()=>{$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own']
+  ['⚔ Duel vs AI 💰',()=>{$('#duel').hidden=false;$('#game').hidden=!(R&&R.mode=='duel');say('Choose a message and models, then hide it.')},'duel'],
+  ['🕵 You hide, AI seeks 💰',()=>{$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own']
 ];
 tabDefs.forEach(([label,fn,kind])=>{
   const b=document.createElement('button');
   b.textContent=label;
   b.dataset.kind=kind;
   b.onclick=()=>{
-    [...tabs.children].forEach(x=>x.classList.remove('on'));
-    b.classList.add('on');
-    $('#duel').hidden=$('#own').hidden=true;
+    allTabs.forEach(x=>x.classList.remove('on','in'));
     const inLearn=kind==='training'||kind==='learn';
-    [...tabs.children].forEach(x=>{if(x.dataset.kind==='training')x.style.display=inLearn?'':'none';if(x.dataset.kind==='learn')x.classList.toggle('on',inLearn)});
+    b.classList.add(kind==='learn'?'in':'on');
+    if(kind==='training')allTabs.find(x=>x.dataset.kind==='learn').classList.add('in');
+    levels.hidden=!inLearn;
+    $('#duel').hidden=$('#own').hidden=true;
     fn();
   };
-  tabs.append(b);
+  allTabs.push(b);(kind==='training'?levels:tabs).append(b);
 });
 
 /* ---------- model discovery: vision-aware ---------- */
@@ -236,6 +238,6 @@ if(!/selftest/.test(location.search))fetch(API+'/models')
     ['#seeker','#seeker2','#judgeModel'].forEach(sel=>{$(sel).innerHTML='<option value="">Vision model discovery unavailable</option>';$(sel).disabled=true});
     say(e.message+' — reload after checking the Pollinations API.','bad');
   });
-if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();tabs.children[0].click();
+if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();allTabs[0].click();
 
 if(/selftest/.test(location.search))runSelfTest({getState:()=>T,setState:v=>{T=v},getRound:()=>R,setRound:v=>{R=v},getTokens:()=>tok,setTokens:v=>{tok=v},conn,$,esc,TRAIN,toPng,toRaster,dailyIndex,dailyWord,hash32,sim,supportsVisionInput,clean,hasSecretLeak,utf8Base64,annotate,chat,score,syncButtons});
