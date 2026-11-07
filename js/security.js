@@ -67,7 +67,7 @@ const utf8Base64=s=>{
   for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));
   return btoa(binary);
 };
-const hasSecretLeak=(input,secret)=>{
+const hasSecretLeak=(input,secret,{strictWords=true}={})=>{
   const source=String(input??''),isSvg=/^\s*<svg(?:\s|>)/i.test(source);
   let raw=source,values=[];
   if(isSvg){
@@ -83,14 +83,21 @@ const hasSecretLeak=(input,secret)=>{
   const secretWords=words(secret),hayWords=words(raw),haySet=new Set(hayWords);
   const phrase=secretWords.join(' '),hayPhrase=words(raw).join(' ');
   if(phrase.length>=3&&(' '+hayPhrase+' ').includes(' '+phrase+' '))return true;
-  for(const word of secretWords){
-    if(word.length>=4&&!stopwords.has(word)&&haySet.has(word))return true;
+  if(strictWords){
+    for(const word of secretWords){
+      if(word.length>=4&&!stopwords.has(word)&&haySet.has(word))return true;
+    }
   }
-  // Also detect literal transport encodings, but only as complete tokens.
+  // Detect encoded complete secret phrases in both modes. In strict mode,
+  // also detect encoded individual non-trivial words (SVG text/metadata).
   const rawLower=raw.toLowerCase(),tokens=rawLower.split(/[^a-z0-9%+/_=-]+/i);
-  for(const word of secretWords.filter(w=>w.length>=4&&!stopwords.has(w))){
+  const encodedCandidates=strictWords
+    ?secretWords.filter(w=>w.length>=4&&!stopwords.has(w))
+    :[phrase];
+  for(const candidate of encodedCandidates){
+    if(!candidate)continue;
     try{
-      const encoded=encodeURIComponent(word),base64=utf8Base64(word),hex=[...new TextEncoder().encode(word)].map(x=>x.toString(16).padStart(2,'0')).join('');
+      const encoded=encodeURIComponent(candidate),base64=utf8Base64(candidate),hex=[...new TextEncoder().encode(candidate)].map(x=>x.toString(16).padStart(2,'0')).join('');
       if(tokens.includes(encoded.toLowerCase())||tokens.includes(base64.toLowerCase())||tokens.includes(hex))return true;
     }catch{}
   }
