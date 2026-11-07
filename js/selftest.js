@@ -52,8 +52,11 @@ export async function runSelfTest(ctx){
     t('Leakage detector ignores common short words in attributes',!hasSecretLeak('<svg xmlns="http://www.w3.org/2000/svg"><g id="the-path" class="this-route"/></svg>','THE WAY'));
     t('Leakage detector catches UTF-8 Base64 text',hasSecretLeak(`<svg xmlns="http://www.w3.org/2000/svg"><g data-code="${utf8Base64('ΜΕΛΙ')}"/></svg>`,'ΜΕΛΙ'));
     t('Leakage detector ignores SVG tag-name false positives',!hasSecretLeak('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#123"/></svg>','SVG'));
-    t('Leakage detector accepts plain-text SCHEME explanations',!hasSecretLeak('One flower per letter; petals encode A=1 through Z=26.','THE BEES KNOW THE WAY'));
-    t('Leakage detector catches a complete secret phrase in plain text',hasSecretLeak('The decoded message is THE BEES KNOW THE WAY.','THE BEES KNOW THE WAY'));
+    t('Leakage detector accepts plain-text SCHEME explanations',!hasSecretLeak('One flower per letter; petals encode A=1 through Z=26.','THE BEES KNOW THE WAY',{strictWords:false}));
+    t('SCHEME detector allows an incidental single-word overlap',!hasSecretLeak('The stars are arranged in four visual groups.','TRUST THE QUIET STARS',{strictWords:false}));
+    t('SCHEME detector still catches the complete secret phrase',hasSecretLeak('The decoded message is THE BEES KNOW THE WAY.','THE BEES KNOW THE WAY',{strictWords:false}));
+    t('SCHEME detector catches an encoded complete secret phrase',hasSecretLeak('Encoded payload: '+utf8Base64('TRUST THE QUIET STARS'),'TRUST THE QUIET STARS',{strictWords:false}));
+    t('SVG detector remains strict about complete secret words in attributes',hasSecretLeak('<svg xmlns="http://www.w3.org/2000/svg"><g id="stars"/></svg>','TRUST THE QUIET STARS'));
     t('Leakage detector avoids substring false positives in prose',!hasSecretLeak('Use a honeycomb-like arrangement of petals.','HONEY'));
     for(let i=0;i<TRAIN.length;i++){const q=TRAIN[i],a=annotate(q.g(q.m),i);t(`Reveal ${q.n}: highlights the encoded letters`,DEC[i](P(a))===q.m&&[...q.m].every(c=>a.includes('>'+c+'<')))}
     if(conn){
