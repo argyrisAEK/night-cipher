@@ -201,3 +201,83 @@ test('Duel message is limited to 24 characters with a live counter', async ({ pa
   await page.click('#hide');
   await expect(page.locator('#status')).toContainText('Use 3–24 characters');
 });
+
+test('deterministic encoding selector respects length, avoids repeats and yields decodable plans', async ({ page }) => {
+  const r = await page.evaluate(async () => {
+    const { pickPlan, decodePlan, eligibleMethods } = await import('/js/encoding.js');
+    const msg = 'SEE YOU AT NOON';
+    const a = pickPlan(msg, { round: 3 }), b = pickPlan(msg, { round: 3 });
+    let last = '', lastScene = '', repeats = 0, roundtrip = true;
+    for (let i = 0; i < 12; i++) {
+      const p = pickPlan(msg, { lastMethod: last, lastScene, round: i });
+      if (p.method === last || p.scene === lastScene) repeats++;
+      if (decodePlan(p) !== msg) roundtrip = false;
+      last = p.method; lastScene = p.scene;
+    }
+    const covered = new Set(Array.from({ length: 12 }, (_, i) => pickPlan(msg, { round: i }).method)).size;
+    return {
+      eighteen: eligibleMethods('THE BEES KNOW THE WAY'), twelve: eligibleMethods(msg), twentyFour: eligibleMethods('ABCDEFGHIJKLMNOPQRSTUVWX'),
+      deterministic: a.method === b.method && a.scene === b.scene && a.spec === b.spec, repeats, roundtrip, covered,
+      longDecodes: decodePlan(pickPlan('THE BEES KNOW THE WAY', { round: 1 })) === 'THE BEES KNOW THE WAY'
+    };
+  });
+  expect(r.eighteen).toEqual(['binary', 'morse']);
+  expect(r.twelve).toEqual(['counts', 'binary', 'morse']);
+  expect(r.twentyFour).toEqual(['morse']);
+  expect(r.deterministic).toBe(true);
+  expect(r.repeats).toBe(0);
+  expect(r.roundtrip).toBe(true);
+  expect(r.longDecodes).toBe(true);
+  expect(r.covered).toBeGreaterThanOrEqual(2);
+});
+
+test('HIDE prompt fixes encoding, scene and symbols when a plan is supplied', async ({ page }) => {
+  const r = await page.evaluate(async () => {
+    const { pickPlan } = await import('/js/encoding.js');
+    const { HIDE } = await import('/js/api.js');
+    const plan = pickPlan('SEE YOU', { round: 1 });
+    const fixed = HIDE('SEE YOU', false, plan), legacy = HIDE('SEE YOU', false);
+    return { plan, fixed, legacy };
+  });
+  expect(r.fixed).toContain('fixed the encoding for this round: ' + r.plan.label);
+  expect(r.fixed).toContain(r.plan.spec);
+  expect(r.fixed).toContain(r.plan.scene);
+  expect(r.fixed).not.toContain('Choose ONE reliable');
+  expect(r.fixed).not.toContain('Choose a scene that naturally suits');
+  expect(r.legacy).toContain('Choose ONE reliable');
+});
+
+test('AI vs AI Duel sends a fixed plan to the Hider, records the method and rotates it', async ({ page }) => {
+  const prompts = [];
+  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
+    json: { data: [{ id: 'test-hider' }, { id: 'test-vision-seeker', input_modalities: ['image'] }] }
+  }));
+  await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    const body = route.request().postDataJSON();
+    const text = JSON.stringify(body.messages);
+    const isHider = text.includes('SECRET MESSAGE');
+    if (isHider) prompts.push(body.messages.map(m => m.content).join('\n'));
+    const content = isHider
+      ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="#ffd166"/></svg>\nSCHEME: Marks follow the fixed plan.'
+      : 'MESSAGE: LANTERN\nMETHOD: Count the marks.';
+    await route.fulfill({ json: { choices: [{ message: { content } }], usage: { total_tokens: 12 } } });
+  });
+  await page.reload();
+  await page.waitForFunction(() => [...document.querySelectorAll('#hider option')].some(o => o.value === 'test-hider'));
+  await page.evaluate(() => { Object.defineProperty(document.querySelector('polli-connect'), 'apiKey', { value: 'test-key', configurable: true }); });
+  await page.locator('#tabs button', { hasText: 'AI vs AI Duel' }).click();
+  await page.fill('#msg', 'LANTERN');
+  await page.click('#hide');
+  await expect(page.locator('#imgbox img')).toBeVisible({ timeout: 10000 });
+  await page.click('#ai');
+  await expect(page.locator('#res')).toContainText('Method fixed by the game', { timeout: 10000 });
+  await page.click('#hide');
+  await expect.poll(() => prompts.length, { timeout: 10000 }).toBe(2);
+  const label = p => (p.match(/fixed the encoding for this round: ([^\n]*?)\. Do not/) || [])[1];
+  expect(label(prompts[0])).toBeTruthy();
+  expect(label(prompts[1])).toBeTruthy();
+  expect(label(prompts[1])).not.toBe(label(prompts[0]));
+  const log = await page.evaluate(() => JSON.parse(localStorage.getItem('nc')).duelLog);
+  expect(log.n).toBeGreaterThanOrEqual(1);
+  expect(['counts', 'binary', 'morse']).toContain(log.method);
+});
