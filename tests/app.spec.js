@@ -313,6 +313,7 @@ test('AI Output Inspection captures both model responses, prompts, SVG and a sha
   await expect(page.locator('#diagnosticsContent')).toContainText('diagnostic-seeker');
   await expect(page.locator('#diagnosticsContent')).toContainText('Encoding fidelity');
   await expect(page.locator('#diagnosticsContent')).toContainText('Not verified automatically');
+  await page.locator('#diagnostics > summary').click();
   await expect(page.locator('#copyDiagnostics')).toBeVisible();
   const reportText = await page.locator('#diagnosticsContent details').last().locator('pre').textContent();
   const report = JSON.parse(reportText);
