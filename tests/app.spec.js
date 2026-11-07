@@ -281,3 +281,47 @@ test('AI vs AI Duel sends a fixed plan to the Hider, records the method and rota
   expect(log.n).toBeGreaterThanOrEqual(1);
   expect(['counts', 'binary', 'morse']).toContain(log.method);
 });
+
+
+test('AI Output Inspection captures both model responses, prompts, SVG and a shareable diagnostic report', async ({ page }) => {
+  const hiderResponse = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="#ffd166"/></svg>\nSCHEME: The central shape contains a sequence of marks.';
+  const seekerResponse = 'MESSAGE: LANTERN\nMETHOD: Count the repeated marks in the central shape.';
+  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
+    json: { data: [{ id: 'diagnostic-hider' }, { id: 'diagnostic-seeker', input_modalities: ['image'] }] }
+  }));
+  await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    const body = route.request().postDataJSON();
+    const isHider = JSON.stringify(body.messages).includes('SECRET MESSAGE');
+    await route.fulfill({ json: {
+      model: isHider ? 'diagnostic-hider' : 'diagnostic-seeker',
+      choices: [{ message: { content: isHider ? hiderResponse : seekerResponse }, finish_reason: 'stop' }],
+      usage: { total_tokens: 23, completion_tokens: 17 }
+    }});
+  });
+  await page.reload();
+  await page.waitForFunction(() => [...document.querySelectorAll('#hider option')].some(o => o.value === 'diagnostic-hider'));
+  await page.evaluate(() => { Object.defineProperty(document.querySelector('polli-connect'), 'apiKey', { value: 'test-key', configurable: true }); });
+  await page.locator('#tabs button', { hasText: 'AI vs AI Duel' }).click();
+  await page.fill('#msg', 'LANTERN');
+  await page.click('#hide');
+  await expect(page.locator('#imgbox img')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#diagnosticsContent')).toContainText('diagnostic-hider');
+  await expect(page.locator('#diagnosticsContent')).toContainText('SCHEME: The central shape');
+  await expect(page.locator('#diagnosticsContent')).toContainText('Hider raw SVG');
+  await page.click('#ai');
+  await expect(page.locator('#diagnosticsContent')).toContainText('MESSAGE: LANTERN', { timeout: 10000 });
+  await expect(page.locator('#diagnosticsContent')).toContainText('diagnostic-seeker');
+  await expect(page.locator('#diagnosticsContent')).toContainText('Encoding fidelity');
+  await expect(page.locator('#diagnosticsContent')).toContainText('Not verified automatically');
+  await expect(page.locator('#copyDiagnostics')).toBeVisible();
+  const reportText = await page.locator('#diagnosticsContent details').last().locator('pre').textContent();
+  const report = JSON.parse(reportText);
+  expect(report.encoding.expectedMessage).toBe('LANTERN');
+  expect(report.hider.rawResponse).toContain('SCHEME:');
+  expect(report.hider.svg).toContain('<svg');
+  expect(report.hider.validation.svgValid).toBe(true);
+  expect(report.hider.validation.encodingValid).toBeNull();
+  expect(report.seeker.decodedMessage).toBe('LANTERN');
+  expect(report.result.exactMatch).toBe(true);
+  expect(JSON.stringify(report)).not.toContain('test-key');
+});
