@@ -14,7 +14,6 @@ const chat=createChat({getConnection:()=>conn,getTokenCount:()=>tok,setTokenCoun
 const score=()=>{const xp=T.xp||0,rank=rankFor(xp),next=RANKS.find(r=>r.xp>xp),base=rank.xp,progress=next?Math.min(100,(xp-base)/(next.xp-base)*100):100;$('#profile').innerHTML=`<div><strong>${rank.name}</strong><div><small>Rank ${RANKS.indexOf(rank)+1} · ${xp} XP${next?` / ${next.xp} XP`:' · MAX RANK'}</small><div class="xpbar"><i style="width:${progress}%"></i></div></div></div><b>🌙</b>`;const bests=Object.values(T.bestTimes||{});$('#bestTime').textContent=bests.length?fmtTime(Math.min(...bests)):'—';const earned=Object.keys(T.achievements||{}).length;$('#achievementCount').textContent=`${earned}/${ACHIEVEMENTS.length}`;$('#achievements').innerHTML=ACHIEVEMENTS.map(([id,ico,name,desc])=>`<div class="achievement ${T.achievements?.[id]?'':'locked'}"><span class="ico">${ico}</span><div><b>${name}</b><br><small>${desc}${T.achievements?.[id]?' · Unlocked':' · Locked'}</small></div></div>`).join('');$('#codexPreview').innerHTML=TRAIN.map((t,i)=>`<div class="achievement ${T.levels?.[i]?'':'locked'}"><span class="ico">${T.levels?.[i]?'📖':'🔒'}</span><div><b>${T.levels?.[i]?esc(t.n):`Unknown Cipher #${i+1}`}</b><br><small>${T.levels?.[i]?esc(t.s):'Complete this training level to reveal its entry.'}</small></div></div>`).join('');$('#score small').textContent=`Daily streak ${T.streak||0} · Levels ${Object.values(T.levels||{}).filter(Boolean).length}/${TRAIN.length} · Duels: you ${T.you}/${T.n} · AI seeker ${T.ai}/${T.an} · tokens: ${tok}${T.st&&T.st.n?` · avg stealth ${(T.st.s/T.st.n).toFixed(1)}/10 (${T.st.n})`:''}`;const seek=Object.entries(T.s||{}).map(([k,v])=>`<li>${esc(k)}: ${v.ok}/${v.n} read</li>`),stl=Object.entries(T.sh||{}).map(([k,v])=>`<li>${esc(k)}: avg stealth ${(v.s/v.n).toFixed(1)}/10 (${v.n})</li>`),rb=Object.entries(T.rb||{}).map(([k,v])=>`<li>Robustness · ${esc(k)}: ${v.ok}/${v.n} recovered, mean similarity ${Math.round(100*v.sim/v.n)}%</li>`);$('#report').innerHTML=[...seek,...stl,...rb].join('')||'<li>Play a Duel or hide a word yourself to fill this in.</li>'};
 const say=(m,c='')=>{const s=$('#status');s.textContent=m;s.className=c};
 
-
 /* ---------- game flow ---------- */
 let uiBusy=false,aiInFlight=false,aiAttempted=false,hideInFlight=false;
 function renderTries(){const t=$('#tries');if(!R||R.mode==='own'||R.done){t.textContent='';t.removeAttribute('aria-label');return}const left=Math.max(0,R.maxTries-R.tries);t.textContent='●'.repeat(left)+'○'.repeat(R.maxTries-left);t.setAttribute('aria-label',`${left} of ${R.maxTries} tries left`);t.title=`${left} tries left`}
@@ -121,6 +120,7 @@ $('#hide').onclick=async()=>{
   const secret=$('#msg').value.trim(),ns=norm(secret);if(!/^[A-Z ]{3,60}$/i.test(secret)||ns.length<3)return say('Use 3–60 characters with at least 3 letters: English letters A–Z and spaces only. Digits and Greek characters are not supported by the current visual encodings.','bad');
   if(!conn||!conn.apiKey)return say('Connect your Pollinations account first (button, top right).','bad');
   hideInFlight=true;busy(true,'The hider is drawing… premium models can take a minute or two.');
+  if(!$('#imgbox img'))$('#imgbox').textContent='🎨 The hider is drawing your picture… this can take a minute or two.';
   try{
     const out=await chat($('#hider').value,[{role:'system',content:'You are a creative SVG artist and steganographer. Output only what is asked.'},{role:'user',content:HIDE(secret,$('#diff').value=='1')}],16000,120000,{requestType:'hider'});
     const m=out.match(/<svg[\s\S]*?<\/svg>/i);if(!m)throw Error('No complete SVG came back (the model may have run out of tokens). Try again or use another model.');
@@ -131,7 +131,7 @@ $('#hide').onclick=async()=>{
     if(hasSecretLeak(sc,secret))throw Error('The SCHEME explanation reveals the secret. The round was voided; try again.');
     start({mode:'duel',schemeIdx:null,hider:$('#hider').value,secret,svg:safe,scheme:sc,hints:[`${ns.length} letters in ${words} word${words>1?'s':''}.`,`It starts with “${[...secret][0]}”.`,`The hider confessed: ${sc}`]});
     if($('#judge').checked&&conn.apiKey)judgeStealth(R);
-  }catch(e){say(e.message,'bad')}
+  }catch(e){say(e.message,'bad');if(!$('#imgbox img'))$('#imgbox').textContent=IDLE.duel}
   finally{hideInFlight=false;busy(false)}
 }
 $('#next').onclick=()=>{
@@ -175,6 +175,7 @@ $('#res').innerHTML=`<b>Your puzzle: “${esc(w)}” hidden with ${esc(nm)}.</b>
 /* ---------- tabs & models ---------- */
 function train(i){const t=TRAIN[i],w=DW[hash32('training-word-'+i+'-'+localDay())%DW.length],tier=i<3?'Easy':i<7?'Medium':'Hard';$('#duel').hidden=true;start({mode:'train',schemeIdx:i,difficulty:tier,secret:w,svg:t.g(w,hash32('training-art-'+i+'-'+localDay())),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});say(`Level ${i+1} · ${tier}. Find the hidden message. You have 3 tries.`)}
 const tabs=$('#tabs'),levels=$('#levels'),allTabs=[];
+const IDLE={duel:'Choose a message on the right, then press “Hide the message” and an AI will draw it.',own:'Pick a word and a hiding scheme on the right, then press “Challenge the AI”.'};
 function stageIdle(m){$('#imgbox').textContent=m;$('#res').innerHTML='';$('#robustnessReport').innerHTML=''}
 const INTRO={daily:'Every picture hides a word. Spot the pattern, then type the word on the right. One puzzle a day, the same for everyone.',learn:'Every picture hides a word. Spot the pattern, then type it on the right. Hints cost points.',duel:'An AI hider draws your secret message into a picture. Can you and an AI seeker read it back?',own:'Choose a word and a hiding scheme, then see whether an AI seeker can read your picture.'};
 function learn(){const lv=allTabs.filter(x=>x.dataset.kind==='training'),i=Math.max(0,TRAIN.findIndex((_,k)=>!(T.levels&&T.levels[k])));lv[i].click()}
@@ -182,8 +183,8 @@ const tabDefs=[
   ['📅 Daily',daily,'daily'],
   ['🎓 Learn',learn,'learn'],
   ...TRAIN.map((t,i)=>['🎓 Level '+(i+1)+(T.levels&&T.levels[i]?' ✓':''),()=>train(i),'training']),
-  ['⚔ Duel vs AI 💰',()=>{if(!(R&&R.mode==='duel'))stageIdle('Your picture will appear here.');$('#duel').hidden=false;$('#game').hidden=!(R&&R.mode=='duel');say('Choose a message and models, then hide it.')},'duel'],
-  ['🕵 You hide, AI seeks 💰',()=>{if(!(R&&R.mode==='own'))stageIdle('Your picture will appear here.');$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own']
+  ['⚔ Duel vs AI 💰',()=>{if(!(R&&R.mode==='duel'))stageIdle(IDLE.duel);$('#duel').hidden=false;$('#game').hidden=!(R&&R.mode=='duel');say('Choose a message and models, then hide it.')},'duel'],
+  ['🕵 You hide, AI seeks 💰',()=>{if(!(R&&R.mode==='own'))stageIdle(IDLE.own);$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own']
 ];
 tabDefs.forEach(([label,fn,kind])=>{
   const b=document.createElement('button');
