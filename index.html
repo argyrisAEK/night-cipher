@@ -13,7 +13,7 @@
 <nav id="tabs"></nav>
 <nav id="levels" hidden aria-label="Training levels"></nav>
 <main>
-<section class="card"><p id="intro" class="intro"></p><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div></section>
+<section class="card"><p id="intro" class="intro"></p><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div><div id="robustnessReport" aria-live="polite"></div></section>
 <aside class="card">
   
 <div id="duel" hidden>
@@ -26,9 +26,9 @@
 <label>Judge model (needs vision)</label><select id="judgeModel"></select>
 <small>Seeker and judge list models whose catalog metadata confirms image input. Vision-capable chat models are still text models; the app filters them by the catalog's image-input metadata. Premium models cost more Pollen per round. Your key's budget caps the spending.</small>
 </details>
-<p><button id="hide" class="pri" style="width:100%">Hide the message</button></p>
+<p><button id="hide" class="pri" style="width:100%">Hide the message 💰</button></p>
 </div>
-<div id="own" hidden><label>Your word (letters A–Z, up to 10)</label><input id="omsg" maxlength="10" value="LANTERN"><label>Hiding scheme</label><select id="osch"></select><label>Seeker model (vision-capable only)</label><select id="seeker2"></select><small>You pick the code, a vision model tries to read it from a PNG. Which schemes can it crack?</small><p><button id="ohide" class="pri" style="width:100%">Challenge the AI</button></p></div>
+<div id="own" hidden><label>Your word (letters A–Z, up to 10)</label><input id="omsg" maxlength="10" value="LANTERN"><label>Hiding scheme</label><select id="osch"></select><label>Seeker model (vision-capable only)</label><select id="seeker2"></select><small>You pick the code, a vision model tries to read it from a PNG. Which schemes can it crack?</small><p><button id="ohide" class="pri" style="width:100%">Challenge the AI 💰</button></p></div>
 <div id="game" hidden>
 <label>Your guess <span id="tries" class="tries"></span></label><input id="guess" autocomplete="off" placeholder="What is the hidden message?">
 <div class="row"><button id="go" class="pri">Guess</button><button id="hint">Hint (−20)</button></div>
@@ -39,7 +39,6 @@
 <div class="row" style="margin-top:8px"><button id="revealHow" hidden>✨ How was it hidden?</button></div>
 <div class="row" style="margin-top:8px"><button id="save">Save PNG</button><button id="next" hidden>Next ▶</button></div>
 <div class="row" style="margin-top:8px"><button id="robustness" title="Runs three additional vision-model calls; uses Pollen">🧪 Test image robustness 💰×3</button></div>
-<div id="robustnessReport" aria-live="polite"></div>
 </div>
 </div>
 <div id="profile" class="profile" aria-live="polite"></div>
