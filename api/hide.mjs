@@ -42,7 +42,7 @@ const safeSvg=raw=>{
  return output;
 };
 const rng=seed=>{let x=seed>>>0;return()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296}};
-const renderOverlay=(plan,nonce)=>{
+const renderOverlay=(plan,nonce,easy=false)=>{
  const letters=plan.groups.reduce((n,w)=>n+w.length,0),slots=letters+Math.max(0,plan.groups.length-1);
  const cols=Math.min(6,Math.max(3,Math.ceil(Math.sqrt(slots*1.25)))),rows=Math.ceil(slots/cols),cw=620/cols,ch=260/rows,random=rng(parseInt(nonce.slice(0,8),16)||1);
  let slot=0,markup='',layout=[];
@@ -70,6 +70,15 @@ const renderOverlay=(plan,nonce)=>{
    slot++;
   }
  }
+ if(easy){
+  if(plan.method==='counts'){
+   [690,716,742].forEach((x,i)=>{for(let j=0;j<=i;j++)markup+='<circle cx="'+(x+(j-i/2)*4)+'" cy="425" r="1.8" fill="#f1c987" fill-opacity=".82"/>';});
+  }else if(plan.method==='binary'){
+   markup+='<circle cx="704" cy="425" r="3" fill="#f1c987"/><circle cx="728" cy="425" r="3" fill="#171a2b" stroke="#a78e75" stroke-width="1"/>';
+  }else{
+   markup+='<circle cx="704" cy="425" r="2.5" fill="#f1c987"/><rect x="722" y="423.4" width="12" height="3.2" rx="1.6" fill="#f1c987"/>';
+  }
+ }
  return {markup,layout};
 };
 const makePrompt=scene=>`Create a premium, atmospheric SVG illustration for NIGHT CIPHER. Scene: ${scene}. It must look like an ordinary cinematic night landscape or place, not a puzzle worksheet, infographic, chart, or diagram. Deep midnight navy, indigo and muted plum, restrained antique-gold lighting, layered depth, subtle gradients and fine natural detail. Use viewBox="0 0 800 500". Keep the central upper/middle sky visually calm and relatively uncluttered so a few tiny distant lights can naturally belong there. Do not draw constellations, repeated groups, rows, dots, bars, symbols, letters, numbers, labels, text, legends or any encoded pattern; those will be added separately. Return only one self-contained SVG using vector shapes and gradients; no external images, fonts, links, scripts, foreignObject, text, metadata or comments.`;
@@ -87,7 +96,7 @@ export default async function handler(req,res){
   if(!response.ok){const detail=await response.text().catch(()=> '');return send(res,{error:`Pollinations Hider request failed (${response.status}): ${detail.slice(0,300)}`},502)}
   const result=await response.json(),choice=result.choices?.[0],raw=choice?.message?.content;
   if(typeof raw!=='string')return send(res,{error:'Pollinations returned no Hider artwork.'},502);
-  const background=safeSvg(raw),{markup,layout}=renderOverlay(plan,randomBytes(8).toString('hex'));
+  const background=safeSvg(raw),{markup,layout}=renderOverlay(plan,randomBytes(8).toString('hex'),body.easy===true);
   const svg=background.replace(/<\/svg>\s*$/i,markup+'</svg>');
   if(svg.length>500000)return send(res,{error:'Rendered SVG exceeds the size limit.'},502);
   const tokenPayload={secret,plan,layout,createdAt:Date.now()};
