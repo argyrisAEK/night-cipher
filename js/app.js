@@ -16,7 +16,9 @@ const say=(m,c='')=>{const s=$('#status');s.textContent=m;s.className=c};
 
 /* ---------- game flow ---------- */
 let uiBusy=false,aiInFlight=false,aiAttempted=false,hideInFlight=false;
+function renderTries(){const t=$('#tries');if(!R||R.mode==='own'){t.textContent='';t.removeAttribute('aria-label');return}const left=Math.max(0,R.maxTries-R.tries);t.textContent='●'.repeat(left)+'○'.repeat(R.maxTries-left);t.setAttribute('aria-label',`${left} of ${R.maxTries} tries left`);t.title=`${left} tries left`}
 function syncButtons(){
+  renderTries();
   document.querySelectorAll('button').forEach(b=>{b.disabled=uiBusy});
   $('#after').hidden=!(R&&R.done);
   if(!uiBusy&&R){
@@ -32,7 +34,7 @@ function busy(b,m){uiBusy=!!b;syncButtons();if(m)say(m)}
 function start(r){R=Object.assign({tries:0,used:0,done:false,ai:null,maxTries:3,noHints:false},r);R.startedAt=performance.now();aiInFlight=false;aiAttempted=false;$('#imgbox').innerHTML=`<img alt="Puzzle picture" src="${uri(R.svg)}">`;$('#res').innerHTML='';$('#robustnessReport').innerHTML='';$('#hints').innerHTML='';$('#guess').value='';$('#game').hidden=false;$('#guess').hidden=false;$('#guess').previousElementSibling.hidden=false;$('#go').parentElement.hidden=false;$('#hints').hidden=false;$('#giveup').hidden=false;$('#next').hidden=true;$('#hint').hidden=!!R.noHints;$('#hint').disabled=!!R.noHints;$('#revealHow').hidden=false;$('#revealHow').textContent=R.schemeIdx==null?'✨ How was it hidden? (1 paid call)':'✨ How was it hidden?';syncButtons();say('Find the hidden message. '+R.maxTries+' tries.');$('#guess').focus()}
 function finish(ok){if(!R||R.done)return;R.done=true;R.elapsedMs=Math.max(0,performance.now()-(R.startedAt||performance.now()));syncButtons();let earned=0;if(ok&&(R.mode==='train'||R.mode==='daily')){T.solves=(T.solves||0)+1;if(R.tries===1)T.firstTry=(T.firstTry||0)+1;if(R.used===0)T.noHintSolves=(T.noHintSolves||0)+1;const hr=new Date().getHours();if(hr>=0&&hr<5)T.nightSolves=(T.nightSolves||0)+1;const timeKey=R.mode==='daily'?`daily-${R.day}`:`training-${R.schemeIdx}`;T.bestTimes=T.bestTimes||{};if(!T.bestTimes[timeKey]||R.elapsedMs<T.bestTimes[timeKey])T.bestTimes[timeKey]=R.elapsedMs;if(R.mode==='train'){T.levels=T.levels||{};const first=!T.levels[R.schemeIdx];T.levels[R.schemeIdx]=true;if(first)earned+=grantXP(`training-${R.schemeIdx}`,50,'Training level completed');const tb=[...$('#tabs').children].find(x=>x.dataset.kind==='training'&&x.textContent.includes(`Level ${R.schemeIdx+1}`));if(tb)tb.textContent=`🎓 Level ${R.schemeIdx+1} ✓`}else{T.dailyWins=T.dailyWins||[];if(!T.dailyWins.includes(R.day)){T.dailyWins.push(R.day);earned+=grantXP(`daily-${R.day}`,75,'Daily cipher solved');if(R.used===0)earned+=grantXP(`daily-no-hints-${R.day}`,25,'Daily solved without hints');if(R.tries===1)earned+=grantXP(`daily-first-try-${R.day}`,25,'Daily solved on first try');}if(T.last!==R.day){T.streak=T.last===R.day-1?(T.streak||0)+1:1;T.last=R.day}}evaluateAchievements(TRAIN)}const pts=ok?Math.max(10,100-20*R.used-15*(R.tries-1)):0;$('#res').innerHTML=`<b class="${ok?'ok':'bad'}">${ok?'Found it! +'+pts+' points':'Out of tries.'}</b> The message was “${esc(R.secret)}”.<br><small>How it was hidden: ${esc(R.scheme||'unknown')}</small>${ok&&(R.mode==='train'||R.mode==='daily')?`<br><small>Time: ${fmtTime(R.elapsedMs)} · ${earned?`+${earned} XP`:'No new XP (already claimed)'}</small>`:''}`+stealthLine()+(R.ai?aiLine():'');if(R.mode==='duel'){T.n++;if(ok)T.you++;save();score()}if(R.mode==='daily'){$('#res').innerHTML+='<p><button id="sh">Copy result</button></p>';$('#sh').onclick=()=>{navigator.clipboard.writeText(`Night Cipher #${R.day-20000} ${ok?'✅':'❌'} ${R.tries}/${R.maxTries} tries · ${R.used} hints\n${location.href}`);say('Result copied!')}}if(ok){evaluateAchievements(TRAIN);save();score()}$('#next').hidden=false;say(ok?'Cipher solved. Progress saved locally.':'Round finished.')}
 const aiLine=()=>`<p>🤖 AI seeker said: “${esc(R.ai.guess)}” — <b class="${R.ai.ok?'ok':'bad'}">${R.ai.ok?'it found it':'it missed it'}</b> (${Math.round(R.ai.s*100)}% similar).<br><small>Model: ${esc(R.ai.model||'unknown')} · ${R.ai.durationMs??'—'} ms · ${R.ai.tokens??'—'} tokens<br>Its method: ${esc(R.ai.method)}</small></p>`;
-$('#go').onclick=()=>{if(!R||R.done)return;const g=$('#guess').value.trim();if(!g)return;R.tries++;const s=sim(g,R.secret);
+$('#go').onclick=()=>{if(!R||R.done)return;const g=$('#guess').value.trim();if(!g)return;R.tries++;renderTries();const s=sim(g,R.secret);
 if(s>=.9)finish(true);else if(R.tries>=R.maxTries)finish(false);else say(`Not quite (${Math.round(s*100)}% similar). ${R.maxTries-R.tries} tries left.`,'bad')};
 $('#guess').onkeydown=e=>{if(e.key=='Enter')$('#go').click()};
 $('#hint').onclick=()=>{if(!R||R.done||R.used>=R.hints.length)return;$('#hints').innerHTML+=`<li>${esc(R.hints[R.used++])}</li>`;if(R.used>=R.hints.length)$('#hint').disabled=true};
@@ -172,6 +174,7 @@ $('#res').innerHTML=`<b>Your puzzle: “${esc(w)}” hidden with ${esc(nm)}.</b>
 /* ---------- tabs & models ---------- */
 function train(i){const t=TRAIN[i],w=DW[hash32('training-word-'+i+'-'+localDay())%DW.length],tier=i<3?'Easy':i<7?'Medium':'Hard';$('#duel').hidden=true;start({mode:'train',schemeIdx:i,difficulty:tier,secret:w,svg:t.g(w,hash32('training-art-'+i+'-'+localDay())),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});say(`Level ${i+1} · ${tier}. Find the hidden message. You have 3 tries.`)}
 const tabs=$('#tabs'),levels=$('#levels'),allTabs=[];
+const INTRO={daily:'Every picture hides a word. Spot the pattern, then type the word on the right. One puzzle a day, the same for everyone.',learn:'Every picture hides a word. Spot the pattern, then type it on the right. Hints cost points.',duel:'An AI hider draws your secret message into a picture. Can you and an AI seeker read it back?',own:'Choose a word and a hiding scheme, then see whether an AI seeker can read your picture.'};
 function learn(){const lv=allTabs.filter(x=>x.dataset.kind==='training'),i=Math.max(0,TRAIN.findIndex((_,k)=>!(T.levels&&T.levels[k])));lv[i].click()}
 const tabDefs=[
   ['📅 Daily',daily,'daily'],
@@ -190,6 +193,7 @@ tabDefs.forEach(([label,fn,kind])=>{
     b.classList.add(kind==='learn'?'in':'on');
     if(kind==='training')allTabs.find(x=>x.dataset.kind==='learn').classList.add('in');
     levels.hidden=!inLearn;
+    $('#intro').textContent=INTRO[inLearn&&kind!=='daily'?'learn':kind];
     $('#duel').hidden=$('#own').hidden=true;
     fn();
   };
