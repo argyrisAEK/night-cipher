@@ -246,4 +246,12 @@ if(!/selftest/.test(location.search))fetch(API+'/models')
   });
 if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();allTabs[0].click();
 
+/* ---------- first-visit "How to play" ---------- */
+const howto=$('#howto'),HOWTO_KEY='nc-howto-seen';
+const openHowto=()=>{if(!howto.open){howto.showModal();howto.scrollTop=0}};
+$('#howtoBtn').onclick=openHowto;
+$('#howtoClose').onclick=()=>howto.close();
+howto.addEventListener('close',()=>{try{localStorage.setItem(HOWTO_KEY,'1')}catch{/* storage unavailable */}});
+try{if(!localStorage.getItem(HOWTO_KEY)&&!/selftest/.test(location.search))openHowto()}catch{/* storage unavailable */}
+
 if(/selftest/.test(location.search))runSelfTest({getState:()=>T,setState:v=>{T=v},getRound:()=>R,setRound:v=>{R=v},getTokens:()=>tok,setTokens:v=>{tok=v},conn,$,esc,TRAIN,toPng,toRaster,dailyIndex,dailyWord,hash32,sim,supportsVisionInput,clean,hasSecretLeak,utf8Base64,annotate,chat,score,syncButtons});
