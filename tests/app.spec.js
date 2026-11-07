@@ -168,7 +168,7 @@ test('Duel vs AI switches to a hider view and reveals the AI seeker result immed
     await route.fulfill({ json: { choices: [{ message: { content } }], usage: { total_tokens: 12 } } });
   });
   await page.reload();
-  await page.locator('#hider option').first().waitFor();
+  await page.waitForFunction(() => [...document.querySelectorAll('#hider option')].some(option => option.value === 'test-hider'));
   await page.evaluate(() => { Object.defineProperty(document.querySelector('polli-connect'), 'apiKey', { value: 'test-key', configurable: true }); });
   await page.locator('#tabs button', { hasText: 'Duel' }).click();
   await page.fill('#msg', 'LANTERN');
