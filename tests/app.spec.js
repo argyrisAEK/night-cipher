@@ -101,3 +101,11 @@ test('Bloom petals form one evenly spaced, non-overlapping ring per letter', asy
     for (const radius of flower.radii) expect(radius).toBeLessThan(39.5);
   }
 });
+
+test('guess counter shows tries left and drops after a wrong guess', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Learn' }).click();
+  await expect(page.locator('#tries')).toHaveText('●●●');
+  await page.fill('#guess', 'wrongword');
+  await page.click('#go');
+  await expect(page.locator('#tries')).toHaveText('●●○');
+});
