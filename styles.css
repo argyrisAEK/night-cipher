@@ -27,3 +27,5 @@ details.adv[open]>summary,details.me[open]>summary{margin-bottom:8px}
 nav[hidden]{display:none}#levels{margin:-6px 0 14px}#levels button{padding:4px 10px;font-size:.9rem}
 #tabs button.in{background:transparent;border-color:var(--acc);color:var(--acc);font-weight:600}
 .legend{margin:6px 0 0;color:var(--mut)}
+.intro{margin:0 0 10px;color:var(--mut)}.tries{margin-left:8px;color:var(--acc);letter-spacing:.15em}
+polli-connect button,polli-connect button *{color:var(--ink)!important}
