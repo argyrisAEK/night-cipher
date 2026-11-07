@@ -47,7 +47,7 @@ export function createChat({getConnection,getTokenCount,setTokenCount,onUsage}){
   }
 }
 
-const HIDE=(msg,easy)=>`Create a polished, atmospheric visual-cryptography puzzle for NIGHT CIPHER. You are an expert SVG illustrator and puzzle designer, not a chart or worksheet generator.
+const HIDE_BASE=(msg,easy)=>`Create a polished, atmospheric visual-cryptography puzzle for NIGHT CIPHER. You are an expert SVG illustrator and puzzle designer, not a chart or worksheet generator.
 
 SECRET MESSAGE (encode visually; never print it):
 ${msg}
@@ -76,6 +76,18 @@ SVG AND OUTPUT RULES:
 - Before responding, verify that every group encodes exactly one character, the sequence decodes to the supplied message, word gaps are clear, and every symbol is visible and countable.
 
 Output the raw <svg>...</svg> first, followed by one final line beginning exactly with SCHEME: that explains the visual encoding without revealing the secret message.`;
+
+/* With a plan from encoding.js the game fixes the encoding, scene and per-letter symbols; without one the model chooses (legacy). */
+const HIDE=(msg,easy,plan)=>{
+  const base=HIDE_BASE(msg,easy);if(!plan)return base;
+  const choose=base.match(/- Choose ONE reliable visual encoding[^\n]*/),scene='Choose a scene that naturally suits the encoding.';
+  if(!choose||!base.includes(scene))throw new Error('HIDE prompt template changed: update the plan substitution.');
+  return base.replace(choose[0],`- The game has fixed the encoding for this round: ${plan.label}. Do not choose, change or mix any other system.
+- ${plan.rule}
+- Group-by-group plan, in left-to-right reading order (one line per word; use a noticeably larger gap between words, and no group for spaces):
+${plan.spec}
+- Scene for this round: ${plan.scene}. Build the whole image around this scene.`).replace(scene,'Use the scene specified under ENCODING AND COMPOSITION.');
+};
 
 const SEEK='This picture may hide a secret message encoded in its visual structure. Inspect repeated objects, counts, geometry, colours, positions, and grouping. You cannot run code, so reason from visible evidence. First divide the scene into repeated groups in reading order, usually one group per letter. Systematically test counts from 1 to 26 as A=1 through Z=26. If you see flowers, count each visible petal individually and do not count the flower centre; check whether each flower is one letter. Also inspect polygon sides, dots, windows, bars, orientations, colour sequences, and Morse-like marks. Ignore decorative background details that are not repeated consistently. Verify that one rule explains every group before answering. Do not answer NONE merely because the first pattern is unclear. Prefer a complete, internally consistent decoding; use NONE only if no defensible rule explains the entire image. Reply in exactly two lines:\nMESSAGE: <recovered text, or NONE>\nMETHOD: <one sentence explaining the visual evidence and mapping>';
 
