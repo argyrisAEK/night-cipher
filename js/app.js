@@ -110,6 +110,7 @@ $('#robustness').onclick=async()=>{
   }finally{robustnessInFlight=false;busy(false)}
 };
 
+
 const MSGS=['MEET ME AT MIDNIGHT','THE BEES KNOW THE WAY','HONEY IS A MAP','TRUST THE QUIET STARS','OPEN THE BLUE DOOR','THE HONEY IS A MAP'];
 const rnd=()=>{$('#msg').value=MSGS[Math.random()*MSGS.length|0]};$('#dice').onclick=rnd;rnd();
 $('#hide').onclick=async()=>{
