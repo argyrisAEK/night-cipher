@@ -170,7 +170,8 @@ test('AI vs AI Duel clearly assigns both AI roles and reveals the seeker result 
   await page.reload();
   await page.waitForFunction(() => [...document.querySelectorAll('#hider option')].some(option => option.value === 'test-hider'));
   await page.evaluate(() => { Object.defineProperty(document.querySelector('polli-connect'), 'apiKey', { value: 'test-key', configurable: true }); });
-  await page.locator('#tabs button', { hasText: 'Duel' }).click();
+  await expect(page.locator('#tabs button', { hasText: 'AI vs AI Duel' })).toBeVisible();
+  await page.locator('#tabs button', { hasText: 'AI vs AI Duel' }).click();
   await page.fill('#msg', 'LANTERN');
   await page.click('#hide');
   await expect(page.locator('#imgbox img')).toBeVisible({ timeout: 10000 });
