@@ -13,6 +13,6 @@ export default async function handler(req,res){
   const {revealToken}=await readBody(req),payload=openToken(revealToken);
   if(!payload.plan||!Array.isArray(payload.layout)||typeof payload.secret!=='string')return send(res,{error:'Round data is incomplete.'},400);
   const letters=payload.secret.replace(/ /g,'').split(''),annotations=payload.layout.map((box,i)=>({...box,letter:letters[i]||'?'}));
-  return json({message:payload.secret,method:payload.plan.label,rule:payload.plan.rule,scene:payload.plan.scene,annotations});
- }catch(error){return json({error:error?.message||'Could not reveal this round.'},400)}
+  return send(res,{message:payload.secret,method:payload.plan.label,rule:payload.plan.rule,scene:payload.plan.scene,annotations});
+ }catch(error){return send(res,{error:error?.message||'Could not reveal this round.'},400)}
 }
