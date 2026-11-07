@@ -43,3 +43,4 @@ button.link{background:none;border:none;padding:0 0 0 6px;border-radius:0;color:
 
 /* Preserve native HTML hidden behavior when component styles set display. */
 [hidden]{display:none!important}
+.count{display:block;text-align:right;color:var(--mut);margin:4px 0 0}
