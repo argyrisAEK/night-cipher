@@ -22,22 +22,22 @@ const renderDiagnostics=()=>{
     hider:{model:h.model,responseModel:h.responseModel,finishReason:h.finishReason,completionTokens:h.completionTokens,prompt:h.prompt,rawResponse:h.rawResponse,svg:h.svg,durationMs:h.durationMs,validation:v},
     seeker:q?{model:q.model,prompt:q.prompt,rawResponse:q.rawResponse,decodedMessage:q.decodedMessage,durationMs:q.durationMs,tokens:q.tokens,error:q.error}:null,
     result:d.result,errors:d.errors||[]},null,2);
-  root.innerHTML=\`<div class="diag-summary">
-    <div><b>Encoding</b><small>\${esc(d.encoding?.method||'—')} · \${esc(d.encoding?.scene||'—')}</small></div>
-    <div><b>Hider</b><small>\${esc(h.model||'—')} · \${h.durationMs==null?'pending':h.durationMs+' ms'}</small></div>
-    <div><b>Seeker</b><small>\${esc(q.model||'—')} · \${q.durationMs==null?'not run':q.durationMs+' ms'}</small></div>
-    <div><b>SVG / XML</b><small class="\${v.svgValid===true?'ok':v.svgValid===false?'bad':''}">\${v.svgValid===true?'Valid':v.svgValid===false?'Invalid':'Not checked'}</small></div>
+  root.innerHTML=`<div class="diag-summary">
+    <div><b>Encoding</b><small>${esc(d.encoding?.method||'—')} · ${esc(d.encoding?.scene||'—')}</small></div>
+    <div><b>Hider</b><small>${esc(h.model||'—')} · ${h.durationMs==null?'pending':h.durationMs+' ms'}</small></div>
+    <div><b>Seeker</b><small>${esc(q.model||'—')} · ${q.durationMs==null?'not run':q.durationMs+' ms'}</small></div>
+    <div><b>SVG / XML</b><small class="${v.svgValid===true?'ok':v.svgValid===false?'bad':''}">${v.svgValid===true?'Valid':v.svgValid===false?'Invalid':'Not checked'}</small></div>
     <div><b>Encoding fidelity</b><small>Not verified automatically</small></div>
-    <div><b>Result</b><small>\${d.result?.exactMatch==null?'Pending':d.result.exactMatch?'Exact match':'Mismatch'}</small></div>
+    <div><b>Result</b><small>${d.result?.exactMatch==null?'Pending':d.result.exactMatch?'Exact match':'Mismatch'}</small></div>
   </div>
   <div class="diag-actions"><button type="button" id="copyDiagnostics">Copy diagnostic JSON</button></div>
-  <details><summary>Hider raw SVG</summary><pre>\${esc(h.svg||'No validated SVG captured.')}</pre></details>
-  <details><summary>Hider raw response</summary><pre>\${esc(h.rawResponse||'No response captured.')}</pre></details>
-  <details><summary>Hider prompt</summary><pre>\${esc(h.prompt||'No prompt captured.')}</pre></details>
-  <details><summary>Seeker raw response</summary><pre>\${esc(q.rawResponse||'Seeker has not run yet.')}</pre></details>
-  <details><summary>Seeker prompt</summary><pre>\${esc(q.prompt||'Seeker has not run yet.')}</pre></details>
-  <details><summary>Complete diagnostic JSON</summary><pre>\${esc(report)}</pre></details>
-  \${(d.errors||[]).length?'<p class="bad"><b>Errors</b><br>'+d.errors.map(esc).join('<br>')+'</p>':''}\`;
+  <details><summary>Hider raw SVG</summary><pre>${esc(h.svg||'No validated SVG captured.')}</pre></details>
+  <details><summary>Hider raw response</summary><pre>${esc(h.rawResponse||'No response captured.')}</pre></details>
+  <details><summary>Hider prompt</summary><pre>${esc(h.prompt||'No prompt captured.')}</pre></details>
+  <details><summary>Seeker raw response</summary><pre>${esc(q.rawResponse||'Seeker has not run yet.')}</pre></details>
+  <details><summary>Seeker prompt</summary><pre>${esc(q.prompt||'Seeker has not run yet.')}</pre></details>
+  <details><summary>Complete diagnostic JSON</summary><pre>${esc(report)}</pre></details>
+  ${(d.errors||[]).length?'<p class="bad"><b>Errors</b><br>'+d.errors.map(esc).join('<br>')+'</p>':''}`;
   $('#copyDiagnostics')?.addEventListener('click',async()=>{
     try{await navigator.clipboard.writeText(report);say('Diagnostic JSON copied. Review it before sharing.','ok')}
     catch{say('Clipboard access was blocked. Open Complete diagnostic JSON and copy it manually.','bad')}
