@@ -7,8 +7,26 @@
 <link rel="stylesheet" href="/styles.css">
 <script defer src="https://cdn.jsdelivr.net/npm/@pollinations/ui@0.1.0-alpha.20/dist/connect.js"></script>
 </head><body><div class="wrap">
-<header><div><h1>Night <span>Cipher</span></h1><p class="sub">Ten ways to hide a message in one picture. Can you spot the pattern?</p></div>
+<header><div><h1>Night <span>Cipher</span></h1><p class="sub">Ten ways to hide a message in one picture. Can you spot the pattern? <button id="howtoBtn" type="button" class="link">How to play</button></p></div>
 <polli-connect app-key="pk_zERtArHJHymnUbNl" budget="3" expiry="7" models="text"></polli-connect></header>
+<dialog id="howto" aria-labelledby="howtoTitle">
+<h2 id="howtoTitle">How to play</h2>
+<p class="lead">Every picture in Night Cipher hides a secret word. Your job is to spot the pattern and read it.</p>
+<ol>
+<li><b>Study the picture.</b> The letters are hidden in something you can count or compare, like lit windows, bar heights, petals or dots. Look for a pattern rather than written text.</li>
+<li><b>Type your guess</b> on the right. You get 2–3 tries, and a guess counts when it is at least 90% similar. Stuck? A hint costs 20 points.</li>
+<li><b>Learn the trick.</b> When the round ends, press “How was it hidden?” to see the method with the letters highlighted.</li>
+</ol>
+<h3>Four ways to play</h3>
+<ul class="modes">
+<li><b>📅 Daily</b> One puzzle a day, the same for everyone. Build a streak.</li>
+<li><b>🎓 Learn</b> Ten levels, each with a different hiding method.</li>
+<li><b>⚔ Duel vs AI 💰</b> An AI hides your message in a picture. Can you and an AI seeker read it back?</li>
+<li><b>🕵 You hide, AI seeks 💰</b> Pick a word and a scheme and see whether an AI can crack it.</li>
+</ul>
+<p class="note">💰 = uses your Pollen. Daily and Learn work without signing in; only the 💰 buttons need the sign-in button at the top right.</p>
+<button id="howtoClose" class="pri" type="button">Got it, let’s play</button>
+</dialog>
 <div id="setup" class="warn" hidden><b>Setup:</b> replace <code>pk_REPLACE_ME</code> (twice: the &lt;polli-connect&gt; tag and <code>APP_KEY</code>) with your App Key and add this page's URL as a Redirect URI.</div>
 <nav id="tabs"></nav>
 <nav id="levels" hidden aria-label="Training levels"></nav>
