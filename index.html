@@ -11,6 +11,7 @@
 <polli-connect app-key="pk_zERtArHJHymnUbNl" budget="3" expiry="7" models="text"></polli-connect></header>
 <div id="setup" class="warn" hidden><b>Setup:</b> replace <code>pk_REPLACE_ME</code> (twice: the &lt;polli-connect&gt; tag and <code>APP_KEY</code>) with your App Key and add this page's URL as a Redirect URI.</div>
 <nav id="tabs"></nav>
+<nav id="levels" hidden aria-label="Training levels"></nav>
 <main>
 <section class="card"><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div></section>
 <aside class="card">
@@ -21,7 +22,7 @@
 <label>Difficulty</label><select id="diff"><option value="0">Paper mode: no legend, scheme is a mystery</option><option value="1">Friendly: hider adds a visual key</option></select>
 <details class="adv"><summary>⚙ Advanced · AI models &amp; stealth judge</summary><label>Hider model (draws the SVG)</label><select id="hider"></select>
 <label>Seeker model (sees only a PNG, cannot run code)</label><select id="seeker"></select>
-<label style="display:flex;align-items:center;gap:6px;text-transform:none"><input type="checkbox" id="judge" style="width:auto;margin:0"> Stealth judge — a second AI rates how innocent the picture looks (+1 call, your Pollen)</label>
+<label style="display:flex;align-items:center;gap:6px;text-transform:none"><input type="checkbox" id="judge" style="width:auto;margin:0"> Stealth judge — a second AI rates how innocent the picture looks 💰 (+1 call)</label>
 <label>Judge model (needs vision)</label><select id="judgeModel"></select>
 <small>Seeker and judge list models whose catalog metadata confirms image input. Vision-capable chat models are still text models; the app filters them by the catalog's image-input metadata. Premium models cost more Pollen per round. Your key's budget caps the spending.</small>
 </details>
@@ -32,11 +33,14 @@
 <label>Your guess</label><input id="guess" autocomplete="off" placeholder="What is the hidden message?">
 <div class="row"><button id="go" class="pri">Guess</button><button id="hint">Hint (−20)</button></div>
 <ol id="hints"></ol>
-<div class="row" style="margin-top:10px"><button id="ai">Let the AI try</button><button id="giveup">Give up</button></div>
+<div class="row" style="margin-top:10px"><button id="ai">Let the AI try 💰</button><button id="giveup">Give up</button></div>
+<p class="legend"><small>💰 = uses your Pollen</small></p>
+<div id="after" hidden>
 <div class="row" style="margin-top:8px"><button id="revealHow" hidden>✨ How was it hidden?</button></div>
 <div class="row" style="margin-top:8px"><button id="save">Save PNG</button><button id="next" hidden>Next ▶</button></div>
-<div class="row" style="margin-top:8px"><button id="robustness" title="Runs three additional vision-model calls; uses Pollen">🧪 Test image robustness (3 calls)</button></div>
+<div class="row" style="margin-top:8px"><button id="robustness" title="Runs three additional vision-model calls; uses Pollen">🧪 Test image robustness 💰×3</button></div>
 <div id="robustnessReport" aria-live="polite"></div>
+</div>
 </div>
 <div id="profile" class="profile" aria-live="polite"></div>
 <details class="me"><summary>📊 Progress, achievements &amp; stats</summary><div class="meta-grid"><div class="meta-tile"><b id="bestTime">—</b><small>Fastest solve</small></div><div class="meta-tile"><b id="achievementCount">0/8</b><small>Achievements</small></div></div>
