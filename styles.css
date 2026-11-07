@@ -35,3 +35,6 @@ dialog h2{margin:0 0 6px;font-size:1.3rem}dialog h3{margin:16px 0 6px;font-size:
 dialog .lead,dialog .note{color:var(--mut)}dialog .note{font-size:.9rem;margin:14px 0}
 dialog ol,dialog ul{margin:0;padding-left:20px}dialog li{margin:6px 0}dialog .modes{list-style:none;padding:0}dialog button{width:100%}
 button.link{background:none;border:none;padding:0 0 0 6px;border-radius:0;color:var(--acc);text-decoration:underline;font:inherit;cursor:pointer}
+
+/* Preserve native HTML hidden behavior when component styles set display. */
+[hidden]{display:none!important}
