@@ -6,8 +6,16 @@ test.beforeEach(async ({ page }) => {
 
 test('loads all game modes and the BYOP connect control', async ({ page }) => {
   await expect(page.locator('polli-connect')).toHaveAttribute('models', 'text');
-  await expect(page.locator('#tabs button')).toHaveCount(14);
+  await expect(page.locator('#tabs button')).toHaveCount(4);
+  await expect(page.locator('#levels button')).toHaveCount(10);
+  await expect(page.locator('#levels')).toBeHidden();
   await expect(page.locator('#status')).not.toBeEmpty();
+});
+
+test('Learn opens the ten training levels', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Learn' }).click();
+  await expect(page.locator('#levels')).toBeVisible();
+  await expect(page.locator('#levels button.on')).toContainText('Level 1');
 });
 
 test('Bloom cipher encodes each letter as a visibly countable number of petals', async ({ page }) => {
