@@ -118,7 +118,7 @@ test('AI modes start with an empty stage and the counter clears when a round end
   await expect(page.locator('#tries')).toHaveText('');
   await page.locator('#tabs button', { hasText: 'Duel' }).click();
   await expect(page.locator('#imgbox img')).toHaveCount(0);
-  await expect(page.locator('#imgbox')).toContainText('Your picture will appear here');
+  await expect(page.locator('#imgbox')).toContainText('press “Hide the message”');
   await expect(page.locator('#hide')).toContainText('💰');
   await expect(page.locator('section.card #robustnessReport')).toHaveCount(1);
 });
@@ -133,4 +133,11 @@ test('first visit shows How to play once, and it can be reopened', async ({ page
   expect(await page.evaluate(() => localStorage.getItem('nc-howto-seen'))).toBe('1');
   await page.click('#howtoBtn');
   await expect(page.locator('#howto')).toBeVisible();
+});
+
+test('built-in self-test passes completely, including the secret-leak detector', async ({ page }) => {
+  test.setTimeout(60000);
+  await page.goto('/?selftest');
+  await expect(page.locator('#st')).toContainText(/\b(\d+)\/\1 passed/, { timeout: 45000 });
+  await expect(page.locator('#st')).not.toContainText('❌');
 });
