@@ -1,4 +1,4 @@
-import { createCipheriv, createHash, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { pickPlan, decodePlan, METHODS } from '../server/encoding.mjs';
 
 const API='https://gen.pollinations.ai/v1/chat/completions';
@@ -8,6 +8,7 @@ const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:
 const normalize=s=>String(s).toUpperCase().replace(/[^A-Z ]/g,' ').trim().replace(/ +/g,' ');
 const secretKey=()=>{const raw=process.env.NIGHT_CIPHER_ROUND_SECRET;if(!raw||raw.length<32)throw Error('Vercel environment variable NIGHT_CIPHER_ROUND_SECRET must contain at least 32 characters.');return createHash('sha256').update(raw).digest()};
 const seal=value=>{const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',secretKey(),iv),data=Buffer.concat([cipher.update(JSON.stringify(value),'utf8'),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),data]).toString('base64url')};
+const openToken=token=>{const bytes=Buffer.from(String(token||''),'base64url');if(bytes.length<29||bytes.length>12000)throw Error('Previous round token is invalid.');const decipher=createDecipheriv('aes-256-gcm',secretKey(),bytes.subarray(0,12));decipher.setAuthTag(bytes.subarray(12,28));return JSON.parse(Buffer.concat([decipher.update(bytes.subarray(28)),decipher.final()]).toString('utf8'))};
 const safeSvg=raw=>{
  if(typeof raw!=='string'||raw.length>500000)throw Error('Hider artwork is missing or exceeds the 500 KB limit.');
  const match=raw.match(/<svg\b[\s\S]*?<\/svg>/i);if(!match)throw Error('Hider returned no complete SVG.');
