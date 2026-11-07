@@ -29,3 +29,9 @@ nav[hidden]{display:none}#levels{margin:-6px 0 14px}#levels button{padding:4px 1
 .legend{margin:6px 0 0;color:var(--mut)}
 .intro{margin:0 0 10px;color:var(--mut)}.tries{margin-left:8px;color:var(--acc);letter-spacing:.15em}
 polli-connect button,polli-connect button *{color:var(--ink)!important}
+dialog{background:var(--card);color:var(--ink);border:1px solid #38427a;border-radius:16px;padding:22px 24px;width:min(540px,92vw);max-height:88vh;overflow:auto}
+dialog::backdrop{background:rgba(5,8,20,.72)}
+dialog h2{margin:0 0 6px;font-size:1.3rem}dialog h3{margin:16px 0 6px;font-size:1rem;color:var(--acc)}
+dialog .lead,dialog .note{color:var(--mut)}dialog .note{font-size:.9rem;margin:14px 0}
+dialog ol,dialog ul{margin:0;padding-left:20px}dialog li{margin:6px 0}dialog .modes{list-style:none;padding:0}dialog button{width:100%}
+button.link{background:none;border:none;padding:0 0 0 6px;border-radius:0;color:var(--acc);text-decoration:underline;font:inherit;cursor:pointer}
