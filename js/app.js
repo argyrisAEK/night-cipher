@@ -127,7 +127,7 @@ $('#hide').onclick=async()=>{
     if(hasSecretLeak(safe,secret))throw Error('The hider leaked the secret in SVG text or attributes, so the round was voided. Try again.');
     const sc=(out.split(/SCHEME:/i)[1]||'').trim().slice(0,400),words=secret.split(/\s+/).length;
     if(!sc)throw Error('The hider did not provide a SCHEME explanation. Try again.');
-    if(hasSecretLeak(sc,secret))throw Error('The SCHEME explanation reveals the secret. The round was voided; try again.');
+    if(hasSecretLeak(sc,secret,{strictWords:false}))throw Error('The SCHEME explanation reveals the complete secret message. The round was voided; try again.');
     start({mode:'duel',schemeIdx:null,hider:$('#hider').value,secret,svg:safe,scheme:sc,hints:[`${ns.length} letters in ${words} word${words>1?'s':''}.`,`It starts with “${[...secret][0]}”.`,`The hider confessed: ${sc}`]});
     if($('#judge').checked&&conn.apiKey)judgeStealth(R);
   }catch(e){say(e.message,'bad');if(!$('#imgbox img'))$('#imgbox').textContent=IDLE.duel}
