@@ -109,3 +109,15 @@ test('guess counter shows tries left and drops after a wrong guess', async ({ pa
   await page.click('#go');
   await expect(page.locator('#tries')).toHaveText('●●○');
 });
+
+test('AI modes start with an empty stage and the counter clears when a round ends', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Learn' }).click();
+  await expect(page.locator('#imgbox img')).toHaveCount(1);
+  await page.click('#giveup');
+  await expect(page.locator('#tries')).toHaveText('');
+  await page.locator('#tabs button', { hasText: 'Duel' }).click();
+  await expect(page.locator('#imgbox img')).toHaveCount(0);
+  await expect(page.locator('#imgbox')).toContainText('Your picture will appear here');
+  await expect(page.locator('#hide')).toContainText('💰');
+  await expect(page.locator('section.card #robustnessReport')).toHaveCount(1);
+});
