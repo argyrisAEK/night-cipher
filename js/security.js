@@ -68,7 +68,7 @@ const utf8Base64=s=>{
   return btoa(binary);
 };
 const hasSecretLeak=(input,secret)=>{
-  const source=String(input??''),isSvg=/^\\s*<svg(?:\\s|>)/i.test(source);
+  const source=String(input??''),isSvg=/^\s*<svg(?:\s|>)/i.test(source);
   let raw=source,values=[];
   if(isSvg){
     const d=new DOMParser().parseFromString(source,'image/svg+xml');
@@ -79,7 +79,7 @@ const hasSecretLeak=(input,secret)=>{
     raw=[...values,...comments].join(' ');
   }
   const stopwords=new Set(['THE','AND','FOR','ARE','BUT','NOT','YOU','ALL','CAN','HER','WAS','ONE','OUR','OUT','DAY','GET','HAS','HIM','HIS','HOW','ITS','NEW','NOW','OLD','SEE','TWO','WAY','WHO','BOY','DID','SHE','USE','THIS','THAT','WITH','FROM','HAVE','WILL','YOUR','THEM','THEN','THAN','WHEN','WHAT','HERE','BEEN','WERE','SOME','MORE','JUST','LIKE','OVER','ONLY','INTO','BACK','DOWN','EACH']);
-  const words=x=>String(x).toUpperCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').match(/[\\p{L}\\p{N}]+/gu)||[];
+  const words=x=>String(x).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/[\p{L}\p{N}]+/gu)||[];
   const secretWords=words(secret),hayWords=words(raw),haySet=new Set(hayWords);
   const phrase=secretWords.join(' '),hayPhrase=words(raw).join(' ');
   if(phrase.length>=3&&(' '+hayPhrase+' ').includes(' '+phrase+' '))return true;
