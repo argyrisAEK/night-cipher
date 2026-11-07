@@ -78,20 +78,20 @@ export default async function handler(req,res){
  try{
   const body=await readBody(req),secret=normalize(body.secret),model=String(body.model||'').trim(),apiKey=String(body.pollinationsKey||'');
   if(!/^[A-Z ]{3,24}$/.test(secret)||secret.replace(/ /g,'').length<3)return send(res,{error:'Secret must contain 3–24 A–Z characters.'},400);
-  if(!model||model.length>160||!apiKey||apiKey.length>4096)return json({error:'A Hider model and Pollinations connection are required.'},400);
+  if(!model||model.length>160||!apiKey||apiKey.length>4096)return send(res,{error:'A Hider model and Pollinations connection are required.'},400);
   const previous=body.previousRoundToken?openToken(body.previousRoundToken):null;
   const plan=pickPlan(secret,{lastMethod:previous?.plan?.method||'',lastScene:previous?.plan?.scene||'',round:Date.now()});
-  if(decodePlan(plan)!==secret)return json({error:'Internal encoding round-trip validation failed.'},500);
+  if(decodePlan(plan)!==secret)return send(res,{error:'Internal encoding round-trip validation failed.'},500);
   const prompt=makePrompt(plan.scene),started=Date.now();
   const response=await fetch(API,{method:'POST',headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,messages:[{role:'system',content:'You are a skilled SVG illustrator. Create the artwork only; do not encode or infer any secret.'},{role:'user',content:prompt}],max_tokens:12000})});
-  if(!response.ok){const detail=await response.text().catch(()=> '');return json({error:`Pollinations Hider request failed (${response.status}): ${detail.slice(0,300)}`},502)}
+  if(!response.ok){const detail=await response.text().catch(()=> '');return send(res,{error:`Pollinations Hider request failed (${response.status}): ${detail.slice(0,300)}`},502)}
   const result=await response.json(),choice=result.choices?.[0],raw=choice?.message?.content;
-  if(typeof raw!=='string')return json({error:'Pollinations returned no Hider artwork.'},502);
+  if(typeof raw!=='string')return send(res,{error:'Pollinations returned no Hider artwork.'},502);
   const background=safeSvg(raw),{markup,layout}=renderOverlay(plan,randomBytes(8).toString('hex'));
   const svg=background.replace(/<\/svg>\s*$/i,markup+'</svg>');
-  if(svg.length>500000)return json({error:'Rendered SVG exceeds the size limit.'},502);
+  if(svg.length>500000)return send(res,{error:'Rendered SVG exceeds the size limit.'},502);
   const tokenPayload={secret,plan,layout,createdAt:Date.now()};
   const revealToken=seal(tokenPayload);
-  return json({svg,revealToken,usage:result.usage||null,model:result.model||model,finishReason:choice.finish_reason||null,completionTokens:result.usage?.completion_tokens??null,durationMs:Date.now()-started,validation:{svgValid:true,encodingValid:decodePlan(plan)===secret,secretLeak:false},prompt,rawResponse:raw});
- }catch(error){return json({error:error?.message||'Hider generation failed.'},500)}
+  return send(res,{svg,revealToken,usage:result.usage||null,model:result.model||model,finishReason:choice.finish_reason||null,completionTokens:result.usage?.completion_tokens??null,durationMs:Date.now()-started,validation:{svgValid:true,encodingValid:decodePlan(plan)===secret,secretLeak:false},prompt,rawResponse:raw});
+ }catch(error){return send(res,{error:error?.message||'Hider generation failed.'},500)}
 }
