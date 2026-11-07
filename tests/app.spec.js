@@ -188,3 +188,16 @@ test('AI vs AI Duel clearly assigns both AI roles and reveals the seeker result 
   await expect(page.locator('#res')).toContainText('AI seeker said: “LANTERN”', { timeout: 10000 });
   await expect(page.locator('#status')).toContainText('decoded the message chosen for this duel');
 });
+
+test('Duel message is limited to 24 characters with a live counter', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Duel' }).click();
+  const msg = page.locator('#msg');
+  await expect(msg).toHaveAttribute('maxlength', '24');
+  await msg.fill('');
+  await msg.pressSequentially('ABCDEFGHIJ KLMNOPQRSTUVWXYZ');
+  await expect(msg).toHaveValue('ABCDEFGHIJ KLMNOPQRSTUVW');
+  await expect(page.locator('#msgCount')).toHaveText('24 / 24');
+  await page.evaluate(() => { document.querySelector('#msg').value = 'A'.repeat(25); });
+  await page.click('#hide');
+  await expect(page.locator('#status')).toContainText('Use 3–24 characters');
+});
