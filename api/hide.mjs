@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { pickPlan, decodePlan, METHODS } from '../server/encoding.mjs';
+import { pickPlan, decodePlan } from '../server/encoding.mjs';
 
 const API='https://gen.pollinations.ai/v1/chat/completions';
 const SVG_TAGS=new Set(['svg','g','defs','rect','circle','ellipse','line','polyline','polygon','path','linearGradient','radialGradient','stop','filter','feGaussianBlur','feMerge','feMergeNode','feColorMatrix','feOffset','feBlend','feComposite','clipPath','mask']);
@@ -78,9 +78,8 @@ export default async function handler(req){
   const body=await req.json(),secret=normalize(body.secret),model=String(body.model||'').trim(),apiKey=String(body.pollinationsKey||'');
   if(!/^[A-Z ]{3,24}$/.test(secret)||secret.replace(/ /g,'').length<3)return json({error:'Secret must contain 3–24 A–Z characters.'},400);
   if(!model||model.length>160||!apiKey||apiKey.length>4096)return json({error:'A Hider model and Pollinations connection are required.'},400);
-  const previous=body.previousRoundToken?JSON.parse(Buffer.from(body.previousRoundToken,'base64url').toString('utf8')):null;
-  // Previous round data is never trusted unless it decrypts successfully in the reveal endpoint.
-  const plan=pickPlan(secret,{lastMethod:body.lastMethod||'',lastScene:body.lastScene||'',round:Date.now()});
+  const previous=body.previousRoundToken?openToken(body.previousRoundToken):null;
+  const plan=pickPlan(secret,{lastMethod:previous?.plan?.method||'',lastScene:previous?.plan?.scene||'',round:Date.now()});
   if(decodePlan(plan)!==secret)return json({error:'Internal encoding round-trip validation failed.'},500);
   const prompt=makePrompt(plan.scene),started=Date.now();
   const response=await fetch(API,{method:'POST',headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({model,messages:[{role:'system',content:'You are a skilled SVG illustrator. Create the artwork only; do not encode or infer any secret.'},{role:'user',content:prompt}],max_tokens:12000})});
