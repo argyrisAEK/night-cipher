@@ -134,7 +134,6 @@ test('first visit shows How to play once, and it can be reopened', async ({ page
   await page.click('#howtoBtn');
   await expect(page.locator('#howto')).toBeVisible();
 });
-
 test('built-in self-test passes completely, including the secret-leak detector', async ({ page }) => {
   test.setTimeout(60000);
   await page.goto('/?selftest');
