@@ -11,17 +11,17 @@
 <polli-connect app-key="pk_zERtArHJHymnUbNl" budget="3" expiry="7" models="text"></polli-connect></header>
 <dialog id="howto" aria-labelledby="howtoTitle">
 <h2 id="howtoTitle">How to play</h2>
-<p class="lead">Every picture in Night Cipher hides a secret word. Your job is to spot the pattern and read it.</p>
+<p class="lead">Night Cipher has four ways to play: solve a hidden message yourself, or watch AI models compete in a hiding-and-decoding duel.</p>
 <ol>
 <li><b>Study the picture.</b> The letters are hidden in something you can count or compare, like lit windows, bar heights, petals or dots. Look for a pattern rather than written text.</li>
-<li><b>In Learn and Daily, type your guess</b> on the right. In Duel vs AI, you supply the secret and the AI seeker attempts to decode the picture for you.</li>
+<li><b>In Learn and Daily, type your guess</b> on the right. In AI vs AI Duel, you choose the secret message; AI Hider conceals it in an image, then AI Seeker tries to decode it. You watch the contest.</li>
 <li><b>Learn the trick.</b> When the round ends, press “How was it hidden?” to see the method with the letters highlighted.</li>
 </ol>
 <h3>Four ways to play</h3>
 <ul class="modes">
 <li><b>📅 Daily</b> One puzzle a day, the same for everyone. Build a streak.</li>
 <li><b>🎓 Learn</b> Ten levels, each with a different hiding method.</li>
-<li><b>⚔ Duel vs AI 💰</b> Give an AI a secret message to hide, then see whether a second AI can recover it from the picture.</li>
+<li><b>⚔ AI vs AI Duel 💰</b> Choose a secret message and watch two AI models compete: one hides it, the other tries to decode it.</li>
 <li><b>🕵 You hide, AI seeks 💰</b> Pick a word and a scheme and see whether an AI can crack it.</li>
 </ul>
 <p class="note">💰 = uses your Pollen. Daily and Learn work without signing in; only the 💰 buttons need the sign-in button at the top right.</p>
@@ -35,22 +35,24 @@
 <aside class="card">
   
 <div id="duel" hidden>
-<label>Secret message (3–60 characters; English letters A–Z and spaces only)</label>
+<p class="mode-note">🤖 <b>AI Hider</b> creates the image. <b>AI Seeker</b> then attempts to decode the message you selected. You are the referee.</p>
+<label>Choose the secret message (3–60 characters; English letters A–Z and spaces only)</label>
 <div class="row"><input id="msg" maxlength="60"><button id="dice" title="Random message" style="flex:0">🎲</button></div>
 <label>Difficulty</label><select id="diff"><option value="0">Paper mode: no legend, scheme is a mystery</option><option value="1">Friendly: hider adds a visual key</option></select>
-<details class="adv" open><summary>⚙ Advanced · AI models &amp; stealth judge</summary><label title="Your key’s budget caps the spending.">Hider model (draws the SVG)</label><select id="hider" title="Your key’s budget caps the spending."></select>
-<label title="Your key’s budget caps the spending.">Seeker model (sees only a PNG, cannot run code)</label><select id="seeker" title="Your key’s budget caps the spending."></select>
+<details class="adv" open><summary>⚙ Advanced · AI models &amp; stealth judge</summary><label title="Your key’s budget caps the spending.">AI Hider model (creates the image)</label><select id="hider" title="Your key’s budget caps the spending."></select>
+<label title="Your key’s budget caps the spending.">AI Seeker model (analyzes the image)</label><select id="seeker" title="Your key’s budget caps the spending."></select>
 <label style="display:flex;align-items:center;gap:6px;text-transform:none"><input type="checkbox" id="judge" style="width:auto;margin:0"> Stealth judge — a second AI rates how innocent the picture looks 💰 (+1 call)</label>
 <label title="Your key’s budget caps the spending.">Judge model (needs vision)</label><select id="judgeModel" title="Your key’s budget caps the spending."></select>
 </details>
-<p><button id="hide" class="pri" style="width:100%">Hide the message 💰</button></p>
+<p><button id="hide" class="pri" style="width:100%">Start AI Duel 💰</button></p>
 </div>
 <div id="own" hidden><label>Your word (letters A–Z, up to 10)</label><input id="omsg" maxlength="10" value="LANTERN"><label>Hiding scheme</label><select id="osch"></select><label title="Your key’s budget caps the spending.">Seeker model (vision-capable only)</label><select id="seeker2" title="Your key’s budget caps the spending."></select><small>You pick the code, a vision model tries to read it from a PNG. Which schemes can it crack?</small><p><button id="ohide" class="pri" style="width:100%">Challenge the AI 💰</button></p></div>
 <div id="game" hidden>
+<p id="duelRoles" class="duel-roles" hidden><b>🤖 AI Hider</b> <span>→</span> <b>🤖 AI Seeker</b><small>You choose the message; the two models compete to hide and recover it.</small></p>
 <label>Your guess <span id="tries" class="tries"></span></label><input id="guess" autocomplete="off" placeholder="What is the hidden message?">
 <div class="row"><button id="go" class="pri">Guess</button><button id="hint">Hint (−20)</button></div>
 <ol id="hints"></ol>
-<div class="row" style="margin-top:10px"><button id="ai">Let the AI try 💰</button><button id="giveup">Give up</button></div>
+<div class="row" style="margin-top:10px"><button id="ai">Challenge AI Seeker 💰</button><button id="giveup">Give up</button></div>
 <p class="legend"><small>💰 = uses your Pollen</small></p>
 <div id="after" hidden>
 <div class="row" style="margin-top:8px"><button id="revealHow" hidden>✨ How was it hidden?</button></div>
