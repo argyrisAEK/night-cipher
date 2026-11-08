@@ -115,7 +115,7 @@ $('#independent').onclick=async()=>{
   if(!round||round.mode!=='duel'||independentInFlight||aiInFlight)return;
   if(!diagnostics?.result)return say('Run the primary Seeker first so the independent result can be compared against it.','bad');
   if(!conn||!conn.apiKey)return say('Connect your Pollinations account first. This test makes one additional paid vision request.','bad');
-  const model=$('#seekerAudit').value,primaryModel=$('#seeker').value;
+  const model=$('#seekerAudit').value,primaryModel=diagnostics?.seeker?.model||$('#seeker').value;
   if(!model)return say('Select an independent vision-capable model first.','bad');
   if(model===primaryModel)return say('Choose a different model from the primary Seeker. Independent validation requires a second model.','bad');
   if(diagnostics?.independentSeeker)return say('An independent Seeker result is already recorded for this round.','bad');
