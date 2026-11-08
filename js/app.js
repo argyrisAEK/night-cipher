@@ -84,7 +84,7 @@ $('#revealHow').onclick=async()=>{
     const info=await response.json();if(!response.ok)throw Error(info.error||'Could not reveal this round.');
     if(round!==R)return;
     const marks=(info.annotations||[]).map(a=>`<rect x="${a.x.toFixed(1)}" y="${a.y.toFixed(1)}" width="${a.w.toFixed(1)}" height="${a.h.toFixed(1)}" rx="7" fill="none" stroke="#ff4f87" stroke-width="2.2"/><text x="${(a.x+a.w/2).toFixed(1)}" y="${(a.y-5).toFixed(1)}" text-anchor="middle" font-family="monospace" font-size="13" font-weight="bold" fill="#ff6f9d">${esc(a.letter)}</text>`).join('');
-    const annotated=round.svg.replace(/<\\/svg>\\s*$/i,marks+'</svg>');
+    const annotated=round.svg.replace(/<\/svg>\s*$/i,marks+'</svg>');
     $('#imgbox').innerHTML=`<img class="revealed" alt="Annotated hidden message" src="${uri(annotated)}">`;
     round.scheme=info.rule;
     $('#res').innerHTML+=`<p><b>How it was hidden:</b> ${esc(info.rule)}</p>`;
@@ -176,7 +176,7 @@ $('#hide').onclick=async()=>{
     if(result.validation?.secretLeak)throw Error('The server detected a secret leak in the generated SVG.');
     if(result.usage?.total_tokens){tok+=result.usage.total_tokens;score()}
     renderDiagnostics();
-    start({mode:'duel',schemeIdx:null,hider:hiderModel,secret,svg:safe,scheme:'Private server-side visual encoding; reveal after the duel.',revealToken:result.revealToken,method:null,methodLabel:null,scene:null,hints:[ns.length+' letters in '+secret.split(/\\s+/).length+' words.','It starts with “'+[...secret][0]+'”.']});
+    start({mode:'duel',schemeIdx:null,hider:hiderModel,secret,svg:safe,scheme:'Private server-side visual encoding; reveal after the duel.',revealToken:result.revealToken,method:null,methodLabel:null,scene:null,hints:[ns.length+' letters in '+secret.split(/\s+/).length+' words.','It starts with “'+[...secret][0]+'”.']});
     dl.n=(dl.n||0)+1;dl.lastToken=result.revealToken;save();
     if($('#judge').checked&&conn.apiKey)judgeStealth(R);
   }catch(e){if(diagnostics){diagnostics.errors.push(e.message);renderDiagnostics()}say(e.message,'bad');if(!$('#imgbox img'))$('#imgbox').textContent=IDLE.duel}
