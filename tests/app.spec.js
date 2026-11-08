@@ -47,8 +47,9 @@ test('known training and daily ciphers use guided decoding instructions', async 
   expect(prompts.guided).toContain('One petal is A');
   expect(prompts.own).toContain('Petal count');
   expect(prompts.blind).not.toContain('DECODING RULE:');
-  expect(prompts.blind).toContain('count each visible petal');
-  expect(prompts.retry).toContain('Second-pass visual cryptanalysis');
+  expect(prompts.blind).toContain('blind AI SEEKER');
+  expect(prompts.blind).toContain('Do not assume the answer uses A=1');
+  expect(prompts.retry).toContain('Second-pass blind visual analysis');
 });
 
 test('legacy nc LocalStorage progression remains readable', async ({ page }) => {
@@ -167,14 +168,14 @@ test('AI Hider authors the complete organic image and Seeker receives only the b
       hiderBody=body;
       await route.fulfill({json:{
         model:'test-hider',
-        choices:[{message:{content:svg+'\\nSCHEME: '+scheme},finish_reason:'stop'}],
+        choices:[{message:{content:svg+'\nSCHEME: '+scheme},finish_reason:'stop'}],
         usage:{total_tokens:140,completion_tokens:110}
       }});
     }else{
       seekerBody=body;
       await route.fulfill({json:{
         model:'test-vision-seeker',
-        choices:[{message:{content:'MESSAGE: LANTERN\\nMETHOD: The natural window pattern encodes the letters.'},finish_reason:'stop'}],
+        choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: The natural window pattern encodes the letters.'},finish_reason:'stop'}],
         usage:{total_tokens:60,completion_tokens:35}
       }});
     }
@@ -213,7 +214,7 @@ test('Hider diagnostics capture its private explanation while the Seeker request
   }));
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
     const body=route.request().postDataJSON();
-    const content=body.model==='diag-hider'?svg+'\\nSCHEME: '+scheme:'MESSAGE: LANTERN\\nMETHOD: I decoded the window sequence.';
+    const content=body.model==='diag-hider'?svg+'\nSCHEME: '+scheme:'MESSAGE: LANTERN\nMETHOD: I decoded the window sequence.';
     if(body.model==='diag-seeker')seekerMessages=JSON.stringify(body.messages);
     await route.fulfill({json:{model:body.model,choices:[{message:{content},finish_reason:'stop'}],usage:{total_tokens:25,completion_tokens:18}}});
   });
