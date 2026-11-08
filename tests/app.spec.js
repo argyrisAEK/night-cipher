@@ -302,6 +302,10 @@ test('the Hider explanation is revealed only after an explicit user action', asy
   await page.click('#hide');
   await expect(page.locator('#imgbox img')).toBeVisible({timeout:10000});
   await expect(page.locator('#imgbox img')).toHaveAttribute('alt','Puzzle picture');
+  await expect(page.locator('#revealHow')).toBeHidden();
+  await page.click('#ai');
+  await expect(page.locator('#res')).toContainText('AI seeker said:',{timeout:10000});
+  await expect(page.locator('#revealHow')).toBeVisible();
   await page.click('#revealHow');
   await expect(page.locator('#imgbox img')).toHaveAttribute('alt','Annotated hidden message');
   expect(revealBody.revealToken).toBe('opaque-round-token');
