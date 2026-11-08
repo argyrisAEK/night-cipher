@@ -31,3 +31,7 @@ The SVG necessarily contains the visual evidence needed to solve the puzzle. A p
 ## Local development
 
 The Vite development server does not execute Vercel functions automatically. Use `vercel dev` for end-to-end local testing, with the environment variable configured in the local Vercel environment. The Playwright browser tests mock `/api/hide` and `/api/reveal`.
+
+## Public-repository caveat
+
+The encoding plan is not shipped in the browser bundle or returned by the Hider API before reveal. However, this repository is public, so a person who reads the GitHub source can inspect the server implementation itself. If the requirement is to hide the algorithm from source-code readers as well as from the browser and Seeker model, the server implementation must live in a private repository/service. This does not change what Pollinations Seeker receives: only the rendered image and blind prompt.
