@@ -358,6 +358,7 @@ fill('#judgeModel',POLLINATIONS_MODELS,/openai\/gpt-6\.1-sol/i);
 ['#hider','#seeker','#seeker2','#seekerAudit','#judgeModel'].forEach(sel=>{$(sel).disabled=false});
 if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();allTabs[0].click();
 
+
 /* ---------- first-visit "How to play" ---------- */
 const howto=$('#howto'),HOWTO_KEY='nc-howto-seen';
 const openHowto=()=>{if(!howto.open){howto.showModal();howto.scrollTop=0}};
