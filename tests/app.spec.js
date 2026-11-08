@@ -269,6 +269,9 @@ test('independent Seeker gets only the blind prompt and records exact recovery m
   await page.selectOption('#seekerAudit','independent-seeker');
   await page.click('#hide');
   await expect(page.locator('#imgbox img')).toBeVisible();
+  await page.click('#independent');
+  await expect(page.locator('#status')).toContainText('Run the primary Seeker first');
+  expect(requests.some(x=>x.model==='independent-seeker')).toBe(false);
   await page.click('#ai');
   await expect(page.locator('#res')).toContainText('KNOW THE WAY');
   await page.click('#independent');
