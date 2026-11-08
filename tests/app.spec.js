@@ -155,7 +155,8 @@ test('all AI model selectors expose only the eight approved Pollinations models'
     'community/vendouple/gemini-3.8-flash'
   ];
   for (const selector of ['#hider', '#seeker', '#seeker2', '#seekerAudit', '#judgeModel']) {
-    await expect(page.locator(selector + ' option').evaluateAll(options => options.map(o => o.value))).resolves.toEqual(expected);
+    const actual = await page.locator(selector + ' option').evaluateAll(options => options.map(o => o.value));
+    expect(actual).toEqual(expected);
   }
 });
 
