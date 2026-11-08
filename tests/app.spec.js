@@ -302,6 +302,7 @@ test('quality helpers distinguish unmeasured validation from failed recovery and
       secretLeak: auditBlindRequest({ prompt: 'Decode HELLO WORLD', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
       schemeLeak: auditBlindRequest({ prompt: 'Read the stars', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
       valid: auditBlindRequest({ prompt: 'Study the image and infer its visual rule', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
+      commonWord: auditBlindRequest({ prompt: 'Study the image as a coherent scene and return one concise sentence', secret: 'THE', scheme: 'Read the stars', imageAttached: true }),
       spacedMessage: normalizeMessage('MEET ME AT MIDNIGHT'),
       joinedMessage: normalizeMessage('MEETMEATMIDNIGHT')
     };
@@ -314,5 +315,6 @@ test('quality helpers distinguish unmeasured validation from failed recovery and
   expect(result.secretLeak.verified).toBe(false);
   expect(result.schemeLeak.verified).toBe(false);
   expect(result.valid.verified).toBe(true);
+  expect(result.commonWord.verified).toBe(true);
   expect(result.spacedMessage).not.toBe(result.joinedMessage);
 });
