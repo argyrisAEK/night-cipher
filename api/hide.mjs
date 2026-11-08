@@ -97,7 +97,7 @@ export default async function handler(req,res){
   const result=await response.json(),choice=result.choices?.[0],raw=choice?.message?.content;
   if(typeof raw!=='string')return send(res,{error:'Pollinations returned no Hider artwork.'},502);
   const background=safeSvg(raw),{markup,layout}=renderOverlay(plan,randomBytes(8).toString('hex'),body.easy===true);
-  const svg=background.replace(/<\\/svg>\\s*$/i,markup+'</svg>');
+  const svg=background.replace(/<\/svg>\s*$/i,markup+'</svg>');
   if(svg.length>500000)return send(res,{error:'Rendered SVG exceeds the size limit.'},502);
   const encodingValid=decodePlan(plan)===secret&&layout.length===secret.replace(/ /g,'').length;
   const secretLeak=svg.toUpperCase().includes(secret);
