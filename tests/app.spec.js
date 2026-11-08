@@ -236,6 +236,13 @@ test('Hider diagnostics capture its private explanation while the Seeker request
   expect(report.hider.svg).toContain('<svg');
   expect(report.seeker.decodedMessage).toBe('LANTERN');
   expect(report.result.exactMatch).toBe(true);
+  expect(report.hider.validation.renderValid).toBe(true);
+  expect(report.hider.validation.schemePresent).toBe(true);
+  expect(report.seeker.blindAudit.verified).toBe(true);
+  expect(report.seeker.blindAudit.secretExcluded).toBe(true);
+  expect(report.seeker.blindAudit.schemeExcluded).toBe(true);
+  expect(report.seeker.imageReceived).toBe(true);
+  expect(report.seeker.usage.total_tokens).toBe(25);
   expect(JSON.stringify(report)).not.toContain('test-key');
 });
 
@@ -273,6 +280,30 @@ test('independent Seeker gets only the blind prompt and records exact recovery m
   await page.locator('#diagnostics > summary').click();
   const report=JSON.parse(await page.locator('#diagnosticsContent details').last().locator('pre').textContent());
   expect(report.independentSeeker.exactMatch).toBe(true);
+  expect(report.independentSeeker.blindAudit.verified).toBe(true);
+  expect(report.independentSeeker.imageReceived).toBe(true);
+  expect(report.independentSeeker.usage.total_tokens).toBe(40);
   expect(report.quality.bothExact).toBe(true);
   expect(report.quality.agreement).toBe(true);
+});
+
+test('quality helpers distinguish unmeasured validation from failed recovery and audit blind payloads', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { auditBlindRequest, compareSeekers } = await import('/js/quality.js');
+    return {
+      notRun: compareSeekers({ normalized: 'HELLO', exactMatch: true }, null),
+      complete: compareSeekers({ normalized: 'HELLOWORLD', exactMatch: true }, { normalized: 'HELLOWORLD', exactMatch: true }),
+      secretLeak: auditBlindRequest({ prompt: 'Decode HELLO WORLD', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
+      schemeLeak: auditBlindRequest({ prompt: 'Read the stars', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
+      valid: auditBlindRequest({ prompt: 'Study the image and infer its visual rule', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true })
+    };
+  });
+  expect(result.notRun.complete).toBe(false);
+  expect(result.notRun.agreement).toBeNull();
+  expect(result.notRun.bothExact).toBeNull();
+  expect(result.notRun.primaryExact).toBe(true);
+  expect(result.complete.bothExact).toBe(true);
+  expect(result.secretLeak.verified).toBe(false);
+  expect(result.schemeLeak.verified).toBe(false);
+  expect(result.valid.verified).toBe(true);
 });
