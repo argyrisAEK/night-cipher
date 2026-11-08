@@ -210,7 +210,7 @@ test('AI vs AI Duel uses the private Hider endpoint and keeps the encoding plan 
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
     const body=route.request().postDataJSON();
     seekerPrompt=JSON.stringify(body.messages);
-    await route.fulfill({json:{choices:[{message:{content:'MESSAGE: LANTERN\\nMETHOD: I found a repeated pattern of tiny lights.'}}],usage:{total_tokens:12}}});
+    await route.fulfill({json:{choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: I found a repeated pattern of tiny lights.'}}],usage:{total_tokens:12}}});
   });
   await page.reload();
   await page.waitForFunction(() => [...document.querySelectorAll('#hider option')].some(option => option.value === 'test-hider'));
@@ -246,7 +246,7 @@ test('AI Output Inspection captures server Hider output without exposing its pri
   }}));
   await page.route('https://gen.pollinations.ai/v1/chat/completions', route => route.fulfill({json:{
     model:'diagnostic-seeker',
-    choices:[{message:{content:'MESSAGE: LANTERN\\nMETHOD: I counted the repeated lights.'},finish_reason:'stop'}],
+    choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: I counted the repeated lights.'},finish_reason:'stop'}],
     usage:{total_tokens:17,completion_tokens:12}
   }}));
   await page.reload();
@@ -290,7 +290,7 @@ test('the Hider explanation is revealed only after an explicit user action', asy
     await route.fulfill({json:{method:'Constellation counts',rule:'Each constellation contains a count of stars; A=1 through Z=26.',scene:'Night observatory',annotations:[{x:100,y:100,w:60,h:50,letter:'L'}]}});
   });
   await page.route('https://gen.pollinations.ai/v1/chat/completions', route => route.fulfill({json:{
-    choices:[{message:{content:'MESSAGE: LANTERN\\nMETHOD: Count the star clusters.'}}],usage:{total_tokens:5}
+    choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: Count the star clusters.'}}],usage:{total_tokens:5}
   }}));
   await page.reload();
   await page.waitForFunction(() => [...document.querySelectorAll('#hider option')].some(o => o.value === 'reveal-hider'));
