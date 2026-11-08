@@ -29,7 +29,8 @@ const safeSvg=raw=>{
   while((a=re.exec(attrText))){const key=a[1],value=a[3]??a[4]??'';if(!SVG_ATTRS.has(key)||key==='xmlns'&&name!=='svg')continue;
    if(value.length>10000||/(?:javascript:|data:|https?:|\/\/|@import|expression\s*\()/i.test(value))continue;
    if(/url\s*\(/i.test(value)&&!/^url\(\s*#[\w.-]+\s*\)$/i.test(value))continue;
-   if(key==='id'&&!/^[\w.-]{1,80}$/.test(value))continue;
+   if(key==='href'){if(name!=='use'||!/^#[\w.-]{1,80}$/.test(value))continue;refs.push(value.slice(1))}
+   if(key==='id'){if(!/^[\w.-]{1,80}$/.test(value))continue;ids.add(value)}
    attrs.push(`${key}="${value.replace(/&(?!(?:amp|lt|gt|quot|apos);)/g,'&amp;').replace(/"/g,'&quot;')}"`);
   }
   if(name==='svg'){
@@ -39,6 +40,7 @@ const safeSvg=raw=>{
   if(!/\/\s*>$/.test(token))stack.push(name);
  }
  if(!rootSeen||stack.length||!rootClosed)throw Error('Hider artwork is incomplete or malformed.');
+ if(refs.some(id=>!ids.has(id)))throw Error('Hider artwork contains a broken local SVG reference.');
  return output;
 };
 const rng=seed=>{let x=seed>>>0;return()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296}};
