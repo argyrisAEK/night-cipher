@@ -2,8 +2,8 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 import { pickPlan, decodePlan } from '../server/encoding.mjs';
 
 const API='https://gen.pollinations.ai/v1/chat/completions';
-const SVG_TAGS=new Set(['svg','g','defs','rect','circle','ellipse','line','polyline','polygon','path','linearGradient','radialGradient','stop','filter','feGaussianBlur','feMerge','feMergeNode','feColorMatrix','feOffset','feBlend','feComposite','clipPath','mask']);
-const SVG_ATTRS=new Set(('xmlns viewBox width height x y x1 y1 x2 y2 cx cy r rx ry d points fill fill-opacity fill-rule stroke stroke-width stroke-opacity stroke-linecap stroke-linejoin stroke-dasharray stroke-dashoffset opacity transform id class offset stop-color stop-opacity gradientUnits gradientTransform spreadMethod fx fy fr filterUnits primitiveUnits stdDeviation result in in2 type values operator k1 k2 k3 k4 dx dy mode color-interpolation-filters clip-path clip-rule mask maskUnits maskContentUnits preserveAspectRatio').split(' '));
+const SVG_TAGS=new Set(['svg','g','defs','rect','circle','ellipse','line','polyline','polygon','path','linearGradient','radialGradient','stop','filter','feGaussianBlur','feMerge','feMergeNode','feColorMatrix','feOffset','feBlend','feComposite','clipPath','mask','symbol','use']);
+const SVG_ATTRS=new Set(('xmlns viewBox width height x y x1 y1 x2 y2 cx cy r rx ry d points fill fill-opacity fill-rule stroke stroke-width stroke-opacity stroke-linecap stroke-linejoin stroke-dasharray stroke-dashoffset opacity transform id class offset stop-color stop-opacity gradientUnits gradientTransform spreadMethod fx fy fr filterUnits primitiveUnits stdDeviation result in in2 type values operator k1 k2 k3 k4 dx dy mode color-interpolation-filters clip-path clip-rule mask maskUnits maskContentUnits preserveAspectRatio href').split(' '));
 const send=(res,data,status=200)=>{res.statusCode=status;res.setHeader('content-type','application/json; charset=utf-8');res.setHeader('cache-control','no-store');res.end(JSON.stringify(data))};
 const readBody=async req=>{if(req.body&&typeof req.body==='object')return req.body;if(typeof req.body==='string')return JSON.parse(req.body);let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>1000000)throw Error('Request body is too large.')}return JSON.parse(raw||'{}')};
 const normalize=s=>String(s).toUpperCase().replace(/[^A-Z ]/g,' ').trim().replace(/ +/g,' ');
@@ -15,7 +15,7 @@ const safeSvg=raw=>{
  const match=raw.match(/<svg\b[\s\S]*?<\/svg>/i);if(!match)throw Error('Hider returned no complete SVG.');
  let source=match[0].replace(/<!--[\s\S]*?-->/g,'').replace(/<\?xml[^>]*\?>/gi,'');
  if(/<(?:script|foreignObject|image|text|style|iframe|audio|video)\b/i.test(source))throw Error('Hider artwork contains an unsupported or unsafe SVG element.');
- const tokens=source.match(/<[^>]+>|[^<]+/g)||[],stack=[];let output='',rootSeen=false,rootClosed=false;
+ const tokens=source.match(/<[^>]+>|[^<]+/g)||[],stack=[],ids=new Set(),refs=[];let output='',rootSeen=false,rootClosed=false;
  for(const token of tokens){
   if(!token.startsWith('<')){if(token.trim())throw Error('Text nodes are not allowed in Hider artwork.');continue}
   if(/^<\s*!|^<\?/.test(token))throw Error('SVG declarations and entities are not allowed.');
