@@ -4,6 +4,7 @@ import { createChat, HIDE, buildSeekPrompt } from './api.js';
 import { loadState, saveState, createProgression } from './state.js';
 import { runSelfTest } from './selftest.js';
 import { parseSeekerResponse, compareSeekers, auditBlindRequest, normalizeMessage } from './quality.js';
+import { POLLINATIONS_MODELS } from './models.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]/gu,'');
@@ -338,49 +339,23 @@ tabDefs.forEach(([label,fn,kind])=>{
   allTabs.push(b);(kind==='training'?levels:tabs).append(b);
 });
 
-/* ---------- model discovery: vision-aware ---------- */
-function fill(sel,ids,pref){$(sel).innerHTML=ids.map(i=>`<option value="${esc(i)}">${/fable/i.test(i)?'★ ':''}${esc(i)}</option>`).join('');const p=ids.find(i=>pref.test(i));if(p)$(sel).value=p}
+/* ---------- fixed Pollinations model allowlist ---------- */
+function fill(sel,ids,pref){
+  $(sel).innerHTML=ids.map(id=>`<option value="${esc(id)}">${esc(id)}</option>`).join('');
+  const preferred=ids.find(id=>pref.test(id));
+  if(preferred)$(sel).value=preferred;
+}
 const supportsVisionInput=m=>typeof m==='object'&&m!==null&&(
   (Array.isArray(m.input_modalities)&&m.input_modalities.includes('image'))||
   Number(m.max_reference_images)>0
 );
-if(!/selftest/.test(location.search))fetch(API+'/models')
-  .then(r=>{if(!r.ok)throw Error(`Model discovery failed (${r.status})`);return r.json()})
-  .then(j=>(j.data||j))
-  .then(models=>{
-    if(!Array.isArray(models))throw Error('Unexpected model list format.');
-    const text=models.filter(m=>{
-      const id=typeof m==='string'?m:m?.id;
-      return typeof id==='string'&&!/flux|image|video|tts|audio|whisper|embed|music|realtime|3d|sora|veo|seedance|suno/i.test(id);
-    });
-    const idOf=m=>typeof m==='string'?m:m.id;
-    const allIds=text.map(idOf).filter(Boolean);
-    const visionIds=text.filter(supportsVisionInput).map(idOf).filter(Boolean);
-    fill('#hider',allIds,/fable/i);
-    fill('#seeker',visionIds,/fable|gemini|gpt/i);fill('#seeker2',visionIds,/fable|gemini|gpt/i);fill('#seekerAudit',visionIds,/claude|gemini|gpt/i);fill('#judgeModel',visionIds,/gemini|gpt/i);
-    if(!visionIds.length){
-      const heuristicIds=allIds.filter(id=>/claude|gemini|gpt-5|fable|kimi/i.test(id));
-      ['#seeker','#seeker2','#seekerAudit','#judgeModel'].forEach(sel=>{
-        const el=$(sel);
-        el.innerHTML='<option value="">No verified vision models found</option>'+
-          (heuristicIds.length?'<option value="__try_heuristic__">⚠ Try unverified vision candidates…</option>':'');
-        el.disabled=!heuristicIds.length;
-        el.onchange=()=>{
-          if(el.value!=='__try_heuristic__')return;
-          el.innerHTML=heuristicIds.map(id=>`<option value="${esc(id)}">${esc(id)} — unverified</option>`).join('');
-          el.value=heuristicIds[0]||'';
-          say('Warning: these models were selected by name only. Pollinations has not confirmed image-input support; requests may fail or incur Pollen charges.','bad');
-        };
-      });
-      say(heuristicIds.length
-        ?'No verified vision metadata was returned. You can explicitly opt in to unverified model-name candidates from the Seeker/Judge selectors.'
-        :'No vision-capable models or heuristic candidates were found in the catalog.','bad');
-    }else ['#seeker','#seeker2','#seekerAudit','#judgeModel'].forEach(sel=>{$(sel).disabled=false;$(sel).onchange=null});
-  })
-  .catch(e=>{
-    ['#seeker','#seeker2','#seekerAudit','#judgeModel'].forEach(sel=>{$(sel).innerHTML='<option value="">Vision model discovery unavailable</option>';$(sel).disabled=true});
-    say(e.message+' — reload after checking the Pollinations API.','bad');
-  });
+// One source of truth: add future approved model IDs to js/models.js.
+fill('#hider',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-sol$/i);
+fill('#seeker',POLLINATIONS_MODELS,/community\/vendouple\/gemini-3\.8-flash/i);
+fill('#seeker2',POLLINATIONS_MODELS,/community\/vendouple\/gemini-3\.8-flash/i);
+fill('#seekerAudit',POLLINATIONS_MODELS,/openai\/gpt-6-astra/i);
+fill('#judgeModel',POLLINATIONS_MODELS,/openai\/gpt-6\.1-sol/i);
+['#hider','#seeker','#seeker2','#seekerAudit','#judgeModel'].forEach(sel=>{$(sel).disabled=false});
 if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();allTabs[0].click();
 
 /* ---------- first-visit "How to play" ---------- */
