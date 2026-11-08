@@ -273,7 +273,10 @@ test('independent Seeker gets only the blind prompt and records exact recovery m
   await expect(page.locator('#res')).toContainText('KNOW THE WAY');
   await page.click('#independent');
   await expect(page.locator('#robustnessReport')).toContainText('Both exact: Yes');
+  const primary=requests.find(x=>x.model==='primary-seeker');
   const independent=requests.find(x=>x.model==='independent-seeker');
+  expect(independent.messages[0].content[1].image_url.url).toBe(primary.messages[0].content[1].image_url.url);
+  expect(independent.messages[0].content[0].text).toBe(primary.messages[0].content[0].text);
   expect(JSON.stringify(independent.messages)).not.toContain('KNOW THE WAY');
   expect(JSON.stringify(independent.messages)).not.toContain(scheme);
   expect(independent.messages[0].content.some(x=>x.type==='image_url')).toBe(true);
@@ -289,13 +292,15 @@ test('independent Seeker gets only the blind prompt and records exact recovery m
 
 test('quality helpers distinguish unmeasured validation from failed recovery and audit blind payloads', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const { auditBlindRequest, compareSeekers } = await import('/js/quality.js');
+    const { auditBlindRequest, compareSeekers, normalizeMessage } = await import('/js/quality.js');
     return {
       notRun: compareSeekers({ normalized: 'HELLO', exactMatch: true }, null),
       complete: compareSeekers({ normalized: 'HELLOWORLD', exactMatch: true }, { normalized: 'HELLOWORLD', exactMatch: true }),
       secretLeak: auditBlindRequest({ prompt: 'Decode HELLO WORLD', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
       schemeLeak: auditBlindRequest({ prompt: 'Read the stars', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
-      valid: auditBlindRequest({ prompt: 'Study the image and infer its visual rule', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true })
+      valid: auditBlindRequest({ prompt: 'Study the image and infer its visual rule', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
+      spacedMessage: normalizeMessage('MEET ME AT MIDNIGHT'),
+      joinedMessage: normalizeMessage('MEETMEATMIDNIGHT')
     };
   });
   expect(result.notRun.complete).toBe(false);
@@ -306,4 +311,5 @@ test('quality helpers distinguish unmeasured validation from failed recovery and
   expect(result.secretLeak.verified).toBe(false);
   expect(result.schemeLeak.verified).toBe(false);
   expect(result.valid.verified).toBe(true);
+  expect(result.spacedMessage).not.toBe(result.joinedMessage);
 });
