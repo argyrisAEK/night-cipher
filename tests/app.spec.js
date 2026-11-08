@@ -24,7 +24,7 @@ test('server Hider embeds a valid pattern and keeps its plan inside an encrypted
     expect(first.validation.encodingValid).toBe(true);
     expect(first.svg).toContain('<circle');
     expect(first.svg.toUpperCase()).not.toContain('LANTERN');
-    expect(first.prompt).not.toContain('LANTERN');
+    expect(first).not.toHaveProperty('prompt');
     expect(first.revealToken).not.toContain('LANTERN');
     const reveal=await invoke(revealHandler,{revealToken:first.revealToken});
     expect(reveal.status).toBe(200);
@@ -202,7 +202,6 @@ test('AI vs AI Duel uses the private Hider endpoint and keeps the encoding plan 
     hideBody=route.request().postDataJSON();
     await route.fulfill({json:{
       svg:finalSvg,revealToken:'opaque-encrypted-round-token',model:'test-hider',
-      prompt:'Create only a night-scene background; no secret or encoding map.',
       rawResponse:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>',
       validation:{svgValid:true,encodingValid:true,secretLeak:false},
       usage:{total_tokens:12},durationMs:42
@@ -242,7 +241,6 @@ test('AI Output Inspection captures server Hider output without exposing its pri
   }));
   await page.route('**/api/hide', route => route.fulfill({json:{
     svg:finalSvg,revealToken:'opaque-token',model:'diagnostic-hider',
-    prompt:'Background-only prompt; no secret.',
     rawResponse:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>',
     validation:{svgValid:true,encodingValid:true,secretLeak:false},usage:{total_tokens:23},durationMs:30
   }}));
@@ -284,7 +282,7 @@ test('the Hider explanation is revealed only after an explicit user action', asy
   }));
   await page.route('**/api/hide', route => route.fulfill({json:{
     svg:finalSvg,revealToken:'opaque-round-token',model:'reveal-hider',
-    prompt:'Background only.',rawResponse:finalSvg,validation:{svgValid:true,encodingValid:true,secretLeak:false}
+    rawResponse:finalSvg,validation:{svgValid:true,encodingValid:true,secretLeak:false}
   }}));
   let revealBody=null;
   await page.route('**/api/reveal', async route => {
