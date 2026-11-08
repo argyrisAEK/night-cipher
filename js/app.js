@@ -26,8 +26,9 @@ const recordHiderOutcome=success=>{
 const recordSeekerOutcome=(record,role='primary')=>{
   if(!record||record.statsRecorded)return;
   const s=modelStat('sm',record.model);s.attempts++;
-  if(record.status==='completed'){if(record.exactMatch)s.exact++;s.totalSimilarity+=record.similarity||0;s.totalTokens+=record.usage?.total_tokens||record.tokens||0;}
+  if(record.status==='completed'){if(record.exactMatch)s.exact++;s.totalSimilarity+=record.similarity||0;}
   else s.failed++;
+  s.totalTokens+=record.usage?.total_tokens||record.tokens||0;
   s.totalDurationMs+=record.durationMs||0;
   record.statsRecorded=true;
   const hs=diagnostics?.hider?.model&&T.hm?.[diagnostics.hider.model];
@@ -128,7 +129,7 @@ $('#ai').onclick=async()=>{
     const seekerPrompt=buildSeekPrompt(round,{retry:!!round.aiHistory?.length}),seekerStarted=Date.now(),png=round.png||await toPng(round.svg);
     const messages=[{role:'user',content:[{type:'text',text:seekerPrompt},{type:'image_url',image_url:{url:png}}]}];
     const blindAudit=auditBlindRequest({prompt:messages[0].content.find(part=>part.type==='text')?.text,secret:round.secret,scheme:round.scheme,imageAttached:messages.some(message=>message.content?.some(part=>part.type==='image_url'&&!!part.image_url?.url))});
-    if(diagnostics){diagnostics.seeker={status:'running',model,startedAt:seekerStarted,prompt:seekerPrompt,blindAudit,imageReceived:blindAudit.imageAttached,rawResponse:'',decodedMessage:'',durationMs:null,tokens:null,usage:null};diagnostics.result={status:'running',success:null,exactMatch:null,similarity:null};renderDiagnostics()}
+    if(diagnostics){diagnostics.seeker={status:'running',model,startedAt:seekerStarted,prompt:seekerPrompt,blindAudit,imageReceived:blindAudit.imageAttached,rawResponse:'',decodedMessage:'',durationMs:null,tokens:null,usage:null};diagnostics.result={status:'running',success:null,exactMatch:null,similarity:null};diagnostics.independentSeeker={status:'not_run',model:null,exactMatch:null};diagnostics.quality={complete:false,agreement:null,bothExact:null,primaryExact:null,independentExact:null};renderDiagnostics()}
     if(!blindAudit.verified)throw Error('Blind Seeker payload audit failed: secret, SCHEME, or image isolation check did not pass.');
     let responseMeta=null;
     const out=await chat(model,messages,4000,90000,{onRawResponse:meta=>{responseMeta=meta;if(diagnostics?.seeker){Object.assign(diagnostics.seeker,{responseModel:meta.model,finishReason:meta.finishReason,usage:meta.usage||null,promptTokens:meta.promptTokens??null,completionTokens:meta.completionTokens??null,totalTokens:meta.totalTokens??null})}}});
@@ -138,7 +139,7 @@ $('#ai').onclick=async()=>{
     round.ai={guess:g,method:mt,s,ok:round.mode==='duel'?exact:s>=.9,model,durationMs:Date.now()-attemptStarted,tokens:tok-tokensBefore};if(round.mode==='duel')$('#revealHow').hidden=false;round.aiHistory=round.aiHistory||[];round.aiHistory.push({...round.ai,at:Date.now()});
     if(round.mode=='duel'||round.mode=='own'){T.an++;if(round.ai.ok)T.ai++;const k=(round.mode=='own'?'your '+round.sname:'hider '+round.hider)+' → '+$(round.mode=='own'?'#seeker2':'#seeker').value+(round.method?' · '+round.method:''),v=(T.s=T.s||{})[k]=T.s[k]||{n:0,ok:0};v.n++;if(round.ai.ok)v.ok++;save();score()}
     if(round.mode==='duel'){$('#res').innerHTML=aiLine();if(round.ai.ok){aiAttempted=true;say('AI Seeker decoded the message chosen for this duel.','ok')}else{aiAttempted=false;say(g.toUpperCase()==='NONE'?'AI Seeker could not produce a defensible decoding. You can retry or change the model.':'AI Seeker failed to recover the message. You can retry or change the model.','bad')}}else if(g.toUpperCase()==='NONE'||s<.9){aiAttempted=false;if(round.done)$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say(g.toUpperCase()==='NONE'?'The AI found no defensible decoding. Retry or choose another vision model.':'The AI returned an incorrect answer. Retry or choose another vision model.','bad')}else if(round.done){$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say('The AI recovered the message.')}else say('The AI has locked in an answer. Finish your round to see it.');
-  }catch(e){if(round===R){if(diagnostics){diagnostics.errors.push(e.message);if(diagnostics.seeker?.status==='running'){diagnostics.seeker.status='error';diagnostics.seeker.failureReason=e.message;diagnostics.seeker.error=e.message;diagnostics.seeker.durationMs=Date.now()-(diagnostics.seeker.startedAt||attemptStarted);recordSeekerOutcome(diagnostics.seeker,'primary');diagnostics.result={status:'error',success:false,exactMatch:null,similarity:null,failureReason:e.message}}renderDiagnostics()}aiAttempted=false;say(e.message,'bad')}}
+  }catch(e){if(round===R){if(diagnostics){diagnostics.errors.push(e.message);if(diagnostics.seeker?.status==='running'){diagnostics.seeker.status='error';diagnostics.seeker.failureReason=e.message;diagnostics.seeker.error=e.message;diagnostics.seeker.durationMs=Date.now()-(diagnostics.seeker.startedAt||attemptStarted);diagnostics.seeker.tokens=tok-tokensBefore;recordSeekerOutcome(diagnostics.seeker,'primary');diagnostics.result={status:'error',success:false,exactMatch:null,similarity:null,failureReason:e.message}}renderDiagnostics()}aiAttempted=false;say(e.message,'bad')}}
   finally{aiInFlight=false;busy(false)}
 };
 /* ---------- independent blind Seeker validation ---------- */
@@ -146,7 +147,7 @@ let independentInFlight=false;
 $('#independent').onclick=async()=>{
   const round=R;
   if(!round||round.mode!=='duel'||independentInFlight||aiInFlight)return;
-  if(!diagnostics?.result)return say('Run the primary Seeker first so the independent result can be compared against it.','bad');
+  if(diagnostics?.result?.status!=='completed')return say('Run the primary Seeker first so the independent result can be compared against it.','bad');
   if(!conn||!conn.apiKey)return say('Connect your Pollinations account first. This test makes one additional paid vision request.','bad');
   const model=$('#seekerAudit').value,primaryModel=diagnostics?.seeker?.model||$('#seeker').value;
   if(!model)return say('Select an independent vision-capable model first.','bad');
@@ -177,7 +178,7 @@ $('#independent').onclick=async()=>{
     $('#robustnessReport').innerHTML='<section class="card" style="margin-top:10px;padding:10px"><b>Independent blind validation</b><p>Primary: <b class="'+(comparison.primaryExact?'ok':'bad')+'">'+(comparison.primaryExact?'Exact':'Missed')+'</b> · '+esc(primaryModel)+'</p><p>Independent: <b class="'+(exact?'ok':'bad')+'">'+(exact?'Exact':'Missed')+'</b> · '+esc(model)+' · '+Math.round(s*100)+'% similarity</p><p>Model agreement: <b>'+(comparison.agreement?'Yes':'No')+'</b> · Both exact: <b>'+(comparison.bothExact?'Yes':'No')+'</b></p><small>'+record.durationMs+' ms · '+record.tokens+' tokens. The second model received only the blind prompt and rasterized image.</small></section>';
     say(exact&&comparison.primaryExact?'Both independent Seekers recovered the exact message.':exact?'The independent Seeker recovered the message; the primary Seeker did not.':'The independent Seeker did not recover the exact message.',exact&&comparison.primaryExact?'ok':'bad');
     $('#independent').textContent='Independent Seeker complete';
-  }catch(e){if(round===R){record.status='error';record.error=e.message;record.failureReason=e.message;record.durationMs=Date.now()-started;recordSeekerOutcome(record,'independent');if(diagnostics){diagnostics.errors.push('Independent Seeker: '+e.message);renderDiagnostics()}say(e.message,'bad')}}
+  }catch(e){if(round===R){record.status='error';record.error=e.message;record.failureReason=e.message;record.durationMs=Date.now()-started;record.tokens=tok-before;recordSeekerOutcome(record,'independent');if(diagnostics){diagnostics.errors.push('Independent Seeker: '+e.message);renderDiagnostics()}say(e.message,'bad')}}
   finally{independentInFlight=false;busy(false);$('#independent').disabled=diagnostics?.independentSeeker?.status==='completed'}
 };
 /* ---------- image degradation & robustness experiment ---------- */
