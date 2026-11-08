@@ -105,6 +105,6 @@ export default async function handler(req,res){
   if(!encodingValid||secretLeak)return send(res,{error:'The server-side SVG validation failed; this round was voided.'},502);
   const tokenPayload={secret,plan,layout,createdAt:Date.now()};
   const revealToken=seal(tokenPayload);
-  return send(res,{svg,revealToken,usage:result.usage||null,model:result.model||model,finishReason:choice.finish_reason||null,completionTokens:result.usage?.completion_tokens??null,durationMs:Date.now()-started,validation:{svgValid:true,encodingValid,secretLeak},prompt,rawResponse:raw});
+  return send(res,{svg,revealToken,usage:result.usage||null,model:result.model||model,finishReason:choice.finish_reason||null,completionTokens:result.usage?.completion_tokens??null,durationMs:Date.now()-started,validation:{svgValid:true,encodingValid,secretLeak},rawResponse:raw});
  }catch(error){return send(res,{error:error?.message||'Hider generation failed.'},500)}
 }
