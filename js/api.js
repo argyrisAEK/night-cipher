@@ -31,7 +31,7 @@ export function createChat({getConnection,getTokenCount,setTokenCount,onUsage}){
       const text=content==null?'':Array.isArray(content)
         ?content.map(part=>part.text||'').join('')
         :String(content);
-      onRawResponse?.({text,model:j.model||model,finishReason:choice?.finish_reason||null,completionTokens:j.usage?.completion_tokens??null});
+      onRawResponse?.({text,model:j.model||model,finishReason:choice?.finish_reason||null,usage:j.usage||null,promptTokens:j.usage?.prompt_tokens??null,completionTokens:j.usage?.completion_tokens??null,totalTokens:j.usage?.total_tokens??null});
       if(requestType==='hider'&&!/<svg[\s\S]*?<\/svg>/i.test(text)){
         const finishReason=choice?.finish_reason||'not provided';
         const completionTokens=j.usage?.completion_tokens??'not provided';
