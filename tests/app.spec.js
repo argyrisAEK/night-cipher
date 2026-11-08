@@ -142,6 +142,23 @@ test('built-in self-test passes completely, including the secret-leak detector',
   await expect(page.locator('#st')).not.toContainText('❌');
 });
 
+
+test('all AI model selectors expose only the eight approved Pollinations models', async ({ page }) => {
+  const expected = [
+    'openai/gpt-6.1-sol',
+    'openai/gpt-6-luna',
+    'openai/gpt-6.1-terra',
+    'openai/gpt-6-astra',
+    'community/Lorodn4x/qwen3.8-plus',
+    'community/vendouple/gpt-6-luna',
+    'community/vendouple/gpt-6-astra',
+    'community/vendouple/gemini-3.8-flash'
+  ];
+  for (const selector of ['#hider', '#seeker', '#seeker2', '#seekerAudit', '#judgeModel']) {
+    await expect(page.locator(selector + ' option').evaluateAll(options => options.map(o => o.value))).resolves.toEqual(expected);
+  }
+});
+
 test('AI model settings are open by default, collapsible, and carry the budget tooltip', async ({ page }) => {
   await page.locator('#tabs button', { hasText: 'Duel' }).click();
   await expect(page.locator('#hider')).toBeVisible();
@@ -158,36 +175,36 @@ test('AI Hider authors the complete organic image and Seeker receives only the b
   const scheme='The illuminated windows in each natural cluster encode A=1 through Z=26, read left to right; wider gaps separate words.';
   let hiderBody=null,seekerBody=null,chatCalls=0,serverCalls=0;
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
-    json:{data:[{id:'test-hider'},{id:'test-vision-seeker',input_modalities:['image']}]}
+    json:{data:[{id:'openai/gpt-6.1-sol'},{id:'community/vendouple/gemini-3.8-flash',input_modalities:['image']}]}
   }));
   await page.route('**/api/**', route => {serverCalls++;return route.fulfill({status:404,body:'not found'})});
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
     chatCalls++;
     const body=route.request().postDataJSON();
-    if(body.model==='test-hider'){
+    if(body.model==='openai/gpt-6.1-sol'){
       hiderBody=body;
       await route.fulfill({json:{
-        model:'test-hider',
+        model:'openai/gpt-6.1-sol',
         choices:[{message:{content:svg+'\nSCHEME: '+scheme},finish_reason:'stop'}],
         usage:{total_tokens:140,completion_tokens:110}
       }});
     }else{
       seekerBody=body;
       await route.fulfill({json:{
-        model:'test-vision-seeker',
+        model:'community/vendouple/gemini-3.8-flash',
         choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: The natural window pattern encodes the letters.'},finish_reason:'stop'}],
         usage:{total_tokens:60,completion_tokens:35}
       }});
     }
   });
   await page.reload();
-  await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='test-hider'));
+  await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='openai/gpt-6.1-sol'));
   await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
   await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
   await page.fill('#msg','LANTERN');
   await page.click('#hide');
   await expect(page.locator('#imgbox img')).toBeVisible({timeout:10000});
-  expect(hiderBody.model).toBe('test-hider');
+  expect(hiderBody.model).toBe('openai/gpt-6.1-sol');
   expect(JSON.stringify(hiderBody.messages)).toContain('LANTERN');
   expect(JSON.stringify(hiderBody.messages)).toContain('ordinary image');
   expect(JSON.stringify(hiderBody.messages)).toContain('SCHEME:');
@@ -210,16 +227,16 @@ test('Hider diagnostics capture its private explanation while the Seeker request
   const scheme='A natural sequence of window lights maps counts to alphabet positions.';
   let seekerMessages='';
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
-    json:{data:[{id:'diag-hider'},{id:'diag-seeker',input_modalities:['image']}]}
+    json:{data:[{id:'openai/gpt-6.1-sol'},{id:'community/vendouple/gemini-3.8-flash',input_modalities:['image']}]}
   }));
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
     const body=route.request().postDataJSON();
-    const content=body.model==='diag-hider'?svg+'\nSCHEME: '+scheme:'MESSAGE: LANTERN\nMETHOD: I decoded the window sequence.';
-    if(body.model==='diag-seeker')seekerMessages=JSON.stringify(body.messages);
+    const content=body.model==='openai/gpt-6.1-sol'?svg+'\nSCHEME: '+scheme:'MESSAGE: LANTERN\nMETHOD: I decoded the window sequence.';
+    if(body.model==='community/vendouple/gemini-3.8-flash')seekerMessages=JSON.stringify(body.messages);
     await route.fulfill({json:{model:body.model,choices:[{message:{content},finish_reason:'stop'}],usage:{total_tokens:25,completion_tokens:18}}});
   });
   await page.reload();
-  await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='diag-hider'));
+  await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='openai/gpt-6.1-sol'));
   await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
   await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
   await page.fill('#msg','LANTERN');
@@ -251,33 +268,33 @@ test('independent Seeker gets only the blind prompt and records exact recovery m
   const scheme='Boats encode Morse letters using round and elongated lights.';
   const requests=[];
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({json:{data:[
-    {id:'quality-hider'},{id:'primary-seeker',input_modalities:['image']},{id:'independent-seeker',input_modalities:['image']}
+    {id:'openai/gpt-6.1-sol'},{id:'community/vendouple/gemini-3.8-flash',input_modalities:['image']},{id:'openai/gpt-6-astra',input_modalities:['image']}
   ]}}));
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
     const body=route.request().postDataJSON();requests.push(body);
-    const content=body.model==='quality-hider'?svg+'\nSCHEME: '+scheme:
-      body.model==='primary-seeker'?'MESSAGE: KNOW THE WAY\nMETHOD: I read the light clusters.':
+    const content=body.model==='openai/gpt-6.1-sol'?svg+'\nSCHEME: '+scheme:
+      body.model==='community/vendouple/gemini-3.8-flash'?'MESSAGE: KNOW THE WAY\nMETHOD: I read the light clusters.':
       'MESSAGE: KNOW THE WAY\nMETHOD: I independently decoded the light pattern.';
     await route.fulfill({json:{model:body.model,choices:[{message:{content},finish_reason:'stop'}],usage:{total_tokens:40,completion_tokens:25}}});
   });
   await page.reload();
-  await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='quality-hider'));
+  await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='openai/gpt-6.1-sol'));
   await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
   await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
   await page.fill('#msg','KNOW THE WAY');
-  await page.selectOption('#seeker','primary-seeker');
-  await page.selectOption('#seekerAudit','independent-seeker');
+  await page.selectOption('#seeker','community/vendouple/gemini-3.8-flash');
+  await page.selectOption('#seekerAudit','openai/gpt-6-astra');
   await page.click('#hide');
   await expect(page.locator('#imgbox img')).toBeVisible();
   await page.click('#independent');
   await expect(page.locator('#status')).toContainText('Run the primary Seeker first');
-  expect(requests.some(x=>x.model==='independent-seeker')).toBe(false);
+  expect(requests.some(x=>x.model==='openai/gpt-6-astra')).toBe(false);
   await page.click('#ai');
   await expect(page.locator('#res')).toContainText('KNOW THE WAY');
   await page.click('#independent');
   await expect(page.locator('#robustnessReport')).toContainText('Both exact: Yes');
-  const primary=requests.find(x=>x.model==='primary-seeker');
-  const independent=requests.find(x=>x.model==='independent-seeker');
+  const primary=requests.find(x=>x.model==='community/vendouple/gemini-3.8-flash');
+  const independent=requests.find(x=>x.model==='openai/gpt-6-astra');
   expect(independent.messages[0].content[1].image_url.url).toBe(primary.messages[0].content[1].image_url.url);
   expect(independent.messages[0].content[0].text).toBe(primary.messages[0].content[0].text);
   expect(JSON.stringify(independent.messages)).not.toContain('KNOW THE WAY');
