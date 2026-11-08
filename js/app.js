@@ -154,7 +154,9 @@ $('#independent').onclick=async()=>{
   if(model===primaryModel)return say('Choose a different model from the primary Seeker. Independent validation requires a second model.','bad');
   if(diagnostics?.independentSeeker?.status==='completed')return say('An independent Seeker result is already recorded for this round.','bad');
   independentInFlight=true;
-  const started=Date.now(),before=tok,prompt=diagnostics.seeker?.prompt||buildSeekPrompt(round),png=round.png||await toPng(round.svg);
+  const started=Date.now(),before=tok;let prompt,png;
+  try{prompt=diagnostics.seeker?.prompt||buildSeekPrompt(round);png=round.png||await toPng(round.svg)}
+  catch(e){independentInFlight=false;return say('Could not prepare the image for the independent Seeker: '+e.message,'bad')}
   const messages=[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:png}}]}];
   const blindAudit=auditBlindRequest({prompt:messages[0].content.find(part=>part.type==='text')?.text,secret:round.secret,scheme:round.scheme,imageAttached:messages.some(message=>message.content?.some(part=>part.type==='image_url'&&!!part.image_url?.url))});
   const record={status:'running',model,prompt,blindAudit,imageReceived:blindAudit.imageAttached,rawResponse:'',decodedMessage:'',method:'',durationMs:null,tokens:null,exactMatch:null,similarity:null,usage:null};
