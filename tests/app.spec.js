@@ -158,7 +158,7 @@ test('AI vs AI Duel uses the private Hider endpoint and keeps the encoding plan 
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
     json: { data: [{ id: 'test-hider' }, { id: 'test-vision-seeker', input_modalities: ['image'] }] }
   }));
-  await page.route('/api/hide', async route => {
+  await page.route('**/api/hide', async route => {
     hideBody=route.request().postDataJSON();
     await route.fulfill({json:{
       svg:finalSvg,revealToken:'opaque-encrypted-round-token',model:'test-hider',
@@ -200,7 +200,7 @@ test('AI Output Inspection captures server Hider output without exposing its pri
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
     json: { data: [{ id: 'diagnostic-hider' }, { id: 'diagnostic-seeker', input_modalities: ['image'] }] }
   }));
-  await page.route('/api/hide', route => route.fulfill({json:{
+  await page.route('**/api/hide', route => route.fulfill({json:{
     svg:finalSvg,revealToken:'opaque-token',model:'diagnostic-hider',
     prompt:'Background-only prompt; no secret.',
     rawResponse:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>',
@@ -242,12 +242,12 @@ test('the Hider explanation is revealed only after an explicit user action', asy
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
     json: { data: [{ id: 'reveal-hider' }, { id: 'reveal-seeker', input_modalities: ['image'] }] }
   }));
-  await page.route('/api/hide', route => route.fulfill({json:{
+  await page.route('**/api/hide', route => route.fulfill({json:{
     svg:finalSvg,revealToken:'opaque-round-token',model:'reveal-hider',
     prompt:'Background only.',rawResponse:finalSvg,validation:{svgValid:true,encodingValid:true,secretLeak:false}
   }}));
   let revealBody=null;
-  await page.route('/api/reveal', async route => {
+  await page.route('**/api/reveal', async route => {
     revealBody=route.request().postDataJSON();
     await route.fulfill({json:{method:'Constellation counts',rule:'Each constellation contains a count of stars; A=1 through Z=26.',scene:'Night observatory',annotations:[{x:100,y:100,w:60,h:50,letter:'L'}]}});
   });
