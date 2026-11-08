@@ -238,3 +238,41 @@ test('Hider diagnostics capture its private explanation while the Seeker request
   expect(report.result.exactMatch).toBe(true);
   expect(JSON.stringify(report)).not.toContain('test-key');
 });
+
+test('independent Seeker gets only the blind prompt and records exact recovery metrics', async ({ page }) => {
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>';
+  const scheme='Boats encode Morse letters using round and elongated lights.';
+  const requests=[];
+  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({json:{data:[
+    {id:'quality-hider'},{id:'primary-seeker',input_modalities:['image']},{id:'independent-seeker',input_modalities:['image']}
+  ]}}));
+  await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    const body=route.request().postDataJSON();requests.push(body);
+    const content=body.model==='quality-hider'?svg+'\nSCHEME: '+scheme:
+      body.model==='primary-seeker'?'MESSAGE: KNOW THE WAY\nMETHOD: I read the light clusters.':
+      'MESSAGE: KNOW THE WAY\nMETHOD: I independently decoded the light pattern.';
+    await route.fulfill({json:{model:body.model,choices:[{message:{content},finish_reason:'stop'}],usage:{total_tokens:40,completion_tokens:25}}});
+  });
+  await page.reload();
+  await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='quality-hider'));
+  await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
+  await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
+  await page.fill('#msg','KNOW THE WAY');
+  await page.selectOption('#seeker','primary-seeker');
+  await page.selectOption('#seekerAudit','independent-seeker');
+  await page.click('#hide');
+  await expect(page.locator('#imgbox img')).toBeVisible();
+  await page.click('#ai');
+  await expect(page.locator('#res')).toContainText('KNOW THE WAY');
+  await page.click('#independent');
+  await expect(page.locator('#robustnessReport')).toContainText('Both exact: Yes');
+  const independent=requests.find(x=>x.model==='independent-seeker');
+  expect(JSON.stringify(independent.messages)).not.toContain('KNOW THE WAY');
+  expect(JSON.stringify(independent.messages)).not.toContain(scheme);
+  expect(independent.messages[0].content.some(x=>x.type==='image_url')).toBe(true);
+  await page.locator('#diagnostics > summary').click();
+  const report=JSON.parse(await page.locator('#diagnosticsContent details').last().locator('pre').textContent());
+  expect(report.independentSeeker.exactMatch).toBe(true);
+  expect(report.quality.bothExact).toBe(true);
+  expect(report.quality.agreement).toBe(true);
+});
