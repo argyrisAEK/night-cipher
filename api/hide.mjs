@@ -97,10 +97,13 @@ export default async function handler(req,res){
   const result=await response.json(),choice=result.choices?.[0],raw=choice?.message?.content;
   if(typeof raw!=='string')return send(res,{error:'Pollinations returned no Hider artwork.'},502);
   const background=safeSvg(raw),{markup,layout}=renderOverlay(plan,randomBytes(8).toString('hex'),body.easy===true);
-  const svg=background.replace(/<\/svg>\s*$/i,markup+'</svg>');
+  const svg=background.replace(/<\\/svg>\\s*$/i,markup+'</svg>');
   if(svg.length>500000)return send(res,{error:'Rendered SVG exceeds the size limit.'},502);
+  const encodingValid=decodePlan(plan)===secret&&layout.length===secret.replace(/ /g,'').length;
+  const secretLeak=svg.toUpperCase().includes(secret);
+  if(!encodingValid||secretLeak)return send(res,{error:'The server-side SVG validation failed; this round was voided.'},502);
   const tokenPayload={secret,plan,layout,createdAt:Date.now()};
   const revealToken=seal(tokenPayload);
-  return send(res,{svg,revealToken,usage:result.usage||null,model:result.model||model,finishReason:choice.finish_reason||null,completionTokens:result.usage?.completion_tokens??null,durationMs:Date.now()-started,validation:{svgValid:true,encodingValid:decodePlan(plan)===secret,secretLeak:false},prompt,rawResponse:raw});
+  return send(res,{svg,revealToken,usage:result.usage||null,model:result.model||model,finishReason:choice.finish_reason||null,completionTokens:result.usage?.completion_tokens??null,durationMs:Date.now()-started,validation:{svgValid:true,encodingValid,secretLeak},prompt,rawResponse:raw});
  }catch(error){return send(res,{error:error?.message||'Hider generation failed.'},500)}
 }
