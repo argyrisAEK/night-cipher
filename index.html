@@ -41,7 +41,8 @@
 <small id="msgCount" class="count" aria-live="polite"></small>
 <label>Difficulty</label><select id="diff"><option value="0">Paper mode: no legend, scheme is a mystery</option><option value="1">Friendly: hider adds a visual key</option></select>
 <details class="adv" open><summary>⚙ Advanced · AI models &amp; stealth judge</summary><label title="Your key’s budget caps the spending.">AI Hider model (creates the image)</label><select id="hider" title="Your key’s budget caps the spending."></select>
-<label title="Your key’s budget caps the spending.">AI Seeker model (analyzes the image)</label><select id="seeker" title="Your key’s budget caps the spending."></select>
+<label title="Your key’s budget caps the spending.">Primary AI Seeker model</label><select id="seeker" title="Your key’s budget caps the spending."></select>
+<label title="Must differ from the primary Seeker. One extra paid request when you run the test.">Independent validation model</label><select id="seekerAudit" title="Must differ from the primary Seeker. One extra paid request when you run the test."></select>
 <label style="display:flex;align-items:center;gap:6px;text-transform:none"><input type="checkbox" id="judge" style="width:auto;margin:0"> Stealth judge — a second AI rates how innocent the picture looks 💰 (+1 call)</label>
 <label title="Your key’s budget caps the spending.">Judge model (needs vision)</label><select id="judgeModel" title="Your key’s budget caps the spending."></select>
 </details>
@@ -58,6 +59,7 @@
 <div id="after" hidden>
 <div class="row" style="margin-top:8px"><button id="revealHow" hidden>✨ How was it hidden?</button></div>
 <div class="row" style="margin-top:8px"><button id="save">Save PNG</button><button id="next" hidden>Next ▶</button></div>
+<div class="row" style="margin-top:8px"><button id="independent" title="Runs one additional blind vision-model request; uses Pollen">🧪 Independent Seeker validation 💰×1</button></div>
 <div class="row" style="margin-top:8px"><button id="robustness" title="Runs three additional vision-model calls; uses Pollen">🧪 Test image robustness 💰×3</button></div>
 </div>
 </div>

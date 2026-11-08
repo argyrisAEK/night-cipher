@@ -92,3 +92,8 @@ Do not commit a user `sk_` key. The existing `nc` LocalStorage key and game prog
 The Hider is instructed to create a natural-looking scene rather than a cipher worksheet: the encoded information must be integrated into plausible objects and their visual properties. The returned SVG is parsed, sanitized, checked for structural validity and scanned for literal secret leakage before it is shown. The Hider's `SCHEME` explanation is retained only for the post-attempt human reveal; it is never sent to the Seeker. Revealing the explanation uses no additional AI request.
 
 This is an LLM-authored visual puzzle workflow, not a guarantee of robust or imperceptible pixel-level steganography. Models can produce attractive images with incorrect or ambiguous encodings. A round counts as recovered only when the blind Seeker returns the original message; mocked tests cannot establish live model reliability.
+
+
+## Independent Seeker quality validation
+
+AI-vs-AI Duel includes an optional independent validation run. Select a second, different vision-capable model and run it after the primary Seeker. The second model receives the same rasterized PNG and the same blind prompt; it never receives the secret message, Hider prompt, or `SCHEME`. Diagnostics record exact recovery, normalized similarity, model agreement, latency and token usage. Local aggregate counters are stored with the existing browser-local progression. This is an empirical quality signal, not proof of universal decodability: test multiple messages, Hider models, and independent Seeker families. Each validation run makes one additional paid Pollinations request.
