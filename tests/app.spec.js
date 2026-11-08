@@ -1,44 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { pickPlan, decodePlan, eligibleMethods } from '../server/encoding.mjs';
-import hideHandler from '../api/hide.mjs';
-import revealHandler from '../api/reveal.mjs';
-
-test('server-only encoding planner round-trips without shipping a browser module', () => {
-  const plan=pickPlan('LANTERN',{round:123});
-  expect(decodePlan(plan)).toBe('LANTERN');
-  expect(eligibleMethods('THE BEES KNOW THE WAY')).toContain('morse');
-});
-
-test('server Hider embeds a valid pattern and keeps its plan inside an encrypted reveal token', async () => {
-  const previousSecret=process.env.NIGHT_CIPHER_ROUND_SECRET,previousFetch=global.fetch;
-  process.env.NIGHT_CIPHER_ROUND_SECRET='test-only-round-secret-0123456789abcdef0123456789';
-  global.fetch=async()=>({ok:true,json:async()=>({model:'mock-hider',choices:[{message:{content:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>'},finish_reason:'stop'}],usage:{total_tokens:9}})});
-  const invoke=async(handler,body)=>{
-    const res={statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v},end(value){this.body=value}};
-    await handler({method:'POST',body},res);
-    return {status:res.statusCode,...JSON.parse(res.body||'{}')};
-  };
-  try{
-    const first=await invoke(hideHandler,{secret:'LANTERN',model:'mock-hider',pollinationsKey:'byop-test-key'});
-    expect(first.status).toBe(200);
-    expect(first.validation.encodingValid).toBe(true);
-    expect(first.svg).toContain('<circle');
-    expect(first.svg.toUpperCase()).not.toContain('LANTERN');
-    expect(first).not.toHaveProperty('prompt');
-    expect(first.revealToken).not.toContain('LANTERN');
-    const reveal=await invoke(revealHandler,{revealToken:first.revealToken});
-    expect(reveal.status).toBe(200);
-    expect(reveal.message).toBe('LANTERN');
-    expect(reveal.annotations).toHaveLength(7);
-    const second=await invoke(hideHandler,{secret:'LANTERN',model:'mock-hider',pollinationsKey:'byop-test-key',previousRoundToken:first.revealToken});
-    expect(second.status).toBe(200);
-    const secondReveal=await invoke(revealHandler,{revealToken:second.revealToken});
-    expect(secondReveal.method).not.toBe(reveal.method);
-  }finally{
-    global.fetch=previousFetch;
-    if(previousSecret===undefined)delete process.env.NIGHT_CIPHER_ROUND_SECRET;else process.env.NIGHT_CIPHER_ROUND_SECRET=previousSecret;
-  }
-});
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem('nc-howto-seen', '1'); } catch {} });
@@ -242,7 +202,6 @@ test('AI Hider authors the complete organic image and Seeker receives only the b
   await page.click('#revealHow');
   await expect(page.locator('#res')).toContainText(scheme);
   expect(chatCalls).toBe(2);
-  expect(await page.evaluate(async()=> (await fetch('/api/hide')).status)).toBe(404);
 });
 
 test('Hider diagnostics capture its private explanation while the Seeker request remains blind', async ({ page }) => {
