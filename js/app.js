@@ -3,7 +3,7 @@ import { uri, toRaster, toPng, clean, utf8Base64, hasSecretLeak } from './securi
 import { createChat, HIDE, buildSeekPrompt } from './api.js';
 import { loadState, saveState, createProgression } from './state.js';
 import { runSelfTest } from './selftest.js';
-import { parseSeekerResponse, compareSeekers } from './quality.js';
+import { parseSeekerResponse, compareSeekers, auditBlindRequest } from './quality.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]/gu,'');
@@ -11,32 +11,61 @@ const lev=(a,b)=>{const d=Array.from({length:a.length+1},(_,i)=>[i,...Array(b.le
 const sim=(a,b)=>{a=norm(a);b=norm(b);const m=Math.max(a.length,b.length);return m?1-lev(a,b)/m:0};
 let R=null,T=loadState(),tok=0;const save=()=>saveState(T);const {RANKS,ACHIEVEMENTS,rankFor,grantXP,unlock,evaluateAchievements,fmtTime}=createProgression(()=>T);
 const chat=createChat({getConnection:()=>conn,getTokenCount:()=>tok,setTokenCount:v=>tok=v,onUsage:()=>score()});
-const score=()=>{const xp=T.xp||0,rank=rankFor(xp),next=RANKS.find(r=>r.xp>xp),base=rank.xp,progress=next?Math.min(100,(xp-base)/(next.xp-base)*100):100;$('#profile').innerHTML=`<div><strong>${rank.name}</strong><div><small>Rank ${RANKS.indexOf(rank)+1} · ${xp} XP${next?` / ${next.xp} XP`:' · MAX RANK'}</small><div class="xpbar"><i style="width:${progress}%"></i></div></div></div><b>🌙</b>`;const bests=Object.values(T.bestTimes||{});$('#bestTime').textContent=bests.length?fmtTime(Math.min(...bests)):'—';const earned=Object.keys(T.achievements||{}).length;$('#achievementCount').textContent=`${earned}/${ACHIEVEMENTS.length}`;$('#achievements').innerHTML=ACHIEVEMENTS.map(([id,ico,name,desc])=>`<div class="achievement ${T.achievements?.[id]?'':'locked'}"><span class="ico">${ico}</span><div><b>${name}</b><br><small>${desc}${T.achievements?.[id]?' · Unlocked':' · Locked'}</small></div></div>`).join('');$('#codexPreview').innerHTML=TRAIN.map((t,i)=>`<div class="achievement ${T.levels?.[i]?'':'locked'}"><span class="ico">${T.levels?.[i]?'📖':'🔒'}</span><div><b>${T.levels?.[i]?esc(t.n):`Unknown Cipher #${i+1}`}</b><br><small>${T.levels?.[i]?esc(t.s):'Complete this training level to reveal its entry.'}</small></div></div>`).join('');$('#score small').textContent=`Daily streak ${T.streak||0} · Levels ${Object.values(T.levels||{}).filter(Boolean).length}/${TRAIN.length} · Duels: you ${T.you}/${T.n} · AI seeker ${T.ai}/${T.an} · tokens: ${tok}${T.st&&T.st.n?` · avg stealth ${(T.st.s/T.st.n).toFixed(1)}/10 (${T.st.n})`:''}`;const seek=Object.entries(T.s||{}).map(([k,v])=>`<li>${esc(k)}: ${v.ok}/${v.n} read</li>`),qh=Object.entries(T.qh||{}).map(([k,v])=>`<li>Independent quality · ${esc(k)}: both exact ${v.bothExact}/${v.n}, agreement ${v.agreement}/${v.n}</li>`),stl=Object.entries(T.sh||{}).map(([k,v])=>`<li>${esc(k)}: avg stealth ${(v.s/v.n).toFixed(1)}/10 (${v.n})</li>`),rb=Object.entries(T.rb||{}).map(([k,v])=>`<li>Robustness · ${esc(k)}: ${v.ok}/${v.n} recovered, mean similarity ${Math.round(100*v.sim/v.n)}%</li>`);$('#report').innerHTML=[...seek,...qh,...stl,...rb].join('')||'<li>Play a Duel or hide a word yourself to fill this in.</li>'};
+const score=()=>{const xp=T.xp||0,rank=rankFor(xp),next=RANKS.find(r=>r.xp>xp),base=rank.xp,progress=next?Math.min(100,(xp-base)/(next.xp-base)*100):100;$('#profile').innerHTML=`<div><strong>${rank.name}</strong><div><small>Rank ${RANKS.indexOf(rank)+1} · ${xp} XP${next?` / ${next.xp} XP`:' · MAX RANK'}</small><div class="xpbar"><i style="width:${progress}%"></i></div></div></div><b>🌙</b>`;const bests=Object.values(T.bestTimes||{});$('#bestTime').textContent=bests.length?fmtTime(Math.min(...bests)):'—';const earned=Object.keys(T.achievements||{}).length;$('#achievementCount').textContent=`${earned}/${ACHIEVEMENTS.length}`;$('#achievements').innerHTML=ACHIEVEMENTS.map(([id,ico,name,desc])=>`<div class="achievement ${T.achievements?.[id]?'':'locked'}"><span class="ico">${ico}</span><div><b>${name}</b><br><small>${desc}${T.achievements?.[id]?' · Unlocked':' · Locked'}</small></div></div>`).join('');$('#codexPreview').innerHTML=TRAIN.map((t,i)=>`<div class="achievement ${T.levels?.[i]?'':'locked'}"><span class="ico">${T.levels?.[i]?'📖':'🔒'}</span><div><b>${T.levels?.[i]?esc(t.n):`Unknown Cipher #${i+1}`}</b><br><small>${T.levels?.[i]?esc(t.s):'Complete this training level to reveal its entry.'}</small></div></div>`).join('');$('#score small').textContent=`Daily streak ${T.streak||0} · Levels ${Object.values(T.levels||{}).filter(Boolean).length}/${TRAIN.length} · Duels: you ${T.you}/${T.n} · AI seeker ${T.ai}/${T.an} · tokens: ${tok}${T.st&&T.st.n?` · avg stealth ${(T.st.s/T.st.n).toFixed(1)}/10 (${T.st.n})`:''}`;const seek=Object.entries(T.s||{}).map(([k,v])=>`<li>${esc(k)}: ${v.ok}/${v.n} read</li>`),qh=Object.entries(T.qh||{}).map(([k,v])=>`<li>Independent quality · ${esc(k)}: both exact ${v.bothExact}/${v.n}, agreement ${v.agreement}/${v.n}</li>`),hm=Object.entries(T.hm||{}).map(([k,v])=>`<li>Hider · ${esc(k)}: rendered ${v.rendered}/${v.attempts}, primary exact ${v.primaryExact}/${v.primaryEvaluated||0}, independent exact ${v.independentExact}/${v.independentEvaluated||0}</li>`),sm=Object.entries(T.sm||{}).map(([k,v])=>`<li>Seeker · ${esc(k)}: exact ${v.exact}/${v.attempts} · failed requests ${v.failed}${v.attempts-v.failed>0?` · avg similarity ${Math.round(100*v.totalSimilarity/(v.attempts-v.failed))}%`:''}</li>`),stl=Object.entries(T.sh||{}).map(([k,v])=>`<li>${esc(k)}: avg stealth ${(v.s/v.n).toFixed(1)}/10 (${v.n})</li>`),rb=Object.entries(T.rb||{}).map(([k,v])=>`<li>Robustness · ${esc(k)}: ${v.ok}/${v.n} recovered, mean similarity ${Math.round(100*v.sim/v.n)}%</li>`);$('#report').innerHTML=[...hm,...sm,...seek,...qh,...stl,...rb].join('')||'<li>Play a Duel or hide a word yourself to fill this in.</li>'};
 const say=(m,c='')=>{const s=$('#status');s.textContent=m;s.className=c};
 let diagnostics=null;
+const modelStat=(bucket,model)=>{T[bucket]=T[bucket]||{};return T[bucket][model]=T[bucket][model]||{attempts:0,exact:0,failed:0,totalSimilarity:0,totalDurationMs:0,totalTokens:0}};
+const recordHiderOutcome=success=>{
+  const h=diagnostics?.hider;if(!h||h.statsRecorded)return;
+  T.hm=T.hm||{};const s=T.hm[h.model]=T.hm[h.model]||{attempts:0,validSvg:0,rendered:0,schemePresent:0,failed:0,primaryEvaluated:0,primaryExact:0,independentEvaluated:0,independentExact:0,totalDurationMs:0,totalTokens:0};
+  s.attempts++;if(h.validation?.svgValid===true)s.validSvg++;if(h.validation?.renderValid===true)s.rendered++;if(h.validation?.schemePresent===true)s.schemePresent++;if(!success)s.failed++;
+  s.totalDurationMs+=h.durationMs||0;s.totalTokens+=h.usage?.total_tokens||h.totalTokens||h.completionTokens||0;
+  h.statsRecorded=true;save();score();
+};
+const recordSeekerOutcome=(record,role='primary')=>{
+  if(!record||record.statsRecorded)return;
+  const s=modelStat('sm',record.model);s.attempts++;
+  if(record.status==='completed'){if(record.exactMatch)s.exact++;s.totalSimilarity+=record.similarity||0;s.totalTokens+=record.usage?.total_tokens||record.tokens||0;}
+  else s.failed++;
+  s.totalDurationMs+=record.durationMs||0;
+  record.statsRecorded=true;
+  const hs=diagnostics?.hider?.model&&T.hm?.[diagnostics.hider.model];
+  if(hs&&role==='primary'&&record.status==='completed'){hs.primaryEvaluated++;if(record.exactMatch===true)hs.primaryExact++;}
+  if(hs&&role==='independent'&&record.status==='completed'){hs.independentEvaluated++;if(record.exactMatch===true)hs.independentExact++;}
+  save();score();
+};
 const renderDiagnostics=()=>{
   const root=$('#diagnosticsContent');if(!root)return;
   if(!diagnostics){root.innerHTML='<small>No AI output captured yet. Start an AI vs AI Duel to inspect the Hider and Seeker responses.</small>';return}
   const d=diagnostics,h=d.hider||{},q=d.seeker||{},v=h.validation||{};
-  const report=JSON.stringify({roundId:d.roundId,timestamp:d.timestamp,encoding:d.encoding,
-    hider:{model:h.model,responseModel:h.responseModel,finishReason:h.finishReason,completionTokens:h.completionTokens,prompt:h.prompt,rawResponse:h.rawResponse,svg:h.svg,durationMs:h.durationMs,validation:v},
-    seeker:q?{model:q.model,prompt:q.prompt,rawResponse:q.rawResponse,decodedMessage:q.decodedMessage,durationMs:q.durationMs,tokens:q.tokens,error:q.error}:null,
-    result:d.result,independentSeeker:d.independentSeeker||null,quality:d.quality||null,errors:d.errors||[]},null,2);
+  const report=JSON.stringify({schemaVersion:2,roundId:d.roundId,timestamp:d.timestamp,expectedMessage:d.encoding?.expectedMessage,encoding:d.encoding,image:d.image||null,
+    hider:{model:h.model,responseModel:h.responseModel,finishReason:h.finishReason,usage:h.usage||null,completionTokens:h.completionTokens,promptTokens:h.promptTokens,totalTokens:h.totalTokens,prompt:h.prompt,rawResponse:h.rawResponse,svg:h.svg,durationMs:h.durationMs,validation:v},
+    seeker:q?{...q}:null,primarySeeker:q?{...q}:null,
+    result:d.result||{status:'not_run',success:null,exactMatch:null,similarity:null},
+    independentSeeker:d.independentSeeker||{status:'not_run',model:null,exactMatch:null},
+    quality:d.quality||{complete:false,agreement:null,bothExact:null,primaryExact:d.result?.exactMatch??null,independentExact:null},
+    modelStats:{hider:T.hm?.[h.model]||null,primarySeeker:T.sm?.[q.model]||null,independentSeeker:T.sm?.[d.independentSeeker?.model]||null},errors:d.errors||[]},null,2);
   root.innerHTML=`<div class="diag-summary">
     <div><b>Encoding</b><small>${esc(d.encoding?.method||'—')} · ${esc(d.encoding?.scene||'—')}</small></div>
     <div><b>Hider</b><small>${esc(h.model||'—')} · ${h.durationMs==null?'pending':h.durationMs+' ms'}</small></div>
     <div><b>Seeker</b><small>${esc(q.model||'—')} · ${q.durationMs==null?'not run':q.durationMs+' ms'}</small></div>
     <div><b>SVG / XML</b><small class="${v.svgValid===true?'ok':v.svgValid===false?'bad':''}">${v.svgValid===true?'Valid':v.svgValid===false?'Invalid':'Not checked'}</small></div>
-    <div><b>Encoding fidelity</b><small>Not verified automatically</small></div>
-    <div><b>Independent Seeker</b><small>${d.independentSeeker?`${esc(d.independentSeeker.model)} · ${d.independentSeeker.exactMatch?'Exact recovery':'Missed'} · ${d.independentSeeker.durationMs??'—'} ms`:'Not tested'}</small></div>
-    <div><b>Result</b><small>${d.result?.exactMatch==null?'Pending':d.result.exactMatch?'Exact match':'Mismatch'}</small></div>
+    <div><b>PNG rasterization</b><small class="${v.renderValid===true?'ok':v.renderValid===false?'bad':''}">${v.renderValid===true?'Valid':v.renderValid===false?'Failed':'Not checked'}</small></div>
+    <div><b>SCHEME</b><small class="${v.schemePresent===true?'ok':v.schemePresent===false?'bad':''}">${v.schemePresent===true?'Present':v.schemePresent===false?'Missing':'Not checked'}</small></div>
+    <div><b>Encoding fidelity</b><small>Measured end-to-end by blind exact recovery; internal consistency is not independently proven.</small></div>
+    <div><b>Independent Seeker</b><small>${d.independentSeeker?.status==='completed'?`${esc(d.independentSeeker.model)} · ${d.independentSeeker.exactMatch?'Exact recovery':'Missed'} · ${d.independentSeeker.durationMs??'—'} ms`:d.independentSeeker?.status==='error'?'Request failed':d.independentSeeker?.status==='running'?'Running':'Not tested'}</small></div>
+    <div><b>Primary exact recovery</b><small class="${d.result?.exactMatch===true?'ok':d.result?.exactMatch===false?'bad':''}">${d.result?.status==='completed'?(d.result.exactMatch?'Exact match':'Mismatch'):d.result?.status==='error'?'Request / parse error':'Not run'}</small></div>
+    <div><b>Independent agreement</b><small>${d.quality?.agreement==null?'Not measurable':d.quality.agreement?'Agrees':'Disagrees'} · both exact: ${d.quality?.bothExact==null?'—':d.quality.bothExact?'Yes':'No'}</small></div>
   </div>
   <div class="diag-actions"><button type="button" id="copyDiagnostics">Copy diagnostic JSON</button></div>
   <details><summary>Hider raw SVG</summary><pre>${esc(h.svg||'No validated SVG captured.')}</pre></details>
   <details><summary>Hider raw response</summary><pre>${esc(h.rawResponse||'No response captured.')}</pre></details>
   <details><summary>Hider prompt</summary><pre>${esc(h.prompt||'No prompt captured.')}</pre></details>
+  <details><summary>Hider validation &amp; image metadata</summary><pre>${esc(JSON.stringify({validation:v,image:d.image||null},null,2))}</pre></details>
+  <details><summary>Primary Seeker request audit &amp; usage</summary><pre>${esc(JSON.stringify({status:q.status||'not_run',blindAudit:q.blindAudit||null,imageReceived:q.imageReceived??null,requestedModel:q.model||null,responseModel:q.responseModel||null,finishReason:q.finishReason||null,usage:q.usage||null,failureReason:q.failureReason||q.error||null},null,2))}</pre></details>
   <details><summary>Seeker raw response</summary><pre>${esc(q.rawResponse||'Seeker has not run yet.')}</pre></details>
   <details><summary>Seeker prompt</summary><pre>${esc(q.prompt||'Seeker has not run yet.')}</pre></details>
+  <details><summary>Independent Seeker request audit &amp; usage</summary><pre>${esc(JSON.stringify({status:d.independentSeeker?.status||'not_run',blindAudit:d.independentSeeker?.blindAudit||null,imageReceived:d.independentSeeker?.imageReceived??null,requestedModel:d.independentSeeker?.model||null,responseModel:d.independentSeeker?.responseModel||null,finishReason:d.independentSeeker?.finishReason||null,usage:d.independentSeeker?.usage||null,failureReason:d.independentSeeker?.failureReason||d.independentSeeker?.error||null},null,2))}</pre></details>
   <details><summary>Independent Seeker raw response</summary><pre>${esc(d.independentSeeker?.rawResponse||'Independent Seeker has not run yet.')}</pre></details>
   <details><summary>Independent Seeker prompt</summary><pre>${esc(d.independentSeeker?.prompt||'Independent Seeker has not run yet.')}</pre></details>
   <details><summary>Complete diagnostic JSON</summary><pre>${esc(report)}</pre></details>
@@ -55,7 +84,7 @@ function syncButtons(){
   document.querySelectorAll('button').forEach(b=>{b.disabled=uiBusy});
   $('#after').hidden=!(R&&(R.done||R.mode==='duel'));
   $('#independent').hidden=!(R&&R.mode==='duel');
-  $('#independent').disabled=uiBusy||!!(diagnostics&&diagnostics.independentSeeker);
+  $('#independent').disabled=uiBusy||diagnostics?.independentSeeker?.status==='completed';
   if(!uiBusy&&R){
     $('#go').disabled=R.done;$('#giveup').disabled=R.done;
     $('#hint').disabled=R.done||R.used>=R.hints.length;
@@ -90,22 +119,24 @@ $('#revealHow').onclick=()=>{
     say('The Hider’s private explanation is now revealed. No extra AI call was needed.');
   }
 };
-$('#save').onclick=async()=>{if(!R)return;const a=document.createElement('a');a.href=await toPng(R.svg);a.download='night-cipher.png';a.click()};
+$('#save').onclick=async()=>{if(!R)return;const a=document.createElement('a');a.href=R.png||await toPng(R.svg);a.download='night-cipher.png';a.click()};
 $('#ai').onclick=async()=>{
   const round=R;if(!round||(round.done&&round.mode!=='own'&&aiAttempted)||aiInFlight||aiAttempted)return;
   aiInFlight=true;aiAttempted=true;const attemptStarted=Date.now(),tokensBefore=tok,model=$(round.mode=='own'?'#seeker2':'#seeker').value;busy(true,'The AI seeker is studying the picture…');
   try{
-    const seekerPrompt=buildSeekPrompt(round,{retry:!!round.aiHistory?.length}),seekerStarted=Date.now();
-    if(diagnostics){diagnostics.seeker={model,prompt:seekerPrompt,rawResponse:'',decodedMessage:'',durationMs:null,tokens:null};renderDiagnostics()}
-    const png=await toPng(round.svg),out=await chat(model,[{role:'user',content:[{type:'text',text:seekerPrompt},{type:'image_url',image_url:{url:png}}]}],4000,90000);
+    const seekerPrompt=buildSeekPrompt(round,{retry:!!round.aiHistory?.length}),seekerStarted=Date.now(),png=round.png||await toPng(round.svg);
+    const blindAudit=auditBlindRequest({prompt:seekerPrompt,secret:round.secret,scheme:round.scheme,imageAttached:true});
+    if(diagnostics){diagnostics.seeker={status:'running',model,startedAt:seekerStarted,prompt:seekerPrompt,blindAudit,imageReceived:true,rawResponse:'',decodedMessage:'',durationMs:null,tokens:null,usage:null};diagnostics.result={status:'running',success:null,exactMatch:null,similarity:null};renderDiagnostics()}
+    if(!blindAudit.verified)throw Error('Blind Seeker payload audit failed: secret, SCHEME, or image isolation check did not pass.');
+    let responseMeta=null;
+    const out=await chat(model,[{role:'user',content:[{type:'text',text:seekerPrompt},{type:'image_url',image_url:{url:png}}]}],4000,90000,{onRawResponse:meta=>{responseMeta=meta;if(diagnostics?.seeker){Object.assign(diagnostics.seeker,{responseModel:meta.model,finishReason:meta.finishReason,usage:meta.usage||null,promptTokens:meta.promptTokens??null,completionTokens:meta.completionTokens??null,totalTokens:meta.totalTokens??null})}}});
     if(round!==R)return;
-    if(diagnostics){diagnostics.seeker.rawResponse=out;diagnostics.seeker.durationMs=Date.now()-seekerStarted;diagnostics.seeker.tokens=tok-tokensBefore}
-    const parsed=parseSeekerResponse(out),g=parsed.message,mt=parsed.method,s=sim(g,round.secret);
-    if(diagnostics){diagnostics.seeker.decodedMessage=g;diagnostics.result={success:s>=.9,exactMatch:norm(g)===norm(round.secret),similarity:s};renderDiagnostics()}
-    round.ai={guess:g,method:mt,s,ok:s>=.9,model,durationMs:Date.now()-attemptStarted,tokens:tok-tokensBefore};if(round.mode==='duel')$('#revealHow').hidden=false;round.aiHistory=round.aiHistory||[];round.aiHistory.push({...round.ai,at:Date.now()});
+    const parsed=parseSeekerResponse(out),g=parsed.message,mt=parsed.method,s=sim(g,round.secret),exact=norm(g)===norm(round.secret),elapsed=Date.now()-seekerStarted;
+    if(diagnostics){Object.assign(diagnostics.seeker,{status:'completed',responseModel:responseMeta?.model||model,finishReason:responseMeta?.finishReason||null,usage:responseMeta?.usage||null,promptTokens:responseMeta?.promptTokens??null,completionTokens:responseMeta?.completionTokens??null,totalTokens:responseMeta?.totalTokens??null,rawResponse:out,durationMs:elapsed,tokens:tok-tokensBefore,decodedMessage:g,method:mt,exactMatch:exact,similarity:s});diagnostics.result={status:'completed',success:exact,exactMatch:exact,similarity:s};recordSeekerOutcome(diagnostics.seeker,'primary');renderDiagnostics()}
+    round.ai={guess:g,method:mt,s,ok:round.mode==='duel'?exact:s>=.9,model,durationMs:Date.now()-attemptStarted,tokens:tok-tokensBefore};if(round.mode==='duel')$('#revealHow').hidden=false;round.aiHistory=round.aiHistory||[];round.aiHistory.push({...round.ai,at:Date.now()});
     if(round.mode=='duel'||round.mode=='own'){T.an++;if(round.ai.ok)T.ai++;const k=(round.mode=='own'?'your '+round.sname:'hider '+round.hider)+' → '+$(round.mode=='own'?'#seeker2':'#seeker').value+(round.method?' · '+round.method:''),v=(T.s=T.s||{})[k]=T.s[k]||{n:0,ok:0};v.n++;if(round.ai.ok)v.ok++;save();score()}
     if(round.mode==='duel'){$('#res').innerHTML=aiLine();if(round.ai.ok){aiAttempted=true;say('AI Seeker decoded the message chosen for this duel.','ok')}else{aiAttempted=false;say(g.toUpperCase()==='NONE'?'AI Seeker could not produce a defensible decoding. You can retry or change the model.':'AI Seeker failed to recover the message. You can retry or change the model.','bad')}}else if(g.toUpperCase()==='NONE'||s<.9){aiAttempted=false;if(round.done)$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say(g.toUpperCase()==='NONE'?'The AI found no defensible decoding. Retry or choose another vision model.':'The AI returned an incorrect answer. Retry or choose another vision model.','bad')}else if(round.done){$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say('The AI recovered the message.')}else say('The AI has locked in an answer. Finish your round to see it.');
-  }catch(e){if(round===R){if(diagnostics){diagnostics.errors.push(e.message);if(diagnostics.seeker&&!diagnostics.seeker.rawResponse)diagnostics.seeker.error=e.message;renderDiagnostics()}aiAttempted=false;say(e.message,'bad')}}
+  }catch(e){if(round===R){if(diagnostics){diagnostics.errors.push(e.message);if(diagnostics.seeker?.status==='running'){diagnostics.seeker.status='error';diagnostics.seeker.failureReason=e.message;diagnostics.seeker.error=e.message;diagnostics.seeker.durationMs=Date.now()-(diagnostics.seeker.startedAt||attemptStarted);recordSeekerOutcome(diagnostics.seeker,'primary');diagnostics.result={status:'error',success:false,exactMatch:null,similarity:null,failureReason:e.message}}renderDiagnostics()}aiAttempted=false;say(e.message,'bad')}}
   finally{aiInFlight=false;busy(false)}
 };
 /* ---------- independent blind Seeker validation ---------- */
@@ -118,18 +149,21 @@ $('#independent').onclick=async()=>{
   const model=$('#seekerAudit').value,primaryModel=diagnostics?.seeker?.model||$('#seeker').value;
   if(!model)return say('Select an independent vision-capable model first.','bad');
   if(model===primaryModel)return say('Choose a different model from the primary Seeker. Independent validation requires a second model.','bad');
-  if(diagnostics?.independentSeeker)return say('An independent Seeker result is already recorded for this round.','bad');
+  if(diagnostics?.independentSeeker?.status==='completed')return say('An independent Seeker result is already recorded for this round.','bad');
   independentInFlight=true;
-  const started=Date.now(),before=tok,prompt=buildSeekPrompt(round);
-  const record={model,prompt,rawResponse:'',decodedMessage:'',method:'',durationMs:null,tokens:null,exactMatch:false,similarity:null};
+  const started=Date.now(),before=tok,prompt=buildSeekPrompt(round),png=round.png||await toPng(round.svg);
+  const blindAudit=auditBlindRequest({prompt,secret:round.secret,scheme:round.scheme,imageAttached:true});
+  const record={status:'running',model,prompt,blindAudit,imageReceived:true,rawResponse:'',decodedMessage:'',method:'',durationMs:null,tokens:null,exactMatch:null,similarity:null,usage:null};
   if(diagnostics){diagnostics.independentSeeker=record;renderDiagnostics()}
   busy(true,'A second, independent Seeker is analyzing the same image without hints…');
   try{
-    const png=await toPng(round.svg);
-    const out=await chat(model,[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:png}}]}],4000,90000);
+    if(!blindAudit.verified)throw Error('Independent blind Seeker payload audit failed.');
+    let responseMeta=null;
+    const out=await chat(model,[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:png}}]}],4000,90000,{onRawResponse:meta=>{responseMeta=meta;Object.assign(record,{responseModel:meta.model,finishReason:meta.finishReason,usage:meta.usage||null,promptTokens:meta.promptTokens??null,completionTokens:meta.completionTokens??null,totalTokens:meta.totalTokens??null})}});
     if(round!==R)return;
     const parsed=parseSeekerResponse(out),g=parsed.message,s=sim(g,round.secret),exact=norm(g)===norm(round.secret);
-    Object.assign(record,{rawResponse:out,decodedMessage:g,method:parsed.method,durationMs:Date.now()-started,tokens:tok-before,exactMatch:exact,similarity:s,normalized:norm(g)});
+    Object.assign(record,{status:'completed',responseModel:responseMeta?.model||model,finishReason:responseMeta?.finishReason||null,usage:responseMeta?.usage||null,promptTokens:responseMeta?.promptTokens??null,completionTokens:responseMeta?.completionTokens??null,totalTokens:responseMeta?.totalTokens??null,rawResponse:out,decodedMessage:g,method:parsed.method,durationMs:Date.now()-started,tokens:tok-before,exactMatch:exact,similarity:s,normalized:norm(g)});
+    recordSeekerOutcome(record,'independent');
     const primary=diagnostics?.result?{normalized:norm(diagnostics.seeker?.decodedMessage||''),exactMatch:diagnostics.result.exactMatch}:null;
     const comparison=compareSeekers(primary,record);
     diagnostics.quality=comparison;
@@ -140,8 +174,8 @@ $('#independent').onclick=async()=>{
     $('#robustnessReport').innerHTML='<section class="card" style="margin-top:10px;padding:10px"><b>Independent blind validation</b><p>Primary: <b class="'+(comparison.primaryExact?'ok':'bad')+'">'+(comparison.primaryExact?'Exact':'Missed')+'</b> · '+esc(primaryModel)+'</p><p>Independent: <b class="'+(exact?'ok':'bad')+'">'+(exact?'Exact':'Missed')+'</b> · '+esc(model)+' · '+Math.round(s*100)+'% similarity</p><p>Model agreement: <b>'+(comparison.agreement?'Yes':'No')+'</b> · Both exact: <b>'+(comparison.bothExact?'Yes':'No')+'</b></p><small>'+record.durationMs+' ms · '+record.tokens+' tokens. The second model received only the blind prompt and rasterized image.</small></section>';
     say(exact&&comparison.primaryExact?'Both independent Seekers recovered the exact message.':exact?'The independent Seeker recovered the message; the primary Seeker did not.':'The independent Seeker did not recover the exact message.',exact&&comparison.primaryExact?'ok':'bad');
     $('#independent').textContent='Independent Seeker complete';
-  }catch(e){if(round===R){record.error=e.message;if(diagnostics){diagnostics.independentSeeker=null;diagnostics.errors.push('Independent Seeker: '+e.message);renderDiagnostics()}say(e.message,'bad')}}
-  finally{independentInFlight=false;busy(false);$('#independent').disabled=!!(diagnostics&&diagnostics.independentSeeker)}
+  }catch(e){if(round===R){record.status='error';record.error=e.message;record.failureReason=e.message;record.durationMs=Date.now()-started;recordSeekerOutcome(record,'independent');if(diagnostics){diagnostics.errors.push('Independent Seeker: '+e.message);renderDiagnostics()}say(e.message,'bad')}}
+  finally{independentInFlight=false;busy(false);$('#independent').disabled=diagnostics?.independentSeeker?.status==='completed'}
 };
 /* ---------- image degradation & robustness experiment ---------- */
 let robustnessInFlight=false;
@@ -193,9 +227,9 @@ $('#hide').onclick=async()=>{
   try{
     const dl=T.duelLog=T.duelLog||{n:0};
     const hiderModel=$('#hider').value,hiderPrompt=HIDE(secret,$('#diff').value=='1'),hiderStarted=Date.now();
-    diagnostics={roundId:(globalThis.crypto?.randomUUID?.()||String(hiderStarted)),timestamp:new Date().toISOString(),encoding:{method:'AI-selected organic visual encoding',label:'Model-authored',scene:'Model-selected natural scene',expectedMessage:secret},hider:{model:hiderModel,prompt:hiderPrompt,rawResponse:'',svg:'',durationMs:null,validation:{xmlValid:null,svgValid:null,encodingValid:null,errors:[]}},seeker:null,result:null,errors:[]};
+    diagnostics={schemaVersion:2,roundId:(globalThis.crypto?.randomUUID?.()||String(hiderStarted)),timestamp:new Date().toISOString(),encoding:{method:'AI-selected organic visual encoding',label:'Model-authored',scene:'Model-selected natural scene',expectedMessage:secret},image:null,hider:{model:hiderModel,startedAt:hiderStarted,prompt:hiderPrompt,rawResponse:'',svg:'',durationMs:null,usage:null,validation:{xmlValid:null,svgValid:null,renderValid:null,schemePresent:null,encodingValid:null,schemeConsistency:null,errors:[]}},seeker:null,result:{status:'not_run',success:null,exactMatch:null,similarity:null},independentSeeker:{status:'not_run',model:null,exactMatch:null},quality:{complete:false,agreement:null,bothExact:null,primaryExact:null,independentExact:null},errors:[]};
     renderDiagnostics();
-    const out=await chat(hiderModel,[{role:'system',content:'You are a creative SVG artist and steganographer. Output only what is asked.'},{role:'user',content:hiderPrompt}],16000,120000,{requestType:'hider',onRawResponse:meta=>{diagnostics.hider.rawResponse=meta.text;diagnostics.hider.responseModel=meta.model;diagnostics.hider.finishReason=meta.finishReason;diagnostics.hider.completionTokens=meta.completionTokens;diagnostics.hider.durationMs=Date.now()-hiderStarted;renderDiagnostics()}});
+    const out=await chat(hiderModel,[{role:'system',content:'You are a creative SVG artist and steganographer. Output only what is asked.'},{role:'user',content:hiderPrompt}],16000,120000,{requestType:'hider',onRawResponse:meta=>{diagnostics.hider.rawResponse=meta.text;diagnostics.hider.responseModel=meta.model;diagnostics.hider.finishReason=meta.finishReason;diagnostics.hider.usage=meta.usage||null;diagnostics.hider.promptTokens=meta.promptTokens??null;diagnostics.hider.completionTokens=meta.completionTokens;diagnostics.hider.totalTokens=meta.totalTokens??null;diagnostics.hider.durationMs=Date.now()-hiderStarted;renderDiagnostics()}});
     diagnostics.hider.rawResponse=out;diagnostics.hider.durationMs=Date.now()-hiderStarted;renderDiagnostics();
     const m=out.match(/<svg[\s\S]*?<\/svg>/i);if(!m){diagnostics.hider.validation.errors.push('No complete SVG found in Hider response.');throw Error('No complete SVG came back (the model may have run out of tokens). Try again or use another model.')}
     let safe;try{safe=clean(m[0]);diagnostics.hider.validation.xmlValid=true;diagnostics.hider.validation.svgValid=true;diagnostics.hider.svg=safe}catch(e){diagnostics.hider.validation.xmlValid=false;diagnostics.hider.validation.svgValid=false;diagnostics.hider.validation.errors.push(e.message);throw e}
@@ -203,10 +237,13 @@ $('#hide').onclick=async()=>{
     if(/<(?:text|tspan)\b/i.test(safe)){diagnostics.hider.validation.errors.push('Readable text elements are not allowed in the hidden artwork.');throw Error('The Hider added readable text or labels to the artwork. The image must communicate through visual details only; try again.')}
     if(secret.includes(' ')&&hasSecretLeak(safe,secret,{strictWords:false})){diagnostics.hider.validation.errors.push('The complete secret message was detected in SVG content.');throw Error('The Hider leaked the complete secret message in the SVG, so the round was voided. Try again.')}
     const sc=(out.split(/SCHEME:/i)[1]||'').trim().slice(0,400),words=secret.split(/\s+/).length;
+    diagnostics.hider.validation.schemePresent=!!sc;
     if(!sc){diagnostics.hider.validation.errors.push('Missing SCHEME explanation.');throw Error('The hider did not provide a SCHEME explanation. Try again.')}
-    start({mode:'duel',schemeIdx:null,hider:hiderModel,secret,svg:safe,scheme:sc,method:null,methodLabel:null,scene:null,diagnostics,hints:[ns.length+' letters in '+words+' words.','It starts with “'+[...secret][0]+'”.','The hider confessed: '+sc]});
+    let png;try{png=await toPng(safe);diagnostics.hider.validation.renderValid=true;const vb=(safe.match(/viewBox=["']([^"']+)["']/i)||[])[1]?.trim().split(/[ ,]+/).map(Number)||[0,0,800,500];const b64=png.slice(png.indexOf(',')+1);diagnostics.image={mime:'image/png',width:1024,height:Math.round(1024*vb[3]/vb[2]),byteLength:Math.max(0,Math.floor(b64.length*3/4)-(b64.endsWith('==')?2:b64.endsWith('=')?1:0)),rasterized:true};}catch(e){diagnostics.hider.validation.renderValid=false;diagnostics.hider.validation.errors.push('PNG rasterization failed: '+e.message);throw e}
+    diagnostics.hider.durationMs=Date.now()-hiderStarted;recordHiderOutcome(true);
+    start({mode:'duel',schemeIdx:null,hider:hiderModel,secret,svg:safe,png,scheme:sc,method:null,methodLabel:null,scene:null,diagnostics,hints:[ns.length+' letters in '+words+' words.','It starts with “'+[...secret][0]+'”.','The hider confessed: '+sc]});
     dl.n=(dl.n||0)+1;save();    if($('#judge').checked&&conn.apiKey)judgeStealth(R);
-  }catch(e){if(diagnostics){diagnostics.errors.push(e.message);renderDiagnostics()}say(e.message,'bad');if(!$('#imgbox img'))$('#imgbox').textContent=IDLE.duel}
+  }catch(e){if(diagnostics){diagnostics.hider.durationMs=diagnostics.hider.durationMs??Date.now()-(diagnostics.hider.startedAt||Date.now());diagnostics.hider.validation.schemePresent=diagnostics.hider.validation.schemePresent??false;diagnostics.errors.push(e.message);recordHiderOutcome(false);renderDiagnostics()}say(e.message,'bad');if(!$('#imgbox img'))$('#imgbox').textContent=IDLE.duel}
   finally{hideInFlight=false;busy(false)}
 }
 $('#next').onclick=()=>{
