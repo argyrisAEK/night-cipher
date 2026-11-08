@@ -161,10 +161,9 @@ $('#hide').onclick=async()=>{
     let safe;try{safe=clean(m[0]);diagnostics.hider.validation.xmlValid=true;diagnostics.hider.validation.svgValid=true;diagnostics.hider.svg=safe}catch(e){diagnostics.hider.validation.xmlValid=false;diagnostics.hider.validation.svgValid=false;diagnostics.hider.validation.errors.push(e.message);throw e}
     renderDiagnostics();
     if(/<(?:text|tspan)\b/i.test(safe)){diagnostics.hider.validation.errors.push('Readable text elements are not allowed in the hidden artwork.');throw Error('The Hider added readable text or labels to the artwork. The image must communicate through visual details only; try again.')}
-    if(hasSecretLeak(safe,secret,{strictWords:false})){diagnostics.hider.validation.errors.push('The complete secret message was detected in SVG content.');throw Error('The Hider leaked the complete secret message in the SVG, so the round was voided. Try again.')}
+    if(secret.includes(' ')&&hasSecretLeak(safe,secret,{strictWords:false})){diagnostics.hider.validation.errors.push('The complete secret message was detected in SVG content.');throw Error('The Hider leaked the complete secret message in the SVG, so the round was voided. Try again.')}
     const sc=(out.split(/SCHEME:/i)[1]||'').trim().slice(0,400),words=secret.split(/\s+/).length;
     if(!sc){diagnostics.hider.validation.errors.push('Missing SCHEME explanation.');throw Error('The hider did not provide a SCHEME explanation. Try again.')}
-    if(hasSecretLeak(sc,secret,{strictWords:false})){diagnostics.hider.validation.errors.push('SCHEME explanation reveals the complete secret message.');throw Error('The SCHEME explanation reveals the complete secret message. The round was voided; try again.')}
     start({mode:'duel',schemeIdx:null,hider:hiderModel,secret,svg:safe,scheme:sc,method:null,methodLabel:null,scene:null,diagnostics,hints:[ns.length+' letters in '+words+' words.','It starts with “'+[...secret][0]+'”.','The hider confessed: '+sc]});
     dl.n=(dl.n||0)+1;save();    if($('#judge').checked&&conn.apiKey)judgeStealth(R);
   }catch(e){if(diagnostics){diagnostics.errors.push(e.message);renderDiagnostics()}say(e.message,'bad');if(!$('#imgbox img'))$('#imgbox').textContent=IDLE.duel}
