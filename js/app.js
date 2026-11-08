@@ -122,6 +122,22 @@ $('#revealHow').onclick=()=>{
   }
 };
 $('#save').onclick=async()=>{if(!R)return;const a=document.createElement('a');a.href=R.png||await toPng(R.svg);a.download='night-cipher.png';a.click()};
+$('#saveSvg').onclick=()=>{
+  if(!R||!R.svg)return;
+  const svg=R.mode==='duel'?R.svg:R.svg.replace(/\sdata-cipher="[^"]*"/g,'');
+  const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  const tag=R.mode==='train'?`level-${String((R.schemeIdx??0)+1).padStart(2,'0')}`
+    :R.mode==='daily'?`daily-${R.day}`
+    :R.mode==='duel'?'duel'
+    :'own';
+  a.download=`night-cipher-${tag}.svg`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  say(R.mode==='duel'?'SVG saved (sanitized AI output).':'SVG saved (internal encoding metadata removed).');
+};
 $('#ai').onclick=async()=>{
   const round=R;if(!round||(round.done&&round.mode!=='own'&&aiAttempted)||aiInFlight||aiAttempted)return;
   aiInFlight=true;aiAttempted=true;const attemptStarted=Date.now(),tokensBefore=tok,model=$(round.mode=='own'?'#seeker2':'#seeker').value;busy(true,'The AI seeker is studying the picture…');
