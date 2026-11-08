@@ -1,44 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { pickPlan, decodePlan, eligibleMethods } from '../server/encoding.mjs';
-import hideHandler from '../api/hide.mjs';
-import revealHandler from '../api/reveal.mjs';
-
-test('server-only encoding planner round-trips without shipping a browser module', () => {
-  const plan=pickPlan('LANTERN',{round:123});
-  expect(decodePlan(plan)).toBe('LANTERN');
-  expect(eligibleMethods('THE BEES KNOW THE WAY')).toContain('morse');
-});
-
-test('server Hider embeds a valid pattern and keeps its plan inside an encrypted reveal token', async () => {
-  const previousSecret=process.env.NIGHT_CIPHER_ROUND_SECRET,previousFetch=global.fetch;
-  process.env.NIGHT_CIPHER_ROUND_SECRET='test-only-round-secret-0123456789abcdef0123456789';
-  global.fetch=async()=>({ok:true,json:async()=>({model:'mock-hider',choices:[{message:{content:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>'},finish_reason:'stop'}],usage:{total_tokens:9}})});
-  const invoke=async(handler,body)=>{
-    const res={statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v},end(value){this.body=value}};
-    await handler({method:'POST',body},res);
-    return {status:res.statusCode,...JSON.parse(res.body||'{}')};
-  };
-  try{
-    const first=await invoke(hideHandler,{secret:'LANTERN',model:'mock-hider',pollinationsKey:'byop-test-key'});
-    expect(first.status).toBe(200);
-    expect(first.validation.encodingValid).toBe(true);
-    expect(first.svg).toContain('<circle');
-    expect(first.svg.toUpperCase()).not.toContain('LANTERN');
-    expect(first).not.toHaveProperty('prompt');
-    expect(first.revealToken).not.toContain('LANTERN');
-    const reveal=await invoke(revealHandler,{revealToken:first.revealToken});
-    expect(reveal.status).toBe(200);
-    expect(reveal.message).toBe('LANTERN');
-    expect(reveal.annotations).toHaveLength(7);
-    const second=await invoke(hideHandler,{secret:'LANTERN',model:'mock-hider',pollinationsKey:'byop-test-key',previousRoundToken:first.revealToken});
-    expect(second.status).toBe(200);
-    const secondReveal=await invoke(revealHandler,{revealToken:second.revealToken});
-    expect(secondReveal.method).not.toBe(reveal.method);
-  }finally{
-    global.fetch=previousFetch;
-    if(previousSecret===undefined)delete process.env.NIGHT_CIPHER_ROUND_SECRET;else process.env.NIGHT_CIPHER_ROUND_SECRET=previousSecret;
-  }
-});
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem('nc-howto-seen', '1'); } catch {} });
@@ -87,8 +47,9 @@ test('known training and daily ciphers use guided decoding instructions', async 
   expect(prompts.guided).toContain('One petal is A');
   expect(prompts.own).toContain('Petal count');
   expect(prompts.blind).not.toContain('DECODING RULE:');
-  expect(prompts.blind).toContain('count each visible petal');
-  expect(prompts.retry).toContain('Second-pass visual cryptanalysis');
+  expect(prompts.blind).toContain('blind AI SEEKER');
+  expect(prompts.blind).toContain('Do not assume the answer uses A=1');
+  expect(prompts.retry).toContain('Second-pass blind visual analysis');
 });
 
 test('legacy nc LocalStorage progression remains readable', async ({ page }) => {
@@ -192,120 +153,88 @@ test('AI model settings are open by default, collapsible, and carry the budget t
   await expect(page.locator('#hider')).toBeVisible();
 });
 
-test('AI vs AI Duel uses the private Hider endpoint and keeps the encoding plan out of browser requests', async ({ page }) => {
-  let hideBody=null,seekerPrompt='';
-  const finalSvg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/><circle cx="200" cy="180" r="2" fill="#f1c987"/><circle cx="220" cy="190" r="2" fill="#f1c987"/></svg>';
+test('AI Hider authors the complete organic image and Seeker receives only the blind image', async ({ page }) => {
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/><rect x="100" y="100" width="50" height="70" fill="#f1c987"/><rect x="220" y="100" width="50" height="70" fill="#f1c987"/></svg>';
+  const scheme='The illuminated windows in each natural cluster encode A=1 through Z=26, read left to right; wider gaps separate words.';
+  let hiderBody=null,seekerBody=null,chatCalls=0,serverCalls=0;
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
-    json: { data: [{ id: 'test-hider' }, { id: 'test-vision-seeker', input_modalities: ['image'] }] }
+    json:{data:[{id:'test-hider'},{id:'test-vision-seeker',input_modalities:['image']}]}
   }));
-  await page.route('**/api/hide', async route => {
-    hideBody=route.request().postDataJSON();
-    await route.fulfill({json:{
-      svg:finalSvg,revealToken:'opaque-encrypted-round-token',model:'test-hider',
-      rawResponse:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>',
-      validation:{svgValid:true,encodingValid:true,secretLeak:false},
-      usage:{total_tokens:12},durationMs:42
-    }});
-  });
+  await page.route('**/api/**', route => {serverCalls++;return route.fulfill({status:404,body:'not found'})});
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    chatCalls++;
     const body=route.request().postDataJSON();
-    seekerPrompt=JSON.stringify(body.messages);
-    await route.fulfill({json:{choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: I found a repeated pattern of tiny lights.'}}],usage:{total_tokens:12}}});
+    if(body.model==='test-hider'){
+      hiderBody=body;
+      await route.fulfill({json:{
+        model:'test-hider',
+        choices:[{message:{content:svg+'\nSCHEME: '+scheme},finish_reason:'stop'}],
+        usage:{total_tokens:140,completion_tokens:110}
+      }});
+    }else{
+      seekerBody=body;
+      await route.fulfill({json:{
+        model:'test-vision-seeker',
+        choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: The natural window pattern encodes the letters.'},finish_reason:'stop'}],
+        usage:{total_tokens:60,completion_tokens:35}
+      }});
+    }
   });
   await page.reload();
-  await page.waitForFunction(() => [...document.querySelectorAll('#hider option')].some(option => option.value === 'test-hider'));
-  await page.evaluate(() => { Object.defineProperty(document.querySelector('polli-connect'), 'apiKey', { value: 'test-key', configurable: true }); });
-  await page.locator('#tabs button', { hasText: 'AI vs AI Duel' }).click();
-  await page.fill('#msg', 'LANTERN');
-  await page.click('#hide');
-  await expect(page.locator('#imgbox img')).toBeVisible({timeout:10000});
-  expect(hideBody.secret).toBe('LANTERN');
-  expect(hideBody.model).toBe('test-hider');
-  expect(hideBody.pollinationsKey).toBe('test-key');
-  expect(hideBody).not.toHaveProperty('method');
-  expect(hideBody).not.toHaveProperty('groups');
-  expect(hideBody).not.toHaveProperty('mapping');
-  expect(hideBody).not.toHaveProperty('plan');
-  await page.click('#ai');
-  await expect(page.locator('#res')).toContainText('AI seeker said: “LANTERN”',{timeout:10000});
-  expect(seekerPrompt).not.toContain('LANTERN');
-  expect(await page.evaluate(async()=> (await fetch('/js/encoding.js')).status)).toBe(404);
-  const log=await page.evaluate(()=>JSON.parse(localStorage.getItem('nc')).duelLog);
-  expect(log.lastToken).toBe('opaque-encrypted-round-token');
-});
-
-test('AI Output Inspection captures server Hider output without exposing its private encoding plan', async ({ page }) => {
-  const finalSvg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/><circle cx="200" cy="180" r="2" fill="#f1c987"/></svg>';
-  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
-    json: { data: [{ id: 'diagnostic-hider' }, { id: 'diagnostic-seeker', input_modalities: ['image'] }] }
-  }));
-  await page.route('**/api/hide', route => route.fulfill({json:{
-    svg:finalSvg,revealToken:'opaque-token',model:'diagnostic-hider',
-    rawResponse:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>',
-    validation:{svgValid:true,encodingValid:true,secretLeak:false},usage:{total_tokens:23},durationMs:30
-  }}));
-  await page.route('https://gen.pollinations.ai/v1/chat/completions', route => route.fulfill({json:{
-    model:'diagnostic-seeker',
-    choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: I counted the repeated lights.'},finish_reason:'stop'}],
-    usage:{total_tokens:17,completion_tokens:12}
-  }}));
-  await page.reload();
-  await page.waitForFunction(() => [...document.querySelectorAll('#hider option')].some(o => o.value === 'diagnostic-hider'));
-  await page.evaluate(() => { Object.defineProperty(document.querySelector('polli-connect'), 'apiKey', { value: 'test-key', configurable: true }); });
-  await page.locator('#tabs button', {hasText:'AI vs AI Duel'}).click();
-  await page.fill('#msg','LANTERN');
-  await page.click('#hide');
-  await expect(page.locator('#imgbox img')).toBeVisible({timeout:10000});
-  await expect(page.locator('#diagnosticsContent')).toContainText('diagnostic-hider');
-  await expect(page.locator('#diagnosticsContent')).toContainText('Hider raw SVG');
-  await page.click('#ai');
-  await expect(page.locator('#diagnosticsContent')).toContainText('MESSAGE: LANTERN',{timeout:10000});
-  await expect(page.locator('#diagnosticsContent')).toContainText('Encoding fidelity');
-  await page.locator('#diagnostics > summary').click();
-  const reportText=await page.locator('#diagnosticsContent details').last().locator('pre').textContent();
-  const report=JSON.parse(reportText);
-  expect(report.encoding.method).toBe('Server-side private plan');
-  expect(report.encoding).not.toHaveProperty('expectedMessage');
-  expect(report.hider.rawResponse).toContain('<svg');
-  expect(report.hider.svg).toContain('<svg');
-  expect(report.hider.validation.svgValid).toBe(true);
-  expect(report.hider.validation.encodingValid).toBe(true);
-  expect(report.seeker.decodedMessage).toBe('LANTERN');
-  expect(report.result.exactMatch).toBe(true);
-  expect(JSON.stringify(report)).not.toContain('test-key');
-});
-
-test('the Hider explanation is revealed only after an explicit user action', async ({ page }) => {
-  const finalSvg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>';
-  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
-    json: { data: [{ id: 'reveal-hider' }, { id: 'reveal-seeker', input_modalities: ['image'] }] }
-  }));
-  await page.route('**/api/hide', route => route.fulfill({json:{
-    svg:finalSvg,revealToken:'opaque-round-token',model:'reveal-hider',
-    rawResponse:finalSvg,validation:{svgValid:true,encodingValid:true,secretLeak:false}
-  }}));
-  let revealBody=null;
-  await page.route('**/api/reveal', async route => {
-    revealBody=route.request().postDataJSON();
-    await route.fulfill({json:{method:'Constellation counts',rule:'Each constellation contains a count of stars; A=1 through Z=26.',scene:'Night observatory',annotations:[{x:100,y:100,w:60,h:50,letter:'L'}]}});
-  });
-  await page.route('https://gen.pollinations.ai/v1/chat/completions', route => route.fulfill({json:{
-    choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: Count the star clusters.'}}],usage:{total_tokens:5}
-  }}));
-  await page.reload();
-  await page.waitForFunction(() => [...document.querySelectorAll('#hider option')].some(o => o.value === 'reveal-hider'));
-  await page.evaluate(() => { Object.defineProperty(document.querySelector('polli-connect'), 'apiKey', { value: 'test-key', configurable: true }); });
+  await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='test-hider'));
+  await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
   await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
   await page.fill('#msg','LANTERN');
   await page.click('#hide');
   await expect(page.locator('#imgbox img')).toBeVisible({timeout:10000});
-  await expect(page.locator('#imgbox img')).toHaveAttribute('alt','Puzzle picture');
+  expect(hiderBody.model).toBe('test-hider');
+  expect(JSON.stringify(hiderBody.messages)).toContain('LANTERN');
+  expect(JSON.stringify(hiderBody.messages)).toContain('ordinary image');
+  expect(JSON.stringify(hiderBody.messages)).toContain('SCHEME:');
   await expect(page.locator('#revealHow')).toBeHidden();
   await page.click('#ai');
-  await expect(page.locator('#res')).toContainText('AI seeker said:',{timeout:10000});
+  await expect(page.locator('#res')).toContainText('AI seeker said: “LANTERN”',{timeout:10000});
+  expect(JSON.stringify(seekerBody.messages)).not.toContain('LANTERN');
+  expect(JSON.stringify(seekerBody.messages)).not.toContain(scheme);
+  expect(seekerBody.messages[0].content.some(part=>part.type==='image_url')).toBe(true);
+  expect(chatCalls).toBe(2);
+  expect(serverCalls).toBe(0);
   await expect(page.locator('#revealHow')).toBeVisible();
   await page.click('#revealHow');
-  await expect(page.locator('#imgbox img')).toHaveAttribute('alt','Annotated hidden message');
-  expect(revealBody.revealToken).toBe('opaque-round-token');
-  await expect(page.locator('#res')).toContainText('Each constellation contains a count of stars');
+  await expect(page.locator('#res')).toContainText(scheme);
+  expect(chatCalls).toBe(2);
+});
+
+test('Hider diagnostics capture its private explanation while the Seeker request remains blind', async ({ page }) => {
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>';
+  const scheme='A natural sequence of window lights maps counts to alphabet positions.';
+  let seekerMessages='';
+  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
+    json:{data:[{id:'diag-hider'},{id:'diag-seeker',input_modalities:['image']}]}
+  }));
+  await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    const body=route.request().postDataJSON();
+    const content=body.model==='diag-hider'?svg+'\nSCHEME: '+scheme:'MESSAGE: LANTERN\nMETHOD: I decoded the window sequence.';
+    if(body.model==='diag-seeker')seekerMessages=JSON.stringify(body.messages);
+    await route.fulfill({json:{model:body.model,choices:[{message:{content},finish_reason:'stop'}],usage:{total_tokens:25,completion_tokens:18}}});
+  });
+  await page.reload();
+  await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='diag-hider'));
+  await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
+  await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
+  await page.fill('#msg','LANTERN');
+  await page.click('#hide');
+  await expect(page.locator('#imgbox img')).toBeVisible({timeout:10000});
+  await expect(page.locator('#diagnosticsContent')).toContainText('AI-selected organic visual encoding');
+  await page.click('#ai');
+  await expect(page.locator('#diagnosticsContent')).toContainText('MESSAGE: LANTERN',{timeout:10000});
+  expect(seekerMessages).not.toContain(scheme);
+  expect(seekerMessages).not.toContain('LANTERN');
+  await page.locator('#diagnostics > summary').click();
+  const report=JSON.parse(await page.locator('#diagnosticsContent details').last().locator('pre').textContent());
+  expect(report.hider.rawResponse).toContain('SCHEME:');
+  expect(report.hider.svg).toContain('<svg');
+  expect(report.seeker.decodedMessage).toBe('LANTERN');
+  expect(report.result.exactMatch).toBe(true);
+  expect(JSON.stringify(report)).not.toContain('test-key');
 });

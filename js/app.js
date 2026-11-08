@@ -1,7 +1,6 @@
 import { TRAIN, annotate } from './ciphers.js';
 import { uri, toRaster, toPng, clean, utf8Base64, hasSecretLeak } from './security.js';
-import { createChat, buildSeekPrompt } from './api.js';
-
+import { createChat, HIDE, buildSeekPrompt } from './api.js';
 import { loadState, saveState, createProgression } from './state.js';
 import { runSelfTest } from './selftest.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
@@ -27,7 +26,7 @@ const renderDiagnostics=()=>{
     <div><b>Hider</b><small>${esc(h.model||'—')} · ${h.durationMs==null?'pending':h.durationMs+' ms'}</small></div>
     <div><b>Seeker</b><small>${esc(q.model||'—')} · ${q.durationMs==null?'not run':q.durationMs+' ms'}</small></div>
     <div><b>SVG / XML</b><small class="${v.svgValid===true?'ok':v.svgValid===false?'bad':''}">${v.svgValid===true?'Valid':v.svgValid===false?'Invalid':'Not checked'}</small></div>
-    <div><b>Encoding fidelity</b><small class="${v.encodingValid===true?'ok':v.encodingValid===false?'bad':''}">${v.encodingValid===true?'Verified server-side':v.encodingValid===false?'Failed validation':'Not checked'}</small></div>
+    <div><b>Encoding fidelity</b><small>Not verified automatically</small></div>
     <div><b>Result</b><small>${d.result?.exactMatch==null?'Pending':d.result.exactMatch?'Exact match':'Mismatch'}</small></div>
   </div>
   <div class="diag-actions"><button type="button" id="copyDiagnostics">Copy diagnostic JSON</button></div>
@@ -61,9 +60,9 @@ function syncButtons(){
   }
 }
 function busy(b,m){uiBusy=!!b;syncButtons();if(m)say(m)}
-function start(r){R=Object.assign({tries:0,used:0,done:false,ai:null,maxTries:3,noHints:false},r);if(R.diagnostics)diagnostics=R.diagnostics;renderDiagnostics();R.startedAt=performance.now();aiInFlight=false;aiAttempted=false;$('#imgbox').innerHTML=`<img alt="Puzzle picture" src="${uri(R.svg)}">`;$('#res').innerHTML='';$('#robustnessReport').innerHTML='';$('#hints').innerHTML='';$('#guess').value='';$('#game').hidden=false;const hiderDuel=R.mode==='duel';$('#game').classList.toggle('hider-duel',hiderDuel);$('#duelRoles').hidden=!hiderDuel;$('#guess').hidden=hiderDuel;$('#guess').previousElementSibling.hidden=hiderDuel;$('#go').parentElement.hidden=hiderDuel;$('#hints').hidden=hiderDuel;$('#giveup').hidden=hiderDuel;$('#next').hidden=true;$('#hint').hidden=hiderDuel||!!R.noHints;$('#hint').disabled=hiderDuel||!!R.noHints;$('#ai').hidden=false;$('#revealHow').hidden=hiderDuel;$('#revealHow').textContent=R.schemeIdx==null?'✨ How was it hidden?':'✨ How was it hidden?';syncButtons();say(hiderDuel?'AI Hider has hidden your chosen message. Now watch the AI Seeker try to decode it.':'Find the hidden message. '+R.maxTries+' tries.');if(!hiderDuel)$('#guess').focus()}
+function start(r){R=Object.assign({tries:0,used:0,done:false,ai:null,maxTries:3,noHints:false},r);if(R.diagnostics)diagnostics=R.diagnostics;renderDiagnostics();R.startedAt=performance.now();aiInFlight=false;aiAttempted=false;$('#imgbox').innerHTML=`<img alt="Puzzle picture" src="${uri(R.svg)}">`;$('#res').innerHTML='';$('#robustnessReport').innerHTML='';$('#hints').innerHTML='';$('#guess').value='';$('#game').hidden=false;const hiderDuel=R.mode==='duel';$('#game').classList.toggle('hider-duel',hiderDuel);$('#duelRoles').hidden=!hiderDuel;$('#guess').hidden=hiderDuel;$('#guess').previousElementSibling.hidden=hiderDuel;$('#go').parentElement.hidden=hiderDuel;$('#hints').hidden=hiderDuel;$('#giveup').hidden=hiderDuel;$('#next').hidden=true;$('#hint').hidden=hiderDuel||!!R.noHints;$('#hint').disabled=hiderDuel||!!R.noHints;$('#ai').hidden=false;$('#revealHow').hidden=hiderDuel;$('#revealHow').textContent='✨ How was it hidden?';syncButtons();say(hiderDuel?'AI Hider has hidden your chosen message. Now watch the AI Seeker try to decode it.':'Find the hidden message. '+R.maxTries+' tries.');if(!hiderDuel)$('#guess').focus()}
 function finish(ok){if(!R||R.done)return;R.done=true;R.elapsedMs=Math.max(0,performance.now()-(R.startedAt||performance.now()));syncButtons();let earned=0;if(ok&&(R.mode==='train'||R.mode==='daily')){T.solves=(T.solves||0)+1;if(R.tries===1)T.firstTry=(T.firstTry||0)+1;if(R.used===0)T.noHintSolves=(T.noHintSolves||0)+1;const hr=new Date().getHours();if(hr>=0&&hr<5)T.nightSolves=(T.nightSolves||0)+1;const timeKey=R.mode==='daily'?`daily-${R.day}`:`training-${R.schemeIdx}`;T.bestTimes=T.bestTimes||{};if(!T.bestTimes[timeKey]||R.elapsedMs<T.bestTimes[timeKey])T.bestTimes[timeKey]=R.elapsedMs;if(R.mode==='train'){T.levels=T.levels||{};const first=!T.levels[R.schemeIdx];T.levels[R.schemeIdx]=true;if(first)earned+=grantXP(`training-${R.schemeIdx}`,50,'Training level completed');const tb=[...$('#tabs').children].find(x=>x.dataset.kind==='training'&&x.textContent.includes(`Level ${R.schemeIdx+1}`));if(tb)tb.textContent=`🎓 Level ${R.schemeIdx+1} ✓`}else{T.dailyWins=T.dailyWins||[];if(!T.dailyWins.includes(R.day)){T.dailyWins.push(R.day);earned+=grantXP(`daily-${R.day}`,75,'Daily cipher solved');if(R.used===0)earned+=grantXP(`daily-no-hints-${R.day}`,25,'Daily solved without hints');if(R.tries===1)earned+=grantXP(`daily-first-try-${R.day}`,25,'Daily solved on first try');}if(T.last!==R.day){T.streak=T.last===R.day-1?(T.streak||0)+1:1;T.last=R.day}}evaluateAchievements(TRAIN)}const pts=ok?Math.max(10,100-20*R.used-15*(R.tries-1)):0;$('#res').innerHTML=`<b class="${ok?'ok':'bad'}">${ok?'Found it! +'+pts+' points':'Out of tries.'}</b> The message was “${esc(R.secret)}”.<br><small>How it was hidden: ${esc(R.scheme||'unknown')}</small>${ok&&(R.mode==='train'||R.mode==='daily')?`<br><small>Time: ${fmtTime(R.elapsedMs)} · ${earned?`+${earned} XP`:'No new XP (already claimed)'}</small>`:''}`+stealthLine()+(R.ai?aiLine():'');if(R.mode==='duel'){T.n++;if(ok)T.you++;save();score()}if(R.mode==='daily'){$('#res').innerHTML+='<p><button id="sh">Copy result</button></p>';$('#sh').onclick=()=>{navigator.clipboard.writeText(`Night Cipher #${R.day-20000} ${ok?'✅':'❌'} ${R.tries}/${R.maxTries} tries · ${R.used} hints\n${location.href}`);say('Result copied!')}}if(ok){evaluateAchievements(TRAIN);save();score()}$('#next').hidden=false;say(ok?'Cipher solved. Progress saved locally.':'Round finished.')}
-const aiLine=()=>`<p>🤖 AI seeker said: “${esc(R.ai.guess)}” — <b class="${R.ai.ok?'ok':'bad'}">${R.ai.ok?'it found it':'it missed it'}</b> (${Math.round(R.ai.s*100)}% similar).<br><small>Model: ${esc(R.ai.model||'unknown')} · ${R.ai.durationMs??'—'} ms · ${R.ai.tokens??'—'} tokens<br>Its method: ${esc(R.ai.method)}</small></p>`;
+const aiLine=()=>`<p>🤖 AI seeker said: “${esc(R.ai.guess)}” — <b class="${R.ai.ok?'ok':'bad'}">${R.ai.ok?'it found it':'it missed it'}</b> (${Math.round(R.ai.s*100)}% similar).<br><small>Model: ${esc(R.ai.model||'unknown')} · ${R.ai.durationMs??'—'} ms · ${R.ai.tokens??'—'} tokens<br>Its method: ${esc(R.ai.method)}${R.method?`<br>Method fixed by the game: ${esc(R.methodLabel)} · Scene: ${esc(R.scene)}`:''}</small></p>`;
 $('#go').onclick=()=>{if(!R||R.done)return;const g=$('#guess').value.trim();if(!g)return;R.tries++;renderTries();const s=sim(g,R.secret);
 if(s>=.9)finish(true);else if(R.tries>=R.maxTries)finish(false);else say(`Not quite (${Math.round(s*100)}% similar). ${R.maxTries-R.tries} tries left.`,'bad')};
 $('#guess').onkeydown=e=>{if(e.key=='Enter')$('#go').click()};
@@ -74,23 +73,16 @@ const JUDGE='Study this picture carefully. It may or may not hide a secret messa
 async function judgeStealth(r){const key=conn&&conn.apiKey;if(!key)return null;try{const round=r,png=await toPng(round.svg),out=await chat($('#judgeModel').value,[{role:'user',content:[{type:'text',text:JUDGE},{type:'image_url',image_url:{url:png}}]}],1000,60000);if(round!==R)return null;const s=Math.max(1,Math.min(10,parseInt((out.match(/STEALTH:\s*(\d+)/i)||[,'5'])[1])||5)),note=(out.match(/NOTE:\s*(.*)/i)||[,''])[1].trim();round.stealth=s;round.stealthNote=note;T.st=T.st||{s:0,n:0};T.st.s+=s;T.st.n++;const hn=round.hider;if(hn){T.sh=T.sh||{};const e=T.sh[hn]=T.sh[hn]||{s:0,n:0};e.s+=s;e.n++}save();score();if(round===R&&round.done)$('#res').innerHTML+=stealthLine();return{s,note}}catch(e){if(r===R&&!R.done)say(e.message,'bad');return null}}
 
 
-$('#revealHow').onclick=async()=>{
+$('#revealHow').onclick=()=>{
   const round=R;if(!round)return;
-  if(round.schemeIdx!=null){$('#imgbox').innerHTML=`<img class="revealed" alt="Revealed encoding" src="${uri(annotate(round.svg,round.schemeIdx))}">`;say('The encoding, laid bare — every letter exactly where it hid.');return}
-  if(!round.revealToken)return say('The private reveal token is unavailable for this round.','bad');
-  busy(true,'Retrieving the private encoding explanation…');
-  try{
-    const response=await fetch('/api/reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({revealToken:round.revealToken})});
-    const info=await response.json();if(!response.ok)throw Error(info.error||'Could not reveal this round.');
-    if(round!==R)return;
-    const marks=(info.annotations||[]).map(a=>`<rect x="${a.x.toFixed(1)}" y="${a.y.toFixed(1)}" width="${a.w.toFixed(1)}" height="${a.h.toFixed(1)}" rx="7" fill="none" stroke="#ff4f87" stroke-width="2.2"/><text x="${(a.x+a.w/2).toFixed(1)}" y="${(a.y-5).toFixed(1)}" text-anchor="middle" font-family="monospace" font-size="13" font-weight="bold" fill="#ff6f9d">${esc(a.letter)}</text>`).join('');
-    const annotated=round.svg.replace(/<\/svg>\s*$/i,marks+'</svg>');
-    $('#imgbox').innerHTML=`<img class="revealed" alt="Annotated hidden message" src="${uri(annotated)}">`;
-    round.scheme=info.rule;
-    $('#res').innerHTML+=`<p><b>How it was hidden:</b> ${esc(info.rule)}</p>`;
-    say(`The Hider's private encoding is revealed: ${info.method}.`);
-  }catch(e){if(round===R)say(e.message,'bad')}
-  finally{busy(false)}
+  if(round.schemeIdx!=null){
+    $('#imgbox').innerHTML=`<img class="revealed" alt="Revealed encoding" src="${uri(annotate(round.svg,round.schemeIdx))}">`;
+    say('The encoding, laid bare — every letter exactly where it hid.');
+  }else{
+    $('#imgbox').innerHTML=`<img alt="Puzzle picture" src="${uri(round.svg)}">`;
+    $('#res').innerHTML+=`<p><b>Hider's private explanation:</b> ${esc(round.scheme||'No explanation was returned.')}</p>`;
+    say('The Hider’s private explanation is now revealed. No extra AI call was needed.');
+  }
 };
 $('#save').onclick=async()=>{if(!R)return;const a=document.createElement('a');a.href=await toPng(R.svg);a.download='night-cipher.png';a.click()};
 $('#ai').onclick=async()=>{
@@ -105,9 +97,9 @@ $('#ai').onclick=async()=>{
     const gm=out.match(/^MESSAGE:\s*(.*)$/im);if(!gm)throw Error('The model returned no valid MESSAGE line. Try again or select another vision model.');
     const g=gm[1].trim(),mt=(out.match(/^METHOD:\s*(.*)$/im)||[,'(none given)'])[1].trim(),s=sim(g,round.secret);
     if(diagnostics){diagnostics.seeker.decodedMessage=g;diagnostics.result={success:s>=.9,exactMatch:norm(g)===norm(round.secret),similarity:s};renderDiagnostics()}
-    round.ai={guess:g,method:mt,s,ok:s>=.9,model,durationMs:Date.now()-attemptStarted,tokens:tok-tokensBefore};round.aiHistory=round.aiHistory||[];round.aiHistory.push({...round.ai,at:Date.now()});
+    round.ai={guess:g,method:mt,s,ok:s>=.9,model,durationMs:Date.now()-attemptStarted,tokens:tok-tokensBefore};if(round.mode==='duel')$('#revealHow').hidden=false;round.aiHistory=round.aiHistory||[];round.aiHistory.push({...round.ai,at:Date.now()});
     if(round.mode=='duel'||round.mode=='own'){T.an++;if(round.ai.ok)T.ai++;const k=(round.mode=='own'?'your '+round.sname:'hider '+round.hider)+' → '+$(round.mode=='own'?'#seeker2':'#seeker').value+(round.method?' · '+round.method:''),v=(T.s=T.s||{})[k]=T.s[k]||{n:0,ok:0};v.n++;if(round.ai.ok)v.ok++;save();score()}
-    if(round.mode==='duel'){$('#revealHow').hidden=false;$('#res').innerHTML=aiLine();if(round.ai.ok){aiAttempted=true;say('AI Seeker decoded the message chosen for this duel.','ok')}else{aiAttempted=false;say(g.toUpperCase()==='NONE'?'AI Seeker could not produce a defensible decoding. You can retry or change the model.':'AI Seeker failed to recover the message. You can retry or change the model.','bad')}}else if(g.toUpperCase()==='NONE'||s<.9){aiAttempted=false;if(round.done)$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say(g.toUpperCase()==='NONE'?'The AI found no defensible decoding. Retry or choose another vision model.':'The AI returned an incorrect answer. Retry or choose another vision model.','bad')}else if(round.done){$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say('The AI recovered the message.')}else say('The AI has locked in an answer. Finish your round to see it.');
+    if(round.mode==='duel'){$('#res').innerHTML=aiLine();if(round.ai.ok){aiAttempted=true;say('AI Seeker decoded the message chosen for this duel.','ok')}else{aiAttempted=false;say(g.toUpperCase()==='NONE'?'AI Seeker could not produce a defensible decoding. You can retry or change the model.':'AI Seeker failed to recover the message. You can retry or change the model.','bad')}}else if(g.toUpperCase()==='NONE'||s<.9){aiAttempted=false;if(round.done)$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say(g.toUpperCase()==='NONE'?'The AI found no defensible decoding. Retry or choose another vision model.':'The AI returned an incorrect answer. Retry or choose another vision model.','bad')}else if(round.done){$('#res').innerHTML=$('#res').innerHTML.split('<p>🤖 AI seeker said:')[0]+aiLine();say('The AI recovered the message.')}else say('The AI has locked in an answer. Finish your round to see it.');
   }catch(e){if(round===R){if(diagnostics){diagnostics.errors.push(e.message);if(diagnostics.seeker&&!diagnostics.seeker.rawResponse)diagnostics.seeker.error=e.message;renderDiagnostics()}aiAttempted=false;say(e.message,'bad')}}
   finally{aiInFlight=false;busy(false)}
 };
@@ -154,31 +146,26 @@ const updCount=()=>{const m=$('#msg');$('#msgCount').textContent=`${m.value.leng
 const rnd=()=>{$('#msg').value=MSGS[Math.random()*MSGS.length|0];updCount()};$('#dice').onclick=rnd;$('#msg').addEventListener('input',updCount);rnd();
 $('#hide').onclick=async()=>{
   if(hideInFlight)return;
-  const secret=$('#msg').value.trim().toUpperCase().replace(/ +/g,' '),ns=norm(secret);
-  if(!/^[A-Z ]{3,24}$/.test(secret)||ns.length<3)return say('Use 3–24 characters with at least 3 letters: English letters A–Z and spaces only.','bad');
+  const secret=$('#msg').value.trim(),ns=norm(secret);if(!/^[A-Z ]{3,24}$/i.test(secret)||ns.length<3)return say('Use 3–24 characters with at least 3 letters: English letters A–Z and spaces only. Digits and Greek characters are not supported by the current visual encodings.','bad');
   if(!conn||!conn.apiKey)return say('Connect your Pollinations account first (button, top right).','bad');
-  hideInFlight=true;busy(true,'AI Hider is creating the artwork; the server is embedding and validating the hidden message…');
-  if(!$('#imgbox img'))$('#imgbox').textContent='🎨 AI Hider is creating an ordinary-looking night scene…';
+  hideInFlight=true;busy(true,'AI Hider is creating the image… this may take a minute or two.');
+  if(!$('#imgbox img'))$('#imgbox').textContent='🎨 AI Hider is creating an image containing your chosen message…';
   try{
-    const dl=T.duelLog=T.duelLog||{n:0},hiderModel=$('#hider').value,hiderStarted=Date.now();
-    diagnostics={roundId:(globalThis.crypto?.randomUUID?.()||String(hiderStarted)),timestamp:new Date().toISOString(),encoding:{method:'Server-side private plan',scene:'Not exposed to the browser'},hider:{model:hiderModel,prompt:'Generated server-side; contains no secret or encoding map.',rawResponse:'',svg:'',durationMs:null,validation:{xmlValid:null,svgValid:null,encodingValid:null,errors:[]}},seeker:null,result:null,errors:[]};
+    const dl=T.duelLog=T.duelLog||{n:0};
+    const hiderModel=$('#hider').value,hiderPrompt=HIDE(secret,$('#diff').value=='1'),hiderStarted=Date.now();
+    diagnostics={roundId:(globalThis.crypto?.randomUUID?.()||String(hiderStarted)),timestamp:new Date().toISOString(),encoding:{method:'AI-selected organic visual encoding',label:'Model-authored',scene:'Model-selected natural scene',expectedMessage:secret},hider:{model:hiderModel,prompt:hiderPrompt,rawResponse:'',svg:'',durationMs:null,validation:{xmlValid:null,svgValid:null,encodingValid:null,errors:[]}},seeker:null,result:null,errors:[]};
     renderDiagnostics();
-    const response=await fetch('/api/hide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret,model:hiderModel,pollinationsKey:conn.apiKey,easy:$('#diff').value==='1',previousRoundToken:dl.lastToken||null})});
-    const result=await response.json();if(!response.ok)throw Error(result.error||'Server-side Hider generation failed.');
-    if(typeof result.svg!=='string'||!result.revealToken)throw Error('The server returned an incomplete Hider result.');
-    const safe=clean(result.svg);
-    diagnostics.hider.prompt=result.prompt||'Server-side artwork prompt (no secret or encoding map).';
-    diagnostics.hider.rawResponse=result.rawResponse||'No raw artwork response returned.';
-    diagnostics.hider.svg=safe;diagnostics.hider.responseModel=result.model||hiderModel;
-    diagnostics.hider.finishReason=result.finishReason||null;diagnostics.hider.completionTokens=result.completionTokens??null;
-    diagnostics.hider.durationMs=result.durationMs??(Date.now()-hiderStarted);
-    diagnostics.hider.validation={xmlValid:true,svgValid:true,encodingValid:result.validation?.encodingValid===true,errors:[]};
-    if(result.validation?.secretLeak)throw Error('The server detected a secret leak in the generated SVG.');
-    if(result.usage?.total_tokens){tok+=result.usage.total_tokens;score()}
+    const out=await chat(hiderModel,[{role:'system',content:'You are a creative SVG artist and steganographer. Output only what is asked.'},{role:'user',content:hiderPrompt}],16000,120000,{requestType:'hider',onRawResponse:meta=>{diagnostics.hider.rawResponse=meta.text;diagnostics.hider.responseModel=meta.model;diagnostics.hider.finishReason=meta.finishReason;diagnostics.hider.completionTokens=meta.completionTokens;diagnostics.hider.durationMs=Date.now()-hiderStarted;renderDiagnostics()}});
+    diagnostics.hider.rawResponse=out;diagnostics.hider.durationMs=Date.now()-hiderStarted;renderDiagnostics();
+    const m=out.match(/<svg[\s\S]*?<\/svg>/i);if(!m){diagnostics.hider.validation.errors.push('No complete SVG found in Hider response.');throw Error('No complete SVG came back (the model may have run out of tokens). Try again or use another model.')}
+    let safe;try{safe=clean(m[0]);diagnostics.hider.validation.xmlValid=true;diagnostics.hider.validation.svgValid=true;diagnostics.hider.svg=safe}catch(e){diagnostics.hider.validation.xmlValid=false;diagnostics.hider.validation.svgValid=false;diagnostics.hider.validation.errors.push(e.message);throw e}
     renderDiagnostics();
-    start({mode:'duel',schemeIdx:null,hider:hiderModel,secret,svg:safe,scheme:'Private server-side visual encoding; reveal after the duel.',revealToken:result.revealToken,method:null,methodLabel:null,scene:null,hints:[ns.length+' letters in '+secret.split(/\s+/).length+' words.','It starts with “'+[...secret][0]+'”.']});
-    dl.n=(dl.n||0)+1;dl.lastToken=result.revealToken;save();
-    if($('#judge').checked&&conn.apiKey)judgeStealth(R);
+    if(/<(?:text|tspan)\b/i.test(safe)){diagnostics.hider.validation.errors.push('Readable text elements are not allowed in the hidden artwork.');throw Error('The Hider added readable text or labels to the artwork. The image must communicate through visual details only; try again.')}
+    if(secret.includes(' ')&&hasSecretLeak(safe,secret,{strictWords:false})){diagnostics.hider.validation.errors.push('The complete secret message was detected in SVG content.');throw Error('The Hider leaked the complete secret message in the SVG, so the round was voided. Try again.')}
+    const sc=(out.split(/SCHEME:/i)[1]||'').trim().slice(0,400),words=secret.split(/\s+/).length;
+    if(!sc){diagnostics.hider.validation.errors.push('Missing SCHEME explanation.');throw Error('The hider did not provide a SCHEME explanation. Try again.')}
+    start({mode:'duel',schemeIdx:null,hider:hiderModel,secret,svg:safe,scheme:sc,method:null,methodLabel:null,scene:null,diagnostics,hints:[ns.length+' letters in '+words+' words.','It starts with “'+[...secret][0]+'”.','The hider confessed: '+sc]});
+    dl.n=(dl.n||0)+1;save();    if($('#judge').checked&&conn.apiKey)judgeStealth(R);
   }catch(e){if(diagnostics){diagnostics.errors.push(e.message);renderDiagnostics()}say(e.message,'bad');if(!$('#imgbox img'))$('#imgbox').textContent=IDLE.duel}
   finally{hideInFlight=false;busy(false)}
 }
