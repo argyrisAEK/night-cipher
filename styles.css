@@ -47,7 +47,7 @@ button.link{background:none;border:none;padding:0 0 0 6px;border-radius:0;color:
 .diagnostics{margin:12px 0;border:1px solid #38427a;border-radius:12px;padding:10px;background:#10162e;min-width:0}
 .diagnostics>summary{cursor:pointer;color:var(--acc);font-weight:650}
 .diag-intro{font-size:.82rem;color:var(--mut);margin:8px 0}
-.diag-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}@media(min-width:760px){.diag-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.diag-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}@media(min-width:760px){.diag-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.diag-summary>div:last-child:nth-child(3n+1){grid-column:1/-1}}
 .diag-summary>div{min-width:0;background:#0b1020;border:1px solid #28315f;border-radius:8px;padding:8px}
 .diag-summary b,.diag-summary small{display:block;overflow-wrap:anywhere}
 .diag-summary b{font-size:.82rem}.diag-summary small{font-size:.75rem}
