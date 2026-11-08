@@ -1,4 +1,8 @@
 // Pure helpers for measuring blind Seeker recovery.
+const normalize = value => String(value ?? '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/\s+/g,' ');
+const compact = value => normalize(value).replace(/\s/g,'');
+export const normalizeMessage = normalize;
+
 export function parseSeekerResponse(output){
   const text=String(output||'');
   const message=(text.match(/^MESSAGE:\s*(.*)$/im)||[])[1];
@@ -6,8 +10,26 @@ export function parseSeekerResponse(output){
   const method=(text.match(/^METHOD:\s*(.*)$/im)||[])[1]||'(none given)';
   return {message:message.trim(),method:method.trim()};
 }
+
+// Audits the locally constructed request immediately before dispatch.
+// It does not prove what a remote provider may do internally.
+export function auditBlindRequest({prompt,secret,scheme,imageAttached}){
+  const p=compact(prompt),s=compact(secret),sc=compact(scheme);
+  const secretExcluded=!s||!p.includes(s);
+  const schemeExcluded=!sc||!p.includes(sc);
+  const hasImage=imageAttached===true;
+  return {verified:hasImage&&secretExcluded&&schemeExcluded,imageAttached:hasImage,secretExcluded,schemeExcluded};
+}
+
 export function compareSeekers(primary,independent){
-  if(!primary||!independent)return {complete:false,agreement:null,bothExact:false};
-  const a=String(primary.normalized||''),b=String(independent.normalized||'');
-  return {complete:true,agreement:a===b,bothExact:primary.exactMatch===true&&independent.exactMatch===true,primaryExact:primary.exactMatch===true,independentExact:independent.exactMatch===true};
+  const hasPrimary=!!primary&&typeof primary.exactMatch==='boolean';
+  const hasIndependent=!!independent&&typeof independent.exactMatch==='boolean';
+  const comparable=hasPrimary&&hasIndependent&&!!primary.normalized&&!!independent.normalized;
+  return {
+    complete:hasPrimary&&hasIndependent,
+    agreement:comparable?primary.normalized===independent.normalized:null,
+    bothExact:hasPrimary&&hasIndependent?(primary.exactMatch===true&&independent.exactMatch===true):null,
+    primaryExact:hasPrimary?primary.exactMatch:null,
+    independentExact:hasIndependent?independent.exactMatch:null
+  };
 }
