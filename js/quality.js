@@ -1,6 +1,6 @@
 // Pure helpers for measuring blind Seeker recovery.
 const normalize = value => String(value ?? '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/\s+/g,' ');
-const compact = value => normalize(value).replace(/\s/g,'');
+const commonPromptWords = new Set(['A','AN','AND','ARE','AS','AT','BE','BUT','BY','CAN','DO','FOR','FROM','HAS','HAVE','HOW','IN','IS','IT','ITS','ME','MY','NOT','OF','ON','OR','OUR','OUT','THE','THEM','THEN','THERE','THIS','TO','TWO','UP','US','WAS','WE','WERE','WHAT','WHEN','WHERE','WHO','WILL','WITH','YOU','YOUR','ONE','WAY']);
 export const normalizeMessage = normalize;
 
 export function parseSeekerResponse(output){
@@ -14,9 +14,10 @@ export function parseSeekerResponse(output){
 // Audits the locally constructed request immediately before dispatch.
 // It does not prove what a remote provider may do internally.
 export function auditBlindRequest({prompt,secret,scheme,imageAttached}){
-  const p=compact(prompt),s=compact(secret),sc=compact(scheme);
-  const secretExcluded=!s||!p.includes(s);
-  const schemeExcluded=!sc||!p.includes(sc);
+  const p=normalize(prompt),s=normalize(secret),sc=normalize(scheme);
+  const singleCommonWord=s.split(' ').length===1&&commonPromptWords.has(s);
+  const secretExcluded=!s||singleCommonWord||!(` ${p} `).includes(` ${s} `);
+  const schemeExcluded=!sc||!(` ${p} `).includes(` ${sc} `);
   const hasImage=imageAttached===true;
   return {verified:hasImage&&secretExcluded&&schemeExcluded,imageAttached:hasImage,secretExcluded,schemeExcluded};
 }
