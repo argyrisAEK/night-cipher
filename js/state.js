@@ -1,4 +1,4 @@
-const DEFAULT_STATE={you:0,n:0,ai:0,an:0,rb:{},xp:0,xpEvents:{},achievements:{},bestTimes:{},dailyWins:[]};
+const DEFAULT_STATE={you:0,n:0,ai:0,an:0,rb:{},hm:{},sm:{},xp:0,xpEvents:{},achievements:{},bestTimes:{},dailyWins:[]};
 export function loadState(){try{const saved=JSON.parse(localStorage.getItem('nc'))||{};return {...DEFAULT_STATE,...saved,rb:{...DEFAULT_STATE.rb,...(saved.rb||{})},xpEvents:{...DEFAULT_STATE.xpEvents,...(saved.xpEvents||{})},achievements:{...DEFAULT_STATE.achievements,...(saved.achievements||{})},bestTimes:{...DEFAULT_STATE.bestTimes,...(saved.bestTimes||{})},dailyWins:[...(saved.dailyWins||DEFAULT_STATE.dailyWins)]}}catch{return {...DEFAULT_STATE,rb:{},xpEvents:{},achievements:{},bestTimes:{},dailyWins:[]}}}
 export function saveState(state){try{localStorage.setItem('nc',JSON.stringify(state))}catch{}}
 export function createProgression(getState){
