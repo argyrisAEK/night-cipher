@@ -88,7 +88,8 @@ export default async function handler(req,res){
   const body=await readBody(req),secret=normalize(body.secret),model=String(body.model||'').trim(),apiKey=String(body.pollinationsKey||'');
   if(!/^[A-Z ]{3,24}$/.test(secret)||secret.replace(/ /g,'').length<3)return send(res,{error:'Secret must contain 3–24 A–Z characters.'},400);
   if(!model||model.length>160||!apiKey||apiKey.length>4096)return send(res,{error:'A Hider model and Pollinations connection are required.'},400);
-  secretKey(); // Fail before making a paid Pollinations call if the encryption secret is not configured.\n  const previous=body.previousRoundToken?openToken(body.previousRoundToken):null;
+  secretKey(); // Fail before making a paid Pollinations call if the encryption secret is not configured.
+  const previous=body.previousRoundToken?openToken(body.previousRoundToken):null;
   const plan=pickPlan(secret,{lastMethod:previous?.plan?.method||'',lastScene:previous?.plan?.scene||'',round:Date.now()});
   if(decodePlan(plan)!==secret)return send(res,{error:'Internal encoding round-trip validation failed.'},500);
   const prompt=makePrompt(plan.scene),started=Date.now();
