@@ -132,7 +132,7 @@ $('#ai').onclick=async()=>{
     let responseMeta=null;
     const out=await chat(model,messages,4000,90000,{onRawResponse:meta=>{responseMeta=meta;if(diagnostics?.seeker){Object.assign(diagnostics.seeker,{responseModel:meta.model,finishReason:meta.finishReason,usage:meta.usage||null,promptTokens:meta.promptTokens??null,completionTokens:meta.completionTokens??null,totalTokens:meta.totalTokens??null})}}});
     if(round!==R)return;
-    const parsed=parseSeekerResponse(out),g=parsed.message,mt=parsed.method,s=sim(g,round.secret),exact=norm(g)===norm(round.secret),elapsed=Date.now()-seekerStarted;
+    const parsed=parseSeekerResponse(out),g=parsed.message,mt=parsed.method,s=sim(g,round.secret),exact=normalizeMessage(g)===normalizeMessage(round.secret),elapsed=Date.now()-seekerStarted;
     if(diagnostics){Object.assign(diagnostics.seeker,{status:'completed',responseModel:responseMeta?.model||model,finishReason:responseMeta?.finishReason||null,usage:responseMeta?.usage||null,promptTokens:responseMeta?.promptTokens??null,completionTokens:responseMeta?.completionTokens??null,totalTokens:responseMeta?.totalTokens??null,rawResponse:out,durationMs:elapsed,tokens:tok-tokensBefore,decodedMessage:g,method:mt,exactMatch:exact,similarity:s});diagnostics.result={status:'completed',success:exact,exactMatch:exact,similarity:s};recordSeekerOutcome(diagnostics.seeker,'primary');renderDiagnostics()}
     round.ai={guess:g,method:mt,s,ok:round.mode==='duel'?exact:s>=.9,model,durationMs:Date.now()-attemptStarted,tokens:tok-tokensBefore};if(round.mode==='duel')$('#revealHow').hidden=false;round.aiHistory=round.aiHistory||[];round.aiHistory.push({...round.ai,at:Date.now()});
     if(round.mode=='duel'||round.mode=='own'){T.an++;if(round.ai.ok)T.ai++;const k=(round.mode=='own'?'your '+round.sname:'hider '+round.hider)+' → '+$(round.mode=='own'?'#seeker2':'#seeker').value+(round.method?' · '+round.method:''),v=(T.s=T.s||{})[k]=T.s[k]||{n:0,ok:0};v.n++;if(round.ai.ok)v.ok++;save();score()}
@@ -152,7 +152,7 @@ $('#independent').onclick=async()=>{
   if(model===primaryModel)return say('Choose a different model from the primary Seeker. Independent validation requires a second model.','bad');
   if(diagnostics?.independentSeeker?.status==='completed')return say('An independent Seeker result is already recorded for this round.','bad');
   independentInFlight=true;
-  const started=Date.now(),before=tok,prompt=buildSeekPrompt(round),png=round.png||await toPng(round.svg);
+  const started=Date.now(),before=tok,prompt=diagnostics.seeker?.prompt||buildSeekPrompt(round),png=round.png||await toPng(round.svg);
   const messages=[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:png}}]}];
   const blindAudit=auditBlindRequest({prompt:messages[0].content.find(part=>part.type==='text')?.text,secret:round.secret,scheme:round.scheme,imageAttached:messages.some(message=>message.content?.some(part=>part.type==='image_url'&&!!part.image_url?.url))});
   const record={status:'running',model,prompt,blindAudit,imageReceived:blindAudit.imageAttached,rawResponse:'',decodedMessage:'',method:'',durationMs:null,tokens:null,exactMatch:null,similarity:null,usage:null};
