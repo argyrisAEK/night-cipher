@@ -318,3 +318,13 @@ test('quality helpers distinguish unmeasured validation from failed recovery and
   expect(result.commonWord.verified).toBe(true);
   expect(result.spacedMessage).not.toBe(result.joinedMessage);
 });
+
+test('Diagnostics sit in the left card under the picture, not in the crowded right column', async ({ page }) => {
+  await expect(page.locator('section.card #diagnostics')).toHaveCount(1);
+  await expect(page.locator('aside #diagnostics')).toHaveCount(0);
+  const order = await page.evaluate(() => {
+    const d = document.querySelector('#diagnostics'), img = document.querySelector('#imgbox');
+    return !!(img.compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  expect(order).toBe(true);
+});
