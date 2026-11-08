@@ -33,6 +33,7 @@ const safeSvg=raw=>{
    if(key==='id'){if(!/^[\w.-]{1,80}$/.test(value))continue;ids.add(value)}
    attrs.push(`${key}="${value.replace(/&(?!(?:amp|lt|gt|quot|apos);)/g,'&amp;').replace(/"/g,'&quot;')}"`);
   }
+  if(name==='use'&&!attrs.some(x=>x.startsWith('href=')))throw Error('Hider artwork contains a use element without a local reference.');
   if(name==='svg'){
    const existing=attrs.filter(x=>!/^viewBox=|^width=|^height=|^xmlns=/.test(x));
    output='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" '+existing.join(' ')+'>'; 
