@@ -3,7 +3,7 @@ import { uri, toRaster, toPng, clean, utf8Base64, hasSecretLeak } from './securi
 import { createChat, HIDE, buildSeekPrompt } from './api.js';
 import { loadState, saveState, createProgression } from './state.js';
 import { runSelfTest } from './selftest.js';
-import { parseSeekerResponse, compareSeekers, auditBlindRequest } from './quality.js';
+import { parseSeekerResponse, compareSeekers, auditBlindRequest, normalizeMessage } from './quality.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]/gu,'');
@@ -125,11 +125,12 @@ $('#ai').onclick=async()=>{
   aiInFlight=true;aiAttempted=true;const attemptStarted=Date.now(),tokensBefore=tok,model=$(round.mode=='own'?'#seeker2':'#seeker').value;busy(true,'The AI seeker is studying the picture…');
   try{
     const seekerPrompt=buildSeekPrompt(round,{retry:!!round.aiHistory?.length}),seekerStarted=Date.now(),png=round.png||await toPng(round.svg);
-    const blindAudit=auditBlindRequest({prompt:seekerPrompt,secret:round.secret,scheme:round.scheme,imageAttached:true});
-    if(diagnostics){diagnostics.seeker={status:'running',model,startedAt:seekerStarted,prompt:seekerPrompt,blindAudit,imageReceived:true,rawResponse:'',decodedMessage:'',durationMs:null,tokens:null,usage:null};diagnostics.result={status:'running',success:null,exactMatch:null,similarity:null};renderDiagnostics()}
+    const messages=[{role:'user',content:[{type:'text',text:seekerPrompt},{type:'image_url',image_url:{url:png}}]}];
+    const blindAudit=auditBlindRequest({prompt:messages[0].content.find(part=>part.type==='text')?.text,secret:round.secret,scheme:round.scheme,imageAttached:messages.some(message=>message.content?.some(part=>part.type==='image_url'&&!!part.image_url?.url))});
+    if(diagnostics){diagnostics.seeker={status:'running',model,startedAt:seekerStarted,prompt:seekerPrompt,blindAudit,imageReceived:blindAudit.imageAttached,rawResponse:'',decodedMessage:'',durationMs:null,tokens:null,usage:null};diagnostics.result={status:'running',success:null,exactMatch:null,similarity:null};renderDiagnostics()}
     if(!blindAudit.verified)throw Error('Blind Seeker payload audit failed: secret, SCHEME, or image isolation check did not pass.');
     let responseMeta=null;
-    const out=await chat(model,[{role:'user',content:[{type:'text',text:seekerPrompt},{type:'image_url',image_url:{url:png}}]}],4000,90000,{onRawResponse:meta=>{responseMeta=meta;if(diagnostics?.seeker){Object.assign(diagnostics.seeker,{responseModel:meta.model,finishReason:meta.finishReason,usage:meta.usage||null,promptTokens:meta.promptTokens??null,completionTokens:meta.completionTokens??null,totalTokens:meta.totalTokens??null})}}});
+    const out=await chat(model,messages,4000,90000,{onRawResponse:meta=>{responseMeta=meta;if(diagnostics?.seeker){Object.assign(diagnostics.seeker,{responseModel:meta.model,finishReason:meta.finishReason,usage:meta.usage||null,promptTokens:meta.promptTokens??null,completionTokens:meta.completionTokens??null,totalTokens:meta.totalTokens??null})}}});
     if(round!==R)return;
     const parsed=parseSeekerResponse(out),g=parsed.message,mt=parsed.method,s=sim(g,round.secret),exact=norm(g)===norm(round.secret),elapsed=Date.now()-seekerStarted;
     if(diagnostics){Object.assign(diagnostics.seeker,{status:'completed',responseModel:responseMeta?.model||model,finishReason:responseMeta?.finishReason||null,usage:responseMeta?.usage||null,promptTokens:responseMeta?.promptTokens??null,completionTokens:responseMeta?.completionTokens??null,totalTokens:responseMeta?.totalTokens??null,rawResponse:out,durationMs:elapsed,tokens:tok-tokensBefore,decodedMessage:g,method:mt,exactMatch:exact,similarity:s});diagnostics.result={status:'completed',success:exact,exactMatch:exact,similarity:s};recordSeekerOutcome(diagnostics.seeker,'primary');renderDiagnostics()}
@@ -152,19 +153,20 @@ $('#independent').onclick=async()=>{
   if(diagnostics?.independentSeeker?.status==='completed')return say('An independent Seeker result is already recorded for this round.','bad');
   independentInFlight=true;
   const started=Date.now(),before=tok,prompt=buildSeekPrompt(round),png=round.png||await toPng(round.svg);
-  const blindAudit=auditBlindRequest({prompt,secret:round.secret,scheme:round.scheme,imageAttached:true});
-  const record={status:'running',model,prompt,blindAudit,imageReceived:true,rawResponse:'',decodedMessage:'',method:'',durationMs:null,tokens:null,exactMatch:null,similarity:null,usage:null};
+  const messages=[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:png}}]}];
+  const blindAudit=auditBlindRequest({prompt:messages[0].content.find(part=>part.type==='text')?.text,secret:round.secret,scheme:round.scheme,imageAttached:messages.some(message=>message.content?.some(part=>part.type==='image_url'&&!!part.image_url?.url))});
+  const record={status:'running',model,prompt,blindAudit,imageReceived:blindAudit.imageAttached,rawResponse:'',decodedMessage:'',method:'',durationMs:null,tokens:null,exactMatch:null,similarity:null,usage:null};
   if(diagnostics){diagnostics.independentSeeker=record;renderDiagnostics()}
   busy(true,'A second, independent Seeker is analyzing the same image without hints…');
   try{
     if(!blindAudit.verified)throw Error('Independent blind Seeker payload audit failed.');
     let responseMeta=null;
-    const out=await chat(model,[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:png}}]}],4000,90000,{onRawResponse:meta=>{responseMeta=meta;Object.assign(record,{responseModel:meta.model,finishReason:meta.finishReason,usage:meta.usage||null,promptTokens:meta.promptTokens??null,completionTokens:meta.completionTokens??null,totalTokens:meta.totalTokens??null})}});
+    const out=await chat(model,messages,4000,90000,{onRawResponse:meta=>{responseMeta=meta;Object.assign(record,{responseModel:meta.model,finishReason:meta.finishReason,usage:meta.usage||null,promptTokens:meta.promptTokens??null,completionTokens:meta.completionTokens??null,totalTokens:meta.totalTokens??null})}});
     if(round!==R)return;
-    const parsed=parseSeekerResponse(out),g=parsed.message,s=sim(g,round.secret),exact=norm(g)===norm(round.secret);
-    Object.assign(record,{status:'completed',responseModel:responseMeta?.model||model,finishReason:responseMeta?.finishReason||null,usage:responseMeta?.usage||null,promptTokens:responseMeta?.promptTokens??null,completionTokens:responseMeta?.completionTokens??null,totalTokens:responseMeta?.totalTokens??null,rawResponse:out,decodedMessage:g,method:parsed.method,durationMs:Date.now()-started,tokens:tok-before,exactMatch:exact,similarity:s,normalized:norm(g)});
+    const parsed=parseSeekerResponse(out),g=parsed.message,s=sim(g,round.secret),exact=normalizeMessage(g)===normalizeMessage(round.secret);
+    Object.assign(record,{status:'completed',responseModel:responseMeta?.model||model,finishReason:responseMeta?.finishReason||null,usage:responseMeta?.usage||null,promptTokens:responseMeta?.promptTokens??null,completionTokens:responseMeta?.completionTokens??null,totalTokens:responseMeta?.totalTokens??null,rawResponse:out,decodedMessage:g,method:parsed.method,durationMs:Date.now()-started,tokens:tok-before,exactMatch:exact,similarity:s,normalized:normalizeMessage(g)});
     recordSeekerOutcome(record,'independent');
-    const primary=diagnostics?.result?{normalized:norm(diagnostics.seeker?.decodedMessage||''),exactMatch:diagnostics.result.exactMatch}:null;
+    const primary=diagnostics?.result?{normalized:normalizeMessage(diagnostics.seeker?.decodedMessage||''),exactMatch:diagnostics.result.exactMatch}:null;
     const comparison=compareSeekers(primary,record);
     diagnostics.quality=comparison;
     const key=round.hider+' → '+primaryModel+' + '+model;
