@@ -113,6 +113,7 @@ let independentInFlight=false;
 $('#independent').onclick=async()=>{
   const round=R;
   if(!round||round.mode!=='duel'||independentInFlight||aiInFlight)return;
+  if(!diagnostics?.result)return say('Run the primary Seeker first so the independent result can be compared against it.','bad');
   if(!conn||!conn.apiKey)return say('Connect your Pollinations account first. This test makes one additional paid vision request.','bad');
   const model=$('#seekerAudit').value,primaryModel=$('#seeker').value;
   if(!model)return say('Select an independent vision-capable model first.','bad');
