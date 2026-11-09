@@ -144,16 +144,15 @@ test('built-in self-test passes completely, including the secret-leak detector',
 });
 
 
-test('all AI model selectors expose only the eight approved Pollinations models', async ({ page }) => {
+test('all AI model selectors expose only the seven approved Pollinations models', async ({ page }) => {
   const expected = [
     'openai/gpt-6.1-sol',
     'openai/gpt-6-luna',
     'openai/gpt-6.1-terra',
     'openai/gpt-6-astra',
-    'community/Lorodn4x/qwen3.8-plus',
     'community/vendouple/gpt-6-luna',
     'community/vendouple/gpt-6-astra',
-    'community/vendouple/gemini-3.8-flash'
+    'community/JustScriptzz/claude-opus-4.6'
   ];
   for (const selector of ['#hider', '#seeker', '#seeker2', '#seekerAudit', '#judgeModel']) {
     const actual = await page.locator(selector + ' option').evaluateAll(options => options.map(o => o.value));
@@ -177,7 +176,7 @@ test('AI Hider authors the complete organic image and Seeker receives only the b
   const scheme='The illuminated windows in each natural cluster encode A=1 through Z=26, read left to right; wider gaps separate words.';
   let hiderBody=null,seekerBody=null,chatCalls=0,serverCalls=0;
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
-    json:{data:[{id:'openai/gpt-6.1-sol'},{id:'community/vendouple/gemini-3.8-flash',input_modalities:['image']}]}
+    json:{data:[{id:'openai/gpt-6.1-sol'},{id:'openai/gpt-6.1-terra',input_modalities:['image']}]}
   }));
   await page.route('**/api/**', route => {serverCalls++;return route.fulfill({status:404,body:'not found'})});
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
@@ -193,7 +192,7 @@ test('AI Hider authors the complete organic image and Seeker receives only the b
     }else{
       seekerBody=body;
       await route.fulfill({json:{
-        model:'community/vendouple/gemini-3.8-flash',
+        model:'openai/gpt-6.1-terra',
         choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: The natural window pattern encodes the letters.'},finish_reason:'stop'}],
         usage:{total_tokens:60,completion_tokens:35}
       }});
@@ -229,12 +228,12 @@ test('Hider diagnostics capture its private explanation while the Seeker request
   const scheme='A natural sequence of window lights maps counts to alphabet positions.';
   let seekerMessages='';
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
-    json:{data:[{id:'openai/gpt-6.1-sol'},{id:'community/vendouple/gemini-3.8-flash',input_modalities:['image']}]}
+    json:{data:[{id:'openai/gpt-6.1-sol'},{id:'openai/gpt-6.1-terra',input_modalities:['image']}]}
   }));
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
     const body=route.request().postDataJSON();
     const content=body.model==='openai/gpt-6.1-sol'?svg+'\nSCHEME: '+scheme:'MESSAGE: LANTERN\nMETHOD: I decoded the window sequence.';
-    if(body.model==='community/vendouple/gemini-3.8-flash')seekerMessages=JSON.stringify(body.messages);
+    if(body.model==='openai/gpt-6.1-terra')seekerMessages=JSON.stringify(body.messages);
     await route.fulfill({json:{model:body.model,choices:[{message:{content},finish_reason:'stop'}],usage:{total_tokens:25,completion_tokens:18}}});
   });
   await page.reload();
@@ -270,12 +269,12 @@ test('independent Seeker gets only the blind prompt and records exact recovery m
   const scheme='Boats encode Morse letters using round and elongated lights.';
   const requests=[];
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({json:{data:[
-    {id:'openai/gpt-6.1-sol'},{id:'community/vendouple/gemini-3.8-flash',input_modalities:['image']},{id:'openai/gpt-6-astra',input_modalities:['image']}
+    {id:'openai/gpt-6.1-sol'},{id:'openai/gpt-6.1-terra',input_modalities:['image']},{id:'openai/gpt-6-luna',input_modalities:['image']}
   ]}}));
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
     const body=route.request().postDataJSON();requests.push(body);
     const content=body.model==='openai/gpt-6.1-sol'?svg+'\nSCHEME: '+scheme:
-      body.model==='community/vendouple/gemini-3.8-flash'?'MESSAGE: KNOW THE WAY\nMETHOD: I read the light clusters.':
+      body.model==='openai/gpt-6.1-terra'?'MESSAGE: KNOW THE WAY\nMETHOD: I read the light clusters.':
       'MESSAGE: KNOW THE WAY\nMETHOD: I independently decoded the light pattern.';
     await route.fulfill({json:{model:body.model,choices:[{message:{content},finish_reason:'stop'}],usage:{total_tokens:40,completion_tokens:25}}});
   });
@@ -284,19 +283,19 @@ test('independent Seeker gets only the blind prompt and records exact recovery m
   await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
   await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
   await page.fill('#msg','KNOW THE WAY');
-  await page.selectOption('#seeker','community/vendouple/gemini-3.8-flash');
-  await page.selectOption('#seekerAudit','openai/gpt-6-astra');
+  await page.selectOption('#seeker','openai/gpt-6.1-terra');
+  await page.selectOption('#seekerAudit','openai/gpt-6-luna');
   await page.click('#hide');
   await expect(page.locator('#imgbox img')).toBeVisible();
   await page.click('#independent');
   await expect(page.locator('#status')).toContainText('Run the primary Seeker first');
-  expect(requests.some(x=>x.model==='openai/gpt-6-astra')).toBe(false);
+  expect(requests.some(x=>x.model==='openai/gpt-6-luna')).toBe(false);
   await page.click('#ai');
   await expect(page.locator('#res')).toContainText('KNOW THE WAY');
   await page.click('#independent');
   await expect(page.locator('#robustnessReport')).toContainText('Both exact: Yes');
-  const primary=requests.find(x=>x.model==='community/vendouple/gemini-3.8-flash');
-  const independent=requests.find(x=>x.model==='openai/gpt-6-astra');
+  const primary=requests.find(x=>x.model==='openai/gpt-6.1-terra');
+  const independent=requests.find(x=>x.model==='openai/gpt-6-luna');
   expect(independent.messages[0].content[1].image_url.url).toBe(primary.messages[0].content[1].image_url.url);
   expect(independent.messages[0].content[0].text).toBe(primary.messages[0].content[0].text);
   expect(JSON.stringify(independent.messages)).not.toContain('KNOW THE WAY');
@@ -346,4 +345,36 @@ test('Diagnostics sit in the left card under the picture, not in the crowded rig
     return !!(img.compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING);
   });
   expect(order).toBe(true);
+});
+
+test('default models: Seeker is terra, independent validation is luna, and the Hider never grades itself', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Duel' }).click();
+  await expect(page.locator('#hider')).toHaveValue('openai/gpt-6.1-sol');
+  await expect(page.locator('#seeker')).toHaveValue('openai/gpt-6.1-terra');
+  await expect(page.locator('#seeker2')).toHaveValue('openai/gpt-6.1-terra');
+  await expect(page.locator('#seekerAudit')).toHaveValue('openai/gpt-6-luna');
+});
+
+test('Hider prompt carries an output budget that matches what the sanitizer really accepts', async ({ page }) => {
+  const r = await page.evaluate(async () => {
+    const { HIDE } = await import('/js/api.js');
+    const { clean } = await import('/js/security.js');
+    const prompt = HIDE('SEE YOU', false);
+    const allowedSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><defs><linearGradient id="g"><stop offset="0" stop-color="#123"/></linearGradient><radialGradient id="r"><stop offset="1" stop-color="#fff"/></radialGradient><clipPath id="c"><rect width="9" height="9"/></clipPath><mask id="m"><rect width="9" height="9" fill="#fff"/></mask><filter id="f"><feGaussianBlur stdDeviation="1"/></filter><symbol id="s"><rect width="2" height="2"/></symbol></defs><g><rect width="5" height="5"/><circle r="2"/><ellipse rx="2" ry="1"/><line x2="5"/><polyline points="0,0 5,5"/><polygon points="0,0 5,5 5,0"/><path d="M0 0L5 5"/><use href="#s" x="1" y="1"/></g></svg>';
+    let allowedOk = true, useHref = false;
+    try { useHref = /<use[^>]*\bhref=/.test(clean(allowedSvg)); } catch { allowedOk = false; }
+    const rejected = [];
+    for (const el of ['style', 'pattern', 'marker', 'animate']) {
+      try { clean('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><' + el + '/></svg>'); } catch { rejected.push(el); }
+    }
+    return { prompt, allowedOk, useHref, rejected };
+  });
+  expect(r.prompt).toContain('OUTPUT BUDGET');
+  expect(r.prompt).toContain('write href, never xlink:href');
+  expect(r.prompt).toContain('Allowed elements ONLY');
+  expect(r.prompt).not.toContain('Do not sacrifice visual clarity');
+  expect(r.prompt).toContain('If the budget and decoding accuracy conflict, accuracy wins');
+  expect(r.allowedOk).toBe(true);
+  expect(r.useHref).toBe(true);
+  expect(r.rejected).toEqual(['style', 'pattern', 'marker', 'animate']);
 });
