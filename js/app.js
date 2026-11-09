@@ -113,7 +113,7 @@ function renderTries(){const t=$('#tries');if(!R||R.mode==='own'||R.done){t.text
 function renderHintLabel(){const total=R?.hints?.length||0;$('#hint').textContent=total?`Hint (${R.used}/${total} · −20)`:'Hint (−20)';}
 function syncButtons(){
   renderTries();renderHintLabel();
-  document.querySelectorAll('button').forEach(b=>{b.disabled=uiBusy});
+  ['#go','#giveup','#hint','#ai','#next','#independent','#robustness'].forEach(sel=>{const button=$(sel);if(button)button.disabled=uiBusy});
   $('#after').hidden=!(R&&(R.done||R.mode==='duel'));
   const researchRound=!!(R&&(R.mode==='duel'||R.mode==='own')&&R.svg);
   $('#independent').hidden=!(researchRound&&R.mode==='duel');
