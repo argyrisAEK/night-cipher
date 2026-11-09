@@ -158,7 +158,7 @@ $('#ai').onclick=async()=>{
   try{
     const seekerPrompt=buildSeekPrompt(round,{retry:!!round.aiHistory?.length}),seekerStarted=Date.now(),png=round.png||await toPng(round.svg);
     const messages=[{role:'user',content:[{type:'text',text:seekerPrompt},{type:'image_url',image_url:{url:png}}]}];
-    const blindAudit=auditBlindRequest({prompt:messages[0].content.find(part=>part.type==='text')?.text,secret:round.secret,scheme:round.scheme,imageAttached:messages.some(message=>message.content?.some(part=>part.type==='image_url'&&!!part.image_url?.url))});
+    const blindAudit=auditBlindRequest({prompt:messages[0].content.find(part=>part.type==='text')?.text,secret:round.secret,scheme:round.scheme,imageAttached:messages.some(message=>message.content?.some(part=>part.type==='image_url'&&!!part.image_url?.url)),schemeExpected:round.mode!=='duel'});
     if(diagnostics){diagnostics.seeker={status:'running',model,startedAt:seekerStarted,prompt:seekerPrompt,blindAudit,imageReceived:blindAudit.imageAttached,rawResponse:'',decodedMessage:'',durationMs:null,tokens:null,usage:null};diagnostics.result={status:'running',success:null,exactMatch:null,similarity:null};diagnostics.independentSeeker={status:'not_run',model:null,exactMatch:null};diagnostics.quality={complete:false,agreement:null,bothExact:null,primaryExact:null,independentExact:null};renderDiagnostics()}
     if(!blindAudit.verified)throw Error('Blind Seeker payload audit failed: secret, SCHEME, or image isolation check did not pass.');
     let responseMeta=null;
