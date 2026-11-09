@@ -19,7 +19,7 @@
 </ol>
 <h3>Four ways to play</h3>
 <ul class="modes">
-<li><b>📅 Daily</b> One puzzle a day, the same for everyone. Build a streak.</li>
+<li><b>📅 Daily</b> One puzzle a day, the same for everyone.</li>
 <li><b>🎓 Learn</b> Ten levels, each with a different hiding method.</li>
 <li><b>⚔ AI vs AI Duel 💰</b> Choose a secret message and watch two AI models compete: one hides it, the other tries to decode it.</li>
 <li><b>🕵 You hide, AI seeks 💰</b> Pick a word and a scheme and see whether an AI can crack it.</li>
@@ -32,7 +32,7 @@
 <nav id="levels" hidden aria-label="Training levels"></nav>
 <main id="mainGame">
 <section class="card"><p id="intro" class="intro"></p><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div>
-/section>
+</section>
 <aside class="card">
  <div id="duel" hidden>
 <p class="mode-note">🤖 <b>AI Hider</b> creates the image. <b>AI Seeker</b> then attempts to decode the message you selected. </p>
@@ -62,13 +62,6 @@
 
 </div>
 </div>
-<div id="profile" class="profile" aria-live="polite"></div>
-<details class="me"><summary>📊 Progress, achievements &amp; stats</summary><div class="meta-grid"><div class="meta-tile"><b id="bestTime">—</b><small>Fastest solve</small></div><div class="meta-tile"><b id="achievementCount">0/8</b><small>Achievements</small></div></div>
-<details open><summary>🏅 <b>Achievements</b></summary><div id="achievements"></div></details>
-<details><summary>📚 <b>Cipher Codex</b> <small>(unlocked by training)</small></summary><div id="codexPreview"></div></details>
-<p id="score"><small></small></p><details><summary><small>Seeker report card</small></summary><ul id="report"></ul></details>
-<small>Daily modifiers may change the number of tries or disable hints. A guess counts when it is ≥90% similar, the rule used in the study. AIs here cannot run code, so expect them to struggle more than in the paper. Stealth rating is shown for information only; it does not affect your score.</small>
-</details>
 </aside></main>
 <section id="researchMode" class="card research-mode" hidden>
 <h2>Research Mode</h2><p class="diag-intro">Controlled evaluation tools for Hider quality, blind Seeker recovery and image robustness. Additional model calls use your Pollen.</p>
