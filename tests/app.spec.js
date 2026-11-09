@@ -151,7 +151,7 @@ test('all AI model selectors expose only the seven approved Pollinations models'
     'openai/gpt-6-astra',
     'community/vendouple/gpt-6-luna',
     'community/vendouple/gpt-6-astra',
-    'community/JustScriptzz/claude-opus-4.6'
+    'community/JustScriptzz/gpt-5.6-terra'
   ];
   for (const selector of ['#hider', '#seeker', '#seeker2', '#seekerAudit', '#judgeModel']) {
     const actual = await page.locator(selector + ' option').evaluateAll(options => options.map(o => o.value));
