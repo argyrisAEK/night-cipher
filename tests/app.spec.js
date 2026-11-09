@@ -427,7 +427,7 @@ test('Research report groups saved experiment history into readable tables', asy
   await expect(page.locator('#report')).toContainText('openai/gpt-6.1-sol');
   await expect(page.locator('#report')).toContainText('Not tested');
   await expect(page.locator('#researchStats')).toContainText('320');
-  await expect(page.locator('#researchStats')).toContainText('Saved tokens · this browser');
+  await expect(page.locator('#researchStats')).toContainText('Saved Hider + Seeker tokens');
   await page.locator('#report .report-group').filter({hasText:'Matchups'}).locator('summary').click();
   await expect(page.locator('#report')).toContainText('openai/gpt-6.1-terra');
   await page.locator('#report .report-group').filter({hasText:'Robustness'}).locator('summary').click();
