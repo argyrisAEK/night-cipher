@@ -98,4 +98,6 @@ export function mountLsbLab(root) {
     $('#lsbDecode').disabled = true; $('#lsbDownload').disabled = true;
   });
   refreshCapacity();
+  // Keep encoding unavailable until the user has loaded an image and entered a message.
+  encode.disabled = true;
 }
