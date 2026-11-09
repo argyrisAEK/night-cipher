@@ -351,9 +351,9 @@ const supportsVisionInput=m=>typeof m==='object'&&m!==null&&(
 );
 // One source of truth: add future approved model IDs to js/models.js.
 fill('#hider',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-sol$/i);
-fill('#seeker',POLLINATIONS_MODELS,/community\/vendouple\/gemini-3\.8-flash/i);
-fill('#seeker2',POLLINATIONS_MODELS,/community\/vendouple\/gemini-3\.8-flash/i);
-fill('#seekerAudit',POLLINATIONS_MODELS,/openai\/gpt-6-astra/i);
+fill('#seeker',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
+fill('#seeker2',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
+fill('#seekerAudit',POLLINATIONS_MODELS,/^openai\/gpt-6-luna$/i);
 fill('#judgeModel',POLLINATIONS_MODELS,/openai\/gpt-6\.1-sol/i);
 ['#hider','#seeker','#seeker2','#seekerAudit','#judgeModel'].forEach(sel=>{$(sel).disabled=false});
 if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();allTabs[0].click();
