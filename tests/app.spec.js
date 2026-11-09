@@ -405,7 +405,11 @@ test('Duel Next returns to setup without starting or charging a new Hider reques
   const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>';
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
     calls++;
-    await route.fulfill({json:{choices:[{message:{content:svg+'\\nSCHEME: A simple test encoding.'},finish_reason:'stop'}],usage:{total_tokens:10}}});
+    const body=route.request().postDataJSON();
+    const content=body.model==='openai/gpt-6.1-sol'
+      ? svg+'\\nSCHEME: A simple test encoding.'
+      : 'MESSAGE: NONE\\nMETHOD: No defensible pattern found.';
+    await route.fulfill({json:{choices:[{message:{content},finish_reason:'stop'}],usage:{total_tokens:10}}});
   });
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({json:{data:[{id:'openai/gpt-6.1-sol'}]}}));
   await page.reload();
@@ -414,12 +418,14 @@ test('Duel Next returns to setup without starting or charging a new Hider reques
   await page.fill('#msg','LANTERN');
   await page.click('#hide');
   await expect(page.locator('#imgbox img')).toBeVisible();
+  await page.click('#ai');
+  await expect(page.locator('#next')).toBeVisible();
+  expect(calls).toBe(2);
   await page.click('#next');
   await expect(page.locator('#duel')).toBeVisible();
   await expect(page.locator('#game')).toBeHidden();
-  expect(calls).toBe(1);
+  expect(calls).toBe(2);
 });
-
 test('Hint button displays used and available hint count', async ({ page }) => {
   await page.locator('#tabs button', { hasText: 'Learn' }).click();
   await expect(page.locator('#hint')).toContainText('0/');
