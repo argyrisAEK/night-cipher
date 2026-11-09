@@ -31,8 +31,8 @@ const score=()=>{
  </div><p class="report-footnote">Session usage resets when this page is reloaded. Saved totals are accumulated locally in this browser and are not account-wide.</p>`;
  const hiderRows=hiderStats.map(([model,v])=>row([esc(model),`${count(v.rendered)}/${count(v.attempts)}`,rate(count(v.primaryExact),count(v.primaryEvaluated)),rate(count(v.independentExact),count(v.independentEvaluated)),avg(v.totalTokens,count(v.attempts),'tokens'),avg(v.totalDurationMs,count(v.attempts),'ms')]));
  const seekerRows=seekerStats.map(([model,v])=>row([esc(model),`${count(v.exact)}/${count(v.attempts)}`,rate(count(v.exact),count(v.attempts)),count(v.failed).toLocaleString(),avg(v.totalTokens,count(v.attempts),'tokens'),avg(v.totalDurationMs,count(v.attempts),'ms')]));
- const modelContent=`<h4>Hider models</h4>${table(['Model','Valid SVGs','Primary exact','Independent exact','Avg tokens','Avg time'],hiderRows,'No Hider runs recorded yet.')`+
-  `<h4>Seeker models</h4>${table(['Model','Exact matches','Exact rate','Failed','Avg tokens','Avg time'],seekerRows,'No Seeker attempts recorded yet.')`;
+ const modelContent=`<h4>Hider models</h4>${table(['Model','Valid SVGs','Primary exact','Independent exact','Avg tokens','Avg time'],hiderRows,'No Hider runs recorded yet.')}`+
+  `<h4>Seeker models</h4>${table(['Model','Exact matches','Exact rate','Failed','Avg tokens','Avg time'],seekerRows,'No Seeker attempts recorded yet.')}`;
  const grouped=new Map();
  for(const [key,v] of matchStats){const parts=key.split(' → ');if(parts.length<2)continue;const hider=parts[0].replace(/^hider /,'').replace(/^your /,'User scheme · '),seeker=parts.slice(1).join(' → ').split(' · ')[0],id=hider+'||'+seeker,current=grouped.get(id)||{hider,seeker,n:0,ok:0};current.n+=count(v.n);current.ok+=count(v.ok);grouped.set(id,current)}
  const matchupRows=[...grouped.values()].map(v=>row([esc(v.hider),esc(v.seeker),`${v.ok}/${v.n}`,rate(v.ok,v.n)]));
@@ -40,7 +40,6 @@ const score=()=>{
  const stealthRows=stealthStats.map(([model,v])=>row([esc(model),v.n?(v.s/v.n).toFixed(1)+'/10':'Not tested',count(v.n)]));
  const robustRows=robustStats.map(([key,v])=>{const cut=key.lastIndexOf(' · ');return row([esc(cut<0?key:key.slice(0,cut)),esc(cut<0?'—':key.slice(cut+3)),`${count(v.ok)}/${count(v.n)}`,rate(count(v.ok),count(v.n)),v.n?Math.round(100*v.sim/v.n)+'%':'Not tested'])});
  $('#report').innerHTML=[details('Model leaderboard','Hider and Seeker performance',modelContent,true),details('Matchups','Exact recovery by Hider → Seeker pair',table(['Hider model / scheme','Seeker model','Exact','Win rate'],matchupRows,'No matchup results recorded yet.')),details('Quality & independent validation','Agreement and dual-model exact recovery',table(['Hider','Primary Seeker','Independent Seeker','Both exact','Agreement','Runs'],qualityRows,'No independent validation runs recorded yet.')),details('Stealth ratings','Average visual innocuousness by model',table(['Hider model','Mean rating','Ratings'],stealthRows,'No stealth ratings recorded yet.')),details('Robustness','Recovery across PNG and JPEG variants',table(['Seeker model','Image variant','Recovered','Recovery rate','Mean similarity'],robustRows,'No robustness tests recorded yet.'))].join('');
-};
 };
 const say=(m,c='')=>{const research=!$('#researchMode').hidden,s=$(research?'#researchStatus':'#status');s.textContent=m;s.className=c};
 let diagnostics=null;
