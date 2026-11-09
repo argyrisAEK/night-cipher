@@ -131,7 +131,7 @@ test('AI modes start with an empty stage and the counter clears when a round end
   await expect(page.locator('#tries')).toHaveText('');
   await page.locator('#tabs button', { hasText: 'Duel' }).click();
   await expect(page.locator('#imgbox img')).toHaveCount(0);
-  await expect(page.locator('#imgbox')).toContainText('AI Hider will hide it');
+  await expect(page.locator('#imgbox')).toContainText('AI Hider conceals your message in an image.');
   await expect(page.locator('#hide')).toContainText('💰');
   await expect(page.locator('section.card #robustnessReport')).toHaveCount(1);
 });
