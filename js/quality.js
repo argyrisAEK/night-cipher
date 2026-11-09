@@ -13,13 +13,15 @@ export function parseSeekerResponse(output){
 
 // Audits the locally constructed request immediately before dispatch.
 // It does not prove what a remote provider may do internally.
-export function auditBlindRequest({prompt,secret,scheme,imageAttached}){
+export function auditBlindRequest({prompt,secret,scheme,imageAttached,schemeExpected=false}){
   const p=normalize(prompt),s=normalize(secret),sc=normalize(scheme);
   const singleCommonWord=s.split(' ').length===1&&commonPromptWords.has(s);
   const secretExcluded=!s||singleCommonWord||!(` ${p} `).includes(` ${s} `);
-  const schemeExcluded=!sc||!(` ${p} `).includes(` ${sc} `);
+  const schemeIncluded=!!sc&&(` ${p} `).includes(` ${sc} `);
+  const schemeExcluded=!schemeIncluded;
+  const schemeValid=schemeExpected?schemeIncluded:schemeExcluded;
   const hasImage=imageAttached===true;
-  return {verified:hasImage&&secretExcluded&&schemeExcluded,imageAttached:hasImage,secretExcluded,schemeExcluded};
+  return {verified:hasImage&&secretExcluded&&schemeValid,imageAttached:hasImage,secretExcluded,schemeExcluded,schemeIncluded,schemeExpected,schemeValid};
 }
 
 export function compareSeekers(primary,independent){
