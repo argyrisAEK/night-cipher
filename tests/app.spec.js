@@ -36,7 +36,7 @@ test('You hide, AI seeks accepts its intentionally disclosed cipher rule without
     seekerBody=route.request().postDataJSON();
     await route.fulfill({json:{
       model:'openai/gpt-6.1-terra',
-      choices:[{message:{content:'MESSAGE: FREEDOM\\nMETHOD: I applied the supplied Cipher #01 rule to the image.'},finish_reason:'stop'}],
+      choices:[{message:{content:'MESSAGE: FREEDOM\nMETHOD: I applied the supplied Cipher #01 rule to the image.'},finish_reason:'stop'}],
       usage:{total_tokens:45,completion_tokens:20}
     }});
   });
