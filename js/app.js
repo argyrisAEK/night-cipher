@@ -238,7 +238,6 @@ $('#robustness').onclick=async()=>{
     say(`Robustness test complete: ${wins}/${valid.length} image variants recovered${rows.some(r=>r.error)?' (some requests failed)':''}.` ,wins===3?'ok':'');
   }finally{robustnessInFlight=false;busy(false)}
 };
-
 const MSGS=['MEET ME AT MIDNIGHT','THE BEES KNOW THE WAY','HONEY IS A MAP','TRUST THE QUIET STARS','OPEN THE BLUE DOOR','THE HONEY IS A MAP'];
 const updCount=()=>{const m=$('#msg');$('#msgCount').textContent=`${m.value.length} / ${m.maxLength}`};
 const rnd=()=>{$('#msg').value=MSGS[Math.random()*MSGS.length|0];updCount()};$('#dice').onclick=rnd;$('#msg').addEventListener('input',updCount);rnd();
