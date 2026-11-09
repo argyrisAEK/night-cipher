@@ -337,7 +337,7 @@ tabDefs.forEach(([label,fn,kind])=>{
   b.textContent=label;
   b.dataset.kind=kind;
   b.onclick=()=>{
-    allTabs.forEach(x=>x.classList.remove('on','in'));
+    allTabs.forEach(x=>x.classList.remove('on','in'));researchTab.classList.remove('on');
     const inLearn=kind==='training'||kind==='learn';
     b.classList.add(kind==='learn'?'in':'on');
     if(kind==='training')allTabs.find(x=>x.dataset.kind==='learn').classList.add('in');
