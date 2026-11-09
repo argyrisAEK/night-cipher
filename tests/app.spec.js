@@ -289,7 +289,7 @@ test('independent Seeker gets only the blind prompt and records exact recovery m
   await expect(page.locator('#imgbox img')).toBeVisible();
   await page.locator('#tabs button',{hasText:'Research'}).click();
   await page.click('#independent');
-  await expect(page.locator('#status')).toContainText('Run the primary Seeker first');
+  await expect(page.locator('#researchStatus')).toContainText('Run the primary Seeker first');
   expect(requests.some(x=>x.model==='openai/gpt-6-luna')).toBe(false);
   await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
   await page.click('#ai');
