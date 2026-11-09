@@ -337,6 +337,7 @@ test('quality helpers distinguish unmeasured validation from failed recovery and
       complete: compareSeekers({ normalized: 'HELLOWORLD', exactMatch: true }, { normalized: 'HELLOWORLD', exactMatch: true }),
       secretLeak: auditBlindRequest({ prompt: 'Decode HELLO WORLD', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
       schemeLeak: auditBlindRequest({ prompt: 'Read the stars', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
+      guidedScheme: auditBlindRequest({ prompt: 'Apply the decoding rule: Read the stars', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true, schemeExpected: true }),
       valid: auditBlindRequest({ prompt: 'Study the image and infer its visual rule', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
       commonWord: auditBlindRequest({ prompt: 'Study the image as a coherent scene and return one concise sentence', secret: 'THE', scheme: 'Read the stars', imageAttached: true }),
       spacedMessage: normalizeMessage('MEET ME AT MIDNIGHT'),
@@ -350,6 +351,10 @@ test('quality helpers distinguish unmeasured validation from failed recovery and
   expect(result.complete.bothExact).toBe(true);
   expect(result.secretLeak.verified).toBe(false);
   expect(result.schemeLeak.verified).toBe(false);
+  expect(result.guidedScheme.verified).toBe(true);
+  expect(result.guidedScheme.secretExcluded).toBe(true);
+  expect(result.guidedScheme.schemeIncluded).toBe(true);
+  expect(result.guidedScheme.schemeExpected).toBe(true);
   expect(result.valid.verified).toBe(true);
   expect(result.commonWord.verified).toBe(true);
   expect(result.spacedMessage).not.toBe(result.joinedMessage);
