@@ -554,7 +554,7 @@ test('LSB encoder round-trips UTF-8 text, preserves alpha, and reports capacity'
 test('LSB encoder rejects oversized messages and decoder rejects unencoded images', async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { encodeLSB, decodeLSB } = await import('/js/lsb.js');
-    const tiny = new ImageData(new Uint8ClampedArray(16 * 16 * 4).fill(128), 16, 16);
+    const tiny = new ImageData(new Uint8ClampedArray(5 * 4 * 4).fill(128), 5, 4);
     let oversized = '', missing = '';
     try { encodeLSB(tiny, 'This cannot fit'); } catch (error) { oversized = error.message; }
     try { decodeLSB(tiny); } catch (error) { missing = error.message; }
