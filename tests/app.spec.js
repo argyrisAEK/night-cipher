@@ -27,6 +27,33 @@ test('You hide, AI seeks uses numbered scheme labels without unknown wording', a
   expect(labels.join(' ')).not.toMatch(/unknown/i);
 });
 
+test('You hide, AI seeks accepts its intentionally disclosed cipher rule without exposing the secret', async ({ page }) => {
+  let seekerBody=null;
+  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
+    json:{data:[{id:'openai/gpt-6.1-terra',input_modalities:['image']}]}
+  }));
+  await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    seekerBody=route.request().postDataJSON();
+    await route.fulfill({json:{
+      model:'openai/gpt-6.1-terra',
+      choices:[{message:{content:'MESSAGE: FREEDOM\\nMETHOD: I applied the supplied Cipher #01 rule to the image.'},finish_reason:'stop'}],
+      usage:{total_tokens:45,completion_tokens:20}
+    }});
+  });
+  await page.reload();
+  await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
+  await page.locator('#tabs button',{hasText:'You hide, AI seeks'}).click();
+  await page.fill('#omsg','FREEDOM');
+  await page.selectOption('#osch','0');
+  await page.click('#ohide');
+  await expect(page.locator('#res')).toContainText('AI seeker said: “FREEDOM”',{timeout:10000});
+  expect(seekerBody).not.toBeNull();
+  const textPart=seekerBody.messages[0].content.find(part=>part.type==='text').text;
+  expect(textPart).toContain('DECODING RULE:');
+  expect(textPart).not.toContain('FREEDOM');
+  expect(seekerBody.messages[0].content.some(part=>part.type==='image_url'&&part.image_url.url.startsWith('data:image/png'))).toBe(true);
+});
+
 test('Learn opens the ten training levels', async ({ page }) => {
   await page.locator('#tabs button', { hasText: 'Learn' }).click();
   await expect(page.locator('#levels')).toBeVisible();
