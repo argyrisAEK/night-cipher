@@ -76,10 +76,18 @@ SVG REQUIREMENTS
 - Use valid XML and ordinary SVG vector elements. No external images, fonts, links, scripts, foreignObject, embedded raster data or network resources.
 - No visible text, alphabet characters, digits, labels, captions, title, description, comments or metadata in the image. Use neutral IDs unrelated to the secret.
 - Keep all meaningful visual details large enough to survive rasterization to a 1024px PNG.
-- Prefer solid fills and simple SVG primitives when they achieve the intended visual result. Avoid decorative gradients, filters, blur effects and masks when they add no meaningful visual or encoding information; use them when they genuinely help the scene or carry part of the hidden message.
-- When multiple elements have exactly the same shape and appearance, you may define the shared element once inside <defs> and reuse it with <use>. Do not force reuse: keep elements separate whenever their differences in shape, size, colour, orientation or other properties carry visual or encoded information.
-- Do not sacrifice visual clarity, artistic quality, scene coherence or decoding accuracy to reduce SVG length.
+- Keep the markup compact (see OUTPUT BUDGET below) without making the scene poor.
 - Before answering, internally decode your own design from the scene and check that it reproduces the exact message, including word boundaries.
+
+OUTPUT BUDGET
+- Aim for roughly 60–150 SVG elements and under ~8 KB of markup. Build richness from a few well-chosen shapes, not from many.
+- Use at most 3 depth layers (background, midground, foreground), flat fills, at most one gradient, and no filters or blur unless they carry meaning.
+- Prefer rect, circle, ellipse, polygon and short paths (under ~12 points). Round every coordinate to a whole number.
+- Define a repeated shape once in <defs> and repeat it with <use href="#id" x=".." y=".."> (write href, never xlink:href). Place groups with transform on <g>. Keep elements separate when their size, colour or orientation carries the encoding.
+- No default attributes, no comments, short ids (a1, b2). Style only with inline attributes.
+- Allowed elements ONLY: svg, g, defs, symbol, use, rect, circle, ellipse, line, polyline, polygon, path, linearGradient, radialGradient, stop, clipPath, mask, filter. Anything else (style, pattern, marker, animate, image, text, title, desc) causes the picture to be rejected or stripped.
+- If the budget and decoding accuracy conflict, accuracy wins. If the budget and decoration conflict, the budget wins.
+- Output the SVG immediately, then the SCHEME line (maximum 40 words). No planning text before the SVG.
 
 PRIVATE EXPLANATION
 After the SVG, output exactly one final line beginning with SCHEME: followed by a concise explanation of the visual rule, reading order, character mapping and word-boundary convention. This explanation is private game metadata and must never be included in the image or sent to the Seeker.
