@@ -4,7 +4,6 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem('nc-howto-seen', '1'); } catch {} });
   await page.goto('/');
 });
-
 test('loads all game modes and the BYOP connect control', async ({ page }) => {
   await expect(page.locator('polli-connect')).toHaveAttribute('models', 'text');
   await expect(page.locator('#tabs button')).toHaveCount(4);
