@@ -51,18 +51,16 @@ test('known training and daily ciphers use guided decoding instructions', async 
   expect(prompts.retry).toContain('Second-pass blind visual analysis');
 });
 
-test('legacy nc LocalStorage progression remains readable', async ({ page }) => {
-  await page.evaluate(() => {
-    localStorage.setItem('nc', JSON.stringify({
-      xp: 1250,
-      levels: { 0: true, 1: true },
-      achievements: { first_decode: 1 },
-      dailyWins: [20001]
-    }));
-  });
+test('legacy nc LocalStorage data remains readable without progression gamification', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('nc', JSON.stringify({xp:1250,levels:{0:true,1:true},achievements:{first_decode:1},dailyWins:[20001]})));
   await page.reload();
-  await expect(page.locator('#profile')).toContainText('Cryptographer');
-  await expect(page.locator('#codexPreview')).toContainText('Skyline');
+  const state=await page.evaluate(async()=>{const {loadState}=await import('/js/state.js');return loadState()});
+  expect(state.levels).toEqual({0:true,1:true});
+  expect(state.dailyWins).toEqual([20001]);
+  expect(state).not.toHaveProperty('xp');
+  expect(state).not.toHaveProperty('achievements');
+  await expect(page.locator('#profile')).toHaveCount(0);
+  await expect(page.locator('#codexPreview')).toHaveCount(0);
 });
 
 test('all ten deterministic cipher generators still round-trip through their decoders', async ({ page }) => {
@@ -247,6 +245,7 @@ test('Hider diagnostics capture its private explanation while the Seeker request
   await expect(page.locator('#diagnosticsContent')).toContainText('MESSAGE: LANTERN',{timeout:10000});
   expect(seekerMessages).not.toContain(scheme);
   expect(seekerMessages).not.toContain('LANTERN');
+  await page.locator('#tabs button',{hasText:'Research'}).click();
   await page.locator('#diagnostics > summary').click();
   const report=JSON.parse(await page.locator('#diagnosticsContent details').last().locator('pre').textContent());
   expect(report.hider.rawResponse).toContain('SCHEME:');
@@ -288,11 +287,14 @@ test('independent Seeker gets only the blind prompt and records exact recovery m
   await page.selectOption('#seekerAudit','openai/gpt-6-luna');
   await page.click('#hide');
   await expect(page.locator('#imgbox img')).toBeVisible();
+  await page.locator('#tabs button',{hasText:'Research'}).click();
   await page.click('#independent');
   await expect(page.locator('#status')).toContainText('Run the primary Seeker first');
   expect(requests.some(x=>x.model==='openai/gpt-6-luna')).toBe(false);
+  await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
   await page.click('#ai');
   await expect(page.locator('#res')).toContainText('KNOW THE WAY');
+  await page.locator('#tabs button',{hasText:'Research'}).click();
   await page.click('#independent');
   await expect(page.locator('#robustnessReport')).toContainText('Both exact: Yes');
   const primary=requests.find(x=>x.model==='openai/gpt-6.1-terra');
@@ -338,12 +340,13 @@ test('quality helpers distinguish unmeasured validation from failed recovery and
   expect(result.spacedMessage).not.toBe(result.joinedMessage);
 });
 
-test('Diagnostics sit in the left card under the picture, not in the crowded right column', async ({ page }) => {
-  await expect(page.locator('section.card #diagnostics')).toHaveCount(1);
+test('Diagnostics live in Research Mode, separate from the game layout', async ({ page }) => {
+  await expect(page.locator('#researchMode #diagnostics')).toHaveCount(1);
+  await expect(page.locator('#mainGame #diagnostics')).toHaveCount(0);
   await expect(page.locator('aside #diagnostics')).toHaveCount(0);
   const order = await page.evaluate(() => {
-    const d = document.querySelector('#diagnostics'), img = document.querySelector('#imgbox');
-    return !!(img.compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const d = document.querySelector('#diagnostics'), game = document.querySelector('#mainGame');
+    return !!(game.compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING);
   });
   expect(order).toBe(true);
 });
