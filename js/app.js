@@ -5,6 +5,7 @@ import { loadState, saveState } from './state.js';
 import { runSelfTest } from './selftest.js';
 import { parseSeekerResponse, compareSeekers, auditBlindRequest, normalizeMessage } from './quality.js';
 import { POLLINATIONS_MODELS } from './models.js';
+import { mountLsbLab } from './lsb-lab.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]/gu,'');
@@ -112,7 +113,7 @@ function renderTries(){const t=$('#tries');if(!R||R.mode==='own'||R.done){t.text
 function renderHintLabel(){const total=R?.hints?.length||0;$('#hint').textContent=total?`Hint (${R.used}/${total} · −20)`:'Hint (−20)';}
 function syncButtons(){
   renderTries();renderHintLabel();
-  document.querySelectorAll('button').forEach(b=>{b.disabled=uiBusy});
+  ['#go','#giveup','#hint','#ai','#next','#independent','#robustness'].forEach(sel=>{const button=$(sel);if(button)button.disabled=uiBusy});
   $('#after').hidden=!(R&&(R.done||R.mode==='duel'));
   const researchRound=!!(R&&(R.mode==='duel'||R.mode==='own')&&R.svg);
   $('#independent').hidden=!(researchRound&&R.mode==='duel');
@@ -353,7 +354,8 @@ const tabDefs=[
   ['🎓 Learn',learn,'learn'],
   ...TRAIN.map((t,i)=>['🎓 Level '+(i+1)+(T.levels&&T.levels[i]?' ✓':''),()=>train(i),'training']),
   ['⚔ AI vs AI Duel 💰',()=>{if(!(R&&R.mode==='duel'))stageIdle(IDLE.duel);$('#duel').hidden=false;$('#game').hidden=!(R&&R.mode=='duel');say('Choose the secret message and AI models, then start the duel.')},'duel'],
-  ['🕵 You hide, AI seeks 💰',()=>{if(!(R&&R.mode==='own'))stageIdle(IDLE.own);$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own']
+  ['🕵 You hide, AI seeks 💰',()=>{if(!(R&&R.mode==='own'))stageIdle(IDLE.own);$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own'],
+  ['🧬 LSB Lab',()=>say('Explore classic pixel-level steganography with a local RGB LSB encoder and decoder.'),'lab']
 ];
 tabDefs.forEach(([label,fn,kind])=>{
   const b=document.createElement('button');
@@ -362,17 +364,18 @@ tabDefs.forEach(([label,fn,kind])=>{
   b.onclick=()=>{
     allTabs.forEach(x=>x.classList.remove('on','in'));researchTab.classList.remove('on');
     const inLearn=kind==='training'||kind==='learn';
+    const inLab=kind==='lab';
     b.classList.add(kind==='learn'?'in':'on');
     if(kind==='training')allTabs.find(x=>x.dataset.kind==='learn').classList.add('in');
-    levels.hidden=!inLearn;$('#mainGame').hidden=false;$('#researchMode').hidden=true;
-    $('#intro').textContent=INTRO[inLearn&&kind!=='daily'?'learn':kind];
+    levels.hidden=!inLearn;$('#mainGame').hidden=inLab;$('#researchMode').hidden=true;$('#lsbLab').hidden=!inLab;
+    $('#intro').textContent=INTRO[inLearn&&kind!=='daily'?'learn':kind]||'';
     $('#duel').hidden=$('#own').hidden=true;
     fn();
   };
   allTabs.push(b);(kind==='training'?levels:tabs).append(b);
 });
 const researchTab=document.createElement('button');researchTab.type='button';researchTab.textContent='🧪 Research';researchTab.dataset.kind='research';
-researchTab.onclick=()=>{allTabs.forEach(x=>x.classList.remove('on','in'));researchTab.classList.add('on');$('#mainGame').hidden=true;$('#researchMode').hidden=false;$('#intro').textContent='Evaluate Hider and Seeker performance with controlled experiments, independent blind validation and round-level diagnostics.';score();renderDiagnostics()};tabs.append(researchTab);
+researchTab.onclick=()=>{allTabs.forEach(x=>x.classList.remove('on','in'));researchTab.classList.add('on');$('#mainGame').hidden=true;$('#lsbLab').hidden=true;$('#researchMode').hidden=false;$('#intro').textContent='Evaluate Hider and Seeker performance with controlled experiments, independent blind validation and round-level diagnostics.';score();renderDiagnostics()};tabs.append(researchTab);
 
 /* ---------- fixed Pollinations model allowlist ---------- */
 function fill(sel,ids,pref){
@@ -391,7 +394,7 @@ fill('#seeker2',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
 fill('#seekerAudit',POLLINATIONS_MODELS,/^openai\/gpt-6-luna$/i);
 fill('#judgeModel',POLLINATIONS_MODELS,/openai\/gpt-6\.1-sol/i);
 ['#hider','#seeker','#seeker2','#seekerAudit','#judgeModel'].forEach(sel=>{$(sel).disabled=false});
-if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();allTabs[0].click();
+if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();mountLsbLab($('#lsbLab'));allTabs[0].click();
 /* ---------- first-visit "How to play" ---------- */
 const howto=$('#howto'),HOWTO_KEY='nc-howto-seen';
 const openHowto=()=>{if(!howto.open){howto.showModal();howto.scrollTop=0}};

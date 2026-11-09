@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 });
 test('loads all game modes and the BYOP connect control', async ({ page }) => {
   await expect(page.locator('polli-connect')).toHaveAttribute('models', 'text');
-  await expect(page.locator('#tabs button')).toHaveCount(5);
+  await expect(page.locator('#tabs button')).toHaveCount(6);
   await expect(page.locator('#levels button')).toHaveCount(10);
   await expect(page.locator('#levels')).toBeHidden();
   await expect(page.locator('#status')).not.toBeEmpty();
@@ -518,4 +518,48 @@ test('Hint button displays used and available hint count', async ({ page }) => {
   await expect(page.locator('#hint')).toContainText('0/');
   await page.click('#hint');
   await expect(page.locator('#hint')).toContainText('1/');
+});
+
+
+test('Classic LSB lab is available as a separate educational workspace', async ({ page }) => {
+  await expect(page.locator('#tabs button', {hasText:'LSB Lab'})).toHaveCount(1);
+  await page.locator('#tabs button', {hasText:'LSB Lab'}).click();
+  await expect(page.locator('#lsbLab')).toBeVisible();
+  await expect(page.locator('#mainGame')).toBeHidden();
+  await expect(page.locator('#researchMode')).toBeHidden();
+  await expect(page.locator('#lsbFile')).toHaveAttribute('accept', 'image/png,image/jpeg,image/webp');
+  await expect(page.locator('#lsbLab')).toHaveAttribute('data-mounted', '1');
+  await expect(page.locator('#lsbEncode')).toBeDisabled();
+});
+
+test('LSB encoder round-trips UTF-8 text, preserves alpha, and reports capacity', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { encodeLSB, decodeLSB, lsbCapacityBytes } = await import('/js/lsb.js');
+    const width = 64, height = 64, data = new Uint8ClampedArray(width * height * 4);
+    for (let i = 0; i < data.length; i += 4) { data[i] = 120; data[i+1] = 80; data[i+2] = 40; data[i+3] = 173; }
+    const original = new ImageData(data, width, height);
+    const encoded = encodeLSB(original, 'Night Cipher — Καλημέρα');
+    const recovered = decodeLSB(new ImageData(encoded.data, width, height));
+    return { recovered, capacity: lsbCapacityBytes(width, height), changed: encoded.changedChannels,
+      alphaPreserved: encoded.data.every((value, i) => i % 4 !== 3 || value === data[i]),
+      sourceUntouched: original.data.every((value, i) => value === data[i]) };
+  });
+  expect(result.recovered).toBe('Night Cipher — Καλημέρα');
+  expect(result.capacity).toBe(1529);
+  expect(result.alphaPreserved).toBe(true);
+  expect(result.sourceUntouched).toBe(true);
+  expect(result.changed).toBeGreaterThan(0);
+});
+
+test('LSB encoder rejects oversized messages and decoder rejects unencoded images', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { encodeLSB, decodeLSB } = await import('/js/lsb.js');
+    const tiny = new ImageData(new Uint8ClampedArray(5 * 4 * 4).fill(128), 5, 4);
+    let oversized = '', missing = '';
+    try { encodeLSB(tiny, 'This cannot fit'); } catch (error) { oversized = error.message; }
+    try { decodeLSB(tiny); } catch (error) { missing = error.message; }
+    return { oversized, missing };
+  });
+  expect(result.oversized).toContain('Message is too large');
+  expect(result.missing).toContain('No Night Cipher LSB payload found');
 });
