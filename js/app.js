@@ -83,8 +83,9 @@ const renderDiagnostics=()=>{
 /* ---------- game flow ---------- */
 let uiBusy=false,aiInFlight=false,aiAttempted=false,hideInFlight=false;
 function renderTries(){const t=$('#tries');if(!R||R.mode==='own'||R.done){t.textContent='';t.removeAttribute('aria-label');return}const left=Math.max(0,R.maxTries-R.tries);t.textContent='●'.repeat(left)+'○'.repeat(R.maxTries-left);t.setAttribute('aria-label',`${left} of ${R.maxTries} tries left`);t.title=`${left} tries left`}
+function renderHintLabel(){const total=R?.hints?.length||0;$('#hint').textContent=total?`Hint (${R.used}/${total} · −20)`:'Hint (−20)';}
 function syncButtons(){
-  renderTries();
+  renderTries();renderHintLabel();
   document.querySelectorAll('button').forEach(b=>{b.disabled=uiBusy});
   $('#after').hidden=!(R&&(R.done||R.mode==='duel'));
   $('#independent').hidden=!(R&&R.mode==='duel');
@@ -99,13 +100,13 @@ function syncButtons(){
   }
 }
 function busy(b,m){uiBusy=!!b;syncButtons();if(m)say(m)}
-function start(r){R=Object.assign({tries:0,used:0,done:false,ai:null,maxTries:3,noHints:false},r);if(R.diagnostics)diagnostics=R.diagnostics;renderDiagnostics();R.startedAt=performance.now();aiInFlight=false;aiAttempted=false;$('#imgbox').innerHTML=`<img alt="Puzzle picture" src="${uri(R.svg)}">`;$('#res').innerHTML='';$('#robustnessReport').innerHTML='';$('#hints').innerHTML='';$('#guess').value='';$('#game').hidden=false;const hiderDuel=R.mode==='duel';$('#game').classList.toggle('hider-duel',hiderDuel);$('#duelRoles').hidden=!hiderDuel;$('#guess').hidden=hiderDuel;$('#guess').previousElementSibling.hidden=hiderDuel;$('#go').parentElement.hidden=hiderDuel;$('#hints').hidden=hiderDuel;$('#giveup').hidden=hiderDuel;$('#next').hidden=true;$('#hint').hidden=hiderDuel||!!R.noHints;$('#hint').disabled=hiderDuel||!!R.noHints;$('#ai').hidden=false;$('#revealHow').hidden=hiderDuel;$('#revealHow').textContent='✨ How was it hidden?';syncButtons();say(hiderDuel?'AI Hider has hidden your chosen message. Now watch the AI Seeker try to decode it.':'Find the hidden message. '+R.maxTries+' tries.');if(!hiderDuel)$('#guess').focus()}
+function start(r){R=Object.assign({tries:0,used:0,done:false,ai:null,maxTries:3,noHints:false},r);if(R.diagnostics)diagnostics=R.diagnostics;renderDiagnostics();R.startedAt=performance.now();aiInFlight=false;aiAttempted=false;$('#imgbox').innerHTML=`<img alt="Puzzle picture" src="${uri(R.svg)}">`;$('#res').innerHTML='';$('#robustnessReport').innerHTML='';$('#hints').innerHTML='';$('#guess').value='';$('#game').hidden=false;const hiderDuel=R.mode==='duel';$('#game').classList.toggle('hider-duel',hiderDuel);$('#duelRoles').hidden=!hiderDuel;$('#guess').hidden=hiderDuel;$('#guess').previousElementSibling.hidden=hiderDuel;$('#go').parentElement.hidden=hiderDuel;$('#hints').hidden=hiderDuel;$('#giveup').hidden=hiderDuel;$('#next').hidden=true;$('#next').textContent=hiderDuel?'New Duel':'Next ▶';$('#hint').hidden=hiderDuel||!!R.noHints;$('#hint').disabled=hiderDuel||!!R.noHints;$('#ai').hidden=false;$('#revealHow').hidden=hiderDuel;$('#revealHow').textContent='✨ How was it hidden?';syncButtons();say(hiderDuel?'AI Hider has hidden your chosen message. Now watch the AI Seeker try to decode it.':'Find the hidden message. '+R.maxTries+' tries.');if(!hiderDuel)$('#guess').focus()}
 function finish(ok){if(!R||R.done)return;R.done=true;R.elapsedMs=Math.max(0,performance.now()-(R.startedAt||performance.now()));syncButtons();let earned=0;if(ok&&(R.mode==='train'||R.mode==='daily')){T.solves=(T.solves||0)+1;if(R.tries===1)T.firstTry=(T.firstTry||0)+1;if(R.used===0)T.noHintSolves=(T.noHintSolves||0)+1;const hr=new Date().getHours();if(hr>=0&&hr<5)T.nightSolves=(T.nightSolves||0)+1;const timeKey=R.mode==='daily'?`daily-${R.day}`:`training-${R.schemeIdx}`;T.bestTimes=T.bestTimes||{};if(!T.bestTimes[timeKey]||R.elapsedMs<T.bestTimes[timeKey])T.bestTimes[timeKey]=R.elapsedMs;if(R.mode==='train'){T.levels=T.levels||{};const first=!T.levels[R.schemeIdx];T.levels[R.schemeIdx]=true;if(first)earned+=grantXP(`training-${R.schemeIdx}`,50,'Training level completed');const tb=[...$('#tabs').children].find(x=>x.dataset.kind==='training'&&x.textContent.includes(`Level ${R.schemeIdx+1}`));if(tb)tb.textContent=`🎓 Level ${R.schemeIdx+1} ✓`}else{T.dailyWins=T.dailyWins||[];if(!T.dailyWins.includes(R.day)){T.dailyWins.push(R.day);earned+=grantXP(`daily-${R.day}`,75,'Daily cipher solved');if(R.used===0)earned+=grantXP(`daily-no-hints-${R.day}`,25,'Daily solved without hints');if(R.tries===1)earned+=grantXP(`daily-first-try-${R.day}`,25,'Daily solved on first try');}if(T.last!==R.day){T.streak=T.last===R.day-1?(T.streak||0)+1:1;T.last=R.day}}evaluateAchievements(TRAIN)}const pts=ok?Math.max(10,100-20*R.used-15*(R.tries-1)):0;$('#res').innerHTML=`<b class="${ok?'ok':'bad'}">${ok?'Found it! +'+pts+' points':'Out of tries.'}</b> The message was “${esc(R.secret)}”.<br><small>How it was hidden: ${esc(R.scheme||'unknown')}</small>${ok&&(R.mode==='train'||R.mode==='daily')?`<br><small>Time: ${fmtTime(R.elapsedMs)} · ${earned?`+${earned} XP`:'No new XP (already claimed)'}</small>`:''}`+stealthLine()+(R.ai?aiLine():'');if(R.mode==='duel'){T.n++;if(ok)T.you++;save();score()}if(R.mode==='daily'){$('#res').innerHTML+='<p><button id="sh">Copy result</button></p>';$('#sh').onclick=()=>{navigator.clipboard.writeText(`Night Cipher #${R.day-20000} ${ok?'✅':'❌'} ${R.tries}/${R.maxTries} tries · ${R.used} hints\n${location.href}`);say('Result copied!')}}if(ok){evaluateAchievements(TRAIN);save();score()}$('#next').hidden=false;say(ok?'Cipher solved. Progress saved locally.':'Round finished.')}
 const aiLine=()=>`<p>🤖 AI seeker said: “${esc(R.ai.guess)}” — <b class="${R.ai.ok?'ok':'bad'}">${R.ai.ok?'it found it':'it missed it'}</b> (${Math.round(R.ai.s*100)}% similar).<br><small>Model: ${esc(R.ai.model||'unknown')} · ${R.ai.durationMs??'—'} ms · ${R.ai.tokens??'—'} tokens<br>Its method: ${esc(R.ai.method)}${R.method?`<br>Method fixed by the game: ${esc(R.methodLabel)} · Scene: ${esc(R.scene)}`:''}</small></p>`;
 $('#go').onclick=()=>{if(!R||R.done)return;const g=$('#guess').value.trim();if(!g)return;R.tries++;renderTries();const s=sim(g,R.secret);
 if(s>=.9)finish(true);else if(R.tries>=R.maxTries)finish(false);else say(`Not quite (${Math.round(s*100)}% similar). ${R.maxTries-R.tries} tries left.`,'bad')};
 $('#guess').onkeydown=e=>{if(e.key=='Enter')$('#go').click()};
-$('#hint').onclick=()=>{if(!R||R.done||R.used>=R.hints.length)return;$('#hints').innerHTML+=`<li>${esc(R.hints[R.used++])}</li>`;if(R.used>=R.hints.length)$('#hint').disabled=true};
+$('#hint').onclick=()=>{if(!R||R.done||R.used>=R.hints.length)return;$('#hints').innerHTML+=`<li>${esc(R.hints[R.used++])}</li>`;renderHintLabel();if(R.used>=R.hints.length)$('#hint').disabled=true};
 $('#giveup').onclick=()=>{if(R&&!R.done)finish(false)};
 const stealthLine=()=>R&&R.stealth?`<p>🕵️ <b>Stealth ${R.stealth}/10</b> — ${esc(R.stealthNote||'')}</p>`:'';
 const JUDGE='Study this picture carefully. It may or may not hide a secret message encoded somewhere in its visual structure. Rate how INNOCENT it looks to a casual viewer: 10 = completely ordinary, nothing seems off; 1 = obviously suspicious or unnatural. Then give one short sentence of justification.\nReply with exactly two lines:\nSTEALTH: <integer 1-10>\nNOTE: <one sentence>';
@@ -270,7 +271,7 @@ $('#hide').onclick=async()=>{
   finally{hideInFlight=false;busy(false)}
 }
 $('#next').onclick=()=>{
-  if(R.mode=='duel'){$('#duel').hidden=false;$('#hide').click();return}
+  if(R?.mode==='duel'){$('#duel').hidden=false;$('#own').hidden=true;$('#game').hidden=true;stageIdle(IDLE.duel);say('Ready for another Duel. Review your message and settings, then start when you are ready.');return}
   const i=allTabs.findIndex(x=>x.classList.contains('on'));
   allTabs[(i+1)%allTabs.length].click();
 };
@@ -286,10 +287,10 @@ const dailyIndex=n=>{if(dailyIndexCache.has(n))return dailyIndexCache.get(n);let
 const dailyWord=n=>DW[hash32('night-cipher-word-'+n)%DW.length];
 function daily(){
   const n=localDay(),i=dailyIndex(n),t=TRAIN[i],w=dailyWord(n);
-  const tier=i<3?'Easy':i<7?'Medium':'Hard',mods=['Standard','No-Hint Protocol','Time Pressure'];
-  const modifier=mods[hash32('night-cipher-modifier-'+n)%mods.length],maxTries=modifier==='Time Pressure'?2:3,noHints=modifier==='No-Hint Protocol';
-  start({mode:'daily',schemeIdx:i,day:n,difficulty:tier,modifier,maxTries,noHints,secret:w,svg:t.g(w,hash32('night-cipher-art-'+n)),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});
-  const msg=()=>`Daily cipher #${n-20000} · ${tier} · ${modifier} · same puzzle for everyone in your timezone today. Next in ${fmtLeft(nextLocalMidnight()-Date.now())}. ${maxTries} tries${noHints?' · hints disabled':''}.`;
+  const mods=['Standard','No-Hint Protocol'];
+  const modifier=mods[hash32('night-cipher-modifier-'+n)%mods.length],maxTries=3,noHints=modifier==='No-Hint Protocol';
+  start({mode:'daily',schemeIdx:i,day:n,modifier,maxTries,noHints,secret:w,svg:t.g(w,hash32('night-cipher-art-'+n)),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});
+  const msg=()=>`Daily cipher #${n-20000} · ${modifier} · same puzzle for everyone in your timezone today. Next in ${fmtLeft(nextLocalMidnight()-Date.now())}. 3 tries${noHints?' · hints disabled':''}.`;
   say(msg());
   clearInterval(dailyTimer);
   dailyTimer=setInterval(()=>{
@@ -308,7 +309,7 @@ const t=TRAIN[$('#osch').value],nm=`Cipher #${String(+$('#osch').value+1).padSta
 $('#res').innerHTML=`<b>Your puzzle: “${esc(w)}” hidden with ${esc(nm)}.</b>`;$('#ai').disabled=false;$('#ai').click()};
 
 /* ---------- tabs & models ---------- */
-function train(i){const t=TRAIN[i],w=DW[hash32('training-word-'+i+'-'+localDay())%DW.length],tier=i<3?'Easy':i<7?'Medium':'Hard';$('#duel').hidden=true;start({mode:'train',schemeIdx:i,difficulty:tier,secret:w,svg:t.g(w,hash32('training-art-'+i+'-'+localDay())),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});say(`Level ${i+1} · ${tier}. Find the hidden message. You have 3 tries.`)}
+function train(i){const t=TRAIN[i],w=DW[i],seed=hash32('training-art-'+i);$('#duel').hidden=true;start({mode:'train',schemeIdx:i,secret:w,svg:t.g(w,seed),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});say(`Level ${i+1} · ${t.n}. Find the hidden message. You have 3 tries.`)}
 const tabs=$('#tabs'),levels=$('#levels'),allTabs=[];
 const IDLE={duel:'Choose a secret message. AI Hider will hide it in an image, then AI Seeker will try to decode it.',own:'Pick a word and a hiding scheme on the right, then press “Challenge the AI”.'};
 function stageIdle(m){$('#imgbox').textContent=m;$('#res').innerHTML='';$('#robustnessReport').innerHTML=''}
