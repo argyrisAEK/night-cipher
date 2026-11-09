@@ -15,15 +15,11 @@ label{font-size:.85rem;color:var(--mut)}.row{display:flex;gap:8px;flex-wrap:wrap
 #res{margin-top:10px}#hints{margin:8px 0 0;padding-left:18px;color:var(--acc)}small,#status,footer{color:var(--mut)}#status{min-height:1.5em;margin:10px 2px}
 .ok{color:var(--ok)}.bad{color:var(--bad)}footer{font-size:.85rem;margin:18px 2px}a{color:var(--acc)}
 #imgbox img.revealed{animation:pop .5s ease}
-.profile{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:#0e1430;border:1px solid #38427a;border-radius:12px;padding:12px;margin-bottom:12px}
-.profile strong{color:var(--acc)}.xpbar{height:8px;background:#28315f;border-radius:9px;overflow:hidden;margin-top:6px}.xpbar i{display:block;height:100%;background:var(--acc);width:0}
-.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.meta-tile{background:#0e1430;border:1px solid #38427a;border-radius:10px;padding:9px}.meta-tile b{display:block;color:var(--acc);font-size:1.1rem}
-.achievement{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #28315f}.achievement:last-child{border:0}.achievement .ico{font-size:1.35rem}.locked{opacity:.45}.modifier{color:var(--acc);font-weight:600}
 @keyframes pop{0%{filter:brightness(2.2) saturate(1.8)}100%{filter:none}}
 
-details.adv,details.me{margin:12px 0;border:1px solid #28315f;border-radius:12px;padding:8px 12px;background:#10162e}
-details.adv>summary,details.me>summary{cursor:pointer;color:var(--mut);font-weight:600}
-details.adv[open]>summary,details.me[open]>summary{margin-bottom:8px}
+details.adv{margin:12px 0;border:1px solid #28315f;border-radius:12px;padding:8px 12px;background:#10162e}
+details.adv>summary{cursor:pointer;color:var(--mut);font-weight:600}
+details.adv[open]>summary{margin-bottom:8px}
 nav[hidden]{display:none}#levels{margin:-6px 0 14px}#levels button{padding:4px 10px;font-size:.9rem}
 #tabs button.in{background:transparent;border-color:var(--acc);color:var(--acc);font-weight:600}
 .legend{margin:6px 0 0;color:var(--mut)}
