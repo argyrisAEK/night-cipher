@@ -94,7 +94,7 @@ function syncButtons(){
     $('#go').disabled=R.done;$('#giveup').disabled=R.done;
     $('#hint').disabled=R.done||R.used>=R.hints.length;
     $('#ai').disabled=(R.done&&R.mode!=='own'&&aiAttempted)||aiInFlight||aiAttempted;$('#ai').textContent=R.mode==='duel'?(R.aiHistory?.length?'Retry AI Seeker 💰':'Challenge AI Seeker 💰'):(aiAttempted?'AI answer locked':(R.aiHistory?.length?'Retry AI seeker 💰':'Let the AI try 💰'));
-    $('#next').disabled=!R.done;
+    $('#next').disabled=R.mode==='duel'?!R.ai:!R.done;
   }else if(!uiBusy){
     $('#go').disabled=true;$('#giveup').disabled=true;$('#hint').disabled=true;$('#ai').disabled=true;$('#next').disabled=true;
   }
