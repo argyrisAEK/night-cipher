@@ -30,9 +30,9 @@
 <div id="setup" class="warn" hidden><b>Setup:</b> replace <code>pk_REPLACE_ME</code> (twice: the &lt;polli-connect&gt; tag and <code>APP_KEY</code>) with your App Key and add this page's URL as a Redirect URI.</div>
 <nav id="tabs"></nav>
 <nav id="levels" hidden aria-label="Training levels"></nav>
-<main>
-<section class="card"><p id="intro" class="intro"></p><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div><div id="robustnessReport" aria-live="polite"></div>
-<details id="diagnostics" class="diagnostics"><summary>🧪 AI Output Inspection &amp; Diagnostics</summary><p class="diag-intro">Inspect Hider generation, SVG/XML validation, PNG rasterization, private SCHEME presence, blind-payload audits, exact Seeker recovery, independent validation, token usage and latency. Model-level aggregates are stored locally. Encoding consistency is not claimed as verified unless blind Seekers recover the exact message. Diagnostic export excludes API keys and authorization headers.</p><div id="diagnosticsContent"><small>No AI output captured yet.</small></div></details></section>
+<main id="mainGame">
+<section class="card"><p id="intro" class="intro"></p><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div>
+/section>
 <aside class="card">
  <div id="duel" hidden>
 <p class="mode-note">🤖 <b>AI Hider</b> creates the image. <b>AI Seeker</b> then attempts to decode the message you selected. </p>
@@ -59,8 +59,7 @@
 <div id="after" hidden>
 <div class="row" style="margin-top:8px"><button id="revealHow" hidden>✨ How was it hidden?</button></div>
 <div class="row" style="margin-top:8px"><button id="save">Save PNG</button><button id="saveSvg" title="Download the SVG source of the puzzle image">Save SVG</button><button id="next" hidden>Next ▶</button></div>
-<div class="row" style="margin-top:8px"><button id="independent" title="Runs one additional blind vision-model request; uses Pollen">🧪 Independent Seeker validation 💰×1</button></div>
-<div class="row" style="margin-top:8px"><button id="robustness" title="Runs three additional vision-model calls; uses Pollen">🧪 Test image robustness 💰×3</button></div>
+
 </div>
 </div>
 <div id="profile" class="profile" aria-live="polite"></div>
@@ -71,6 +70,12 @@
 <small>Daily modifiers may change the number of tries or disable hints. A guess counts when it is ≥90% similar, the rule used in the study. AIs here cannot run code, so expect them to struggle more than in the paper. Stealth rating is shown for information only; it does not affect your score.</small>
 </details>
 </aside></main>
+<section id="researchMode" class="card research-mode" hidden>
+<h2>Research Mode</h2><p class="diag-intro">Controlled evaluation tools for Hider quality, blind Seeker recovery and image robustness. Additional model calls use your Pollen.</p>
+<section class="research-section"><h3>Experiments</h3><p class="diag-intro">Select an AI round first. Independent Seeker compares a second model against the primary blind result. Robustness Test sends the same image through PNG and two JPEG encodings.</p><div class="row research-actions"><button id="independent" title="Runs one additional blind vision-model request; uses Pollen" hidden>Independent Seeker validation · 1 call</button><button id="robustness" title="Runs three additional vision-model calls; uses Pollen" hidden>Robustness Test · 3 calls</button></div><div id="robustnessReport" aria-live="polite"></div></section>
+<section class="research-section"><h3>Report Card</h3><div id="researchStats"></div><ul id="report" class="research-report"></ul></section>
+<details id="diagnostics" class="diagnostics"><summary>Round diagnostics &amp; raw output</summary><p class="diag-intro">Inspect SVG/XML validation, PNG rasterization, private SCHEME presence, blind-payload audits, exact recovery, model usage, latency and request failures. Diagnostic exports exclude API keys and authorization headers.</p><div id="diagnosticsContent"><small>No AI output captured yet. Start an AI vs AI Duel to inspect a round.</small></div></details>
+</section>
 <footer>Made for <a href="https://github.com/pollinations/pollinations/issues/18367">Pollinations quest #18367</a>, inspired by <a href="https://www.lesswrong.com/posts/WHEQps5PK8LrrcTAb/how-does-fable-5-1-hide-messages-in-images">How does Fable 5.1 hide messages in images?</a>. Your Pollen pays for every AI call; nothing is stored on a server.</footer>
 </div>
 <script type="module" src="/js/app.js"></script></body></html>
