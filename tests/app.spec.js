@@ -281,6 +281,8 @@ test('independent Seeker gets only the blind prompt and records exact recovery m
   await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='openai/gpt-6.1-sol'));
   await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
   await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
+  await page.locator('details.adv > summary').click();
+  await expect(page.locator('#seeker')).toBeVisible();
   await page.fill('#msg','KNOW THE WAY');
   await page.selectOption('#seeker','openai/gpt-6.1-terra');
   await page.selectOption('#seekerAudit','openai/gpt-6-luna');
