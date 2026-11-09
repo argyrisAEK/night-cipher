@@ -38,7 +38,7 @@ export function mountLsbLab(root) {
   file.addEventListener('change', () => {
     const selected = file.files?.[0];
     if (!selected) return;
-    if (!selected.type.startsWith('image/')) { say('Choose a valid image file.', 'bad'); return; }
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(selected.type)) { say('Choose a PNG, JPEG or WebP image.', 'bad'); return; }
     const url = URL.createObjectURL(selected), bitmap = new Image();
     bitmap.onload = () => {
       const maxSide = 1600, factor = Math.min(1, maxSide / Math.max(bitmap.naturalWidth, bitmap.naturalHeight));
@@ -87,7 +87,7 @@ export function mountLsbLab(root) {
       if (!blob) { say('PNG export failed.', 'bad'); return; }
       const url = URL.createObjectURL(blob), link = document.createElement('a');
       link.href = url; link.download = `night-cipher-lsb-${currentName}.png`; link.click();
-      URL.revokeObjectURL(url); say('PNG downloaded. Avoid JPEG re-saving: lossy compression can destroy LSB data.', 'ok');
+      setTimeout(() => URL.revokeObjectURL(url), 1000); say('PNG downloaded. Avoid JPEG re-saving: lossy compression can destroy LSB data.', 'ok');
     }, 'image/png');
   });
   $('#lsbReset').addEventListener('click', () => {
