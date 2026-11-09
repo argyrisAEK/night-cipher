@@ -76,6 +76,9 @@ SVG REQUIREMENTS
 - Use valid XML and ordinary SVG vector elements. No external images, fonts, links, scripts, foreignObject, embedded raster data or network resources.
 - No visible text, alphabet characters, digits, labels, captions, title, description, comments or metadata in the image. Use neutral IDs unrelated to the secret.
 - Keep all meaningful visual details large enough to survive rasterization to a 1024px PNG.
+- Prefer solid fills and simple SVG primitives when they achieve the intended visual result. Avoid decorative gradients, filters, blur effects and masks when they add no meaningful visual or encoding information; use them when they genuinely help the scene or carry part of the hidden message.
+- When multiple elements have exactly the same shape and appearance, you may define the shared element once inside <defs> and reuse it with <use>. Do not force reuse: keep elements separate whenever their differences in shape, size, colour, orientation or other properties carry visual or encoded information.
+- Do not sacrifice visual clarity, artistic quality, scene coherence or decoding accuracy to reduce SVG length.
 - Before answering, internally decode your own design from the scene and check that it reproduces the exact message, including word boundaries.
 
 PRIVATE EXPLANATION
