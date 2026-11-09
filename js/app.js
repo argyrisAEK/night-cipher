@@ -93,7 +93,9 @@ function syncButtons(){
   renderTries();renderHintLabel();
   document.querySelectorAll('button').forEach(b=>{b.disabled=uiBusy});
   $('#after').hidden=!(R&&(R.done||R.mode==='duel'));
-  $('#independent').hidden=!(R&&R.mode==='duel');$('#robustness').hidden=!(R&&R.svg);
+  const researchRound=!!(R&&(R.mode==='duel'||R.mode==='own')&&R.svg);
+  $('#independent').hidden=!(researchRound&&R.mode==='duel');
+  $('#robustness').hidden=!researchRound;
   $('#independent').disabled=uiBusy||diagnostics?.independentSeeker?.status==='completed';$('#robustness').disabled=uiBusy||!R||!R.svg;
   if(!uiBusy&&R){
     $('#go').disabled=R.done;$('#giveup').disabled=R.done;
