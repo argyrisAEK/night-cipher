@@ -94,13 +94,18 @@ The Hider is instructed to create a natural-looking scene rather than a cipher w
 This is an LLM-authored visual puzzle workflow, not a guarantee of robust or imperceptible pixel-level steganography. Models can produce attractive images with incorrect or ambiguous encodings. A round counts as recovered only when the blind Seeker returns the original message; mocked tests cannot establish live model reliability.
 
 
-## Independent Seeker quality validation
+## Research Mode: Independent Seeker quality validation
 
-AI-vs-AI Duel includes an optional independent validation run. Select a second, different vision-capable model and run it after the primary Seeker. The second model receives the same rasterized PNG and the same blind prompt; it never receives the secret message, Hider prompt, or `SCHEME`. Diagnostics record exact recovery, normalized similarity, model agreement, latency and token usage. Local aggregate counters are stored with the existing browser-local progression. This is an empirical quality signal, not proof of universal decodability: test multiple messages, Hider models, and independent Seeker families. Each validation run makes one additional paid Pollinations request.
+Research Mode includes an optional independent validation run. Select a second, different vision-capable model and run it after the primary Seeker. The second model receives the same rasterized PNG and the same blind prompt; it never receives the secret message, Hider prompt, or `SCHEME`. Diagnostics record exact recovery, normalized similarity, model agreement, latency and token usage. Local aggregate counters are stored with the existing browser-local progression. This is an empirical quality signal, not proof of universal decodability: test multiple messages, Hider models, and independent Seeker families. Each validation run makes one additional paid Pollinations request.
 
 
-## Diagnostic evaluation (schema v2)
+## Research Mode: Diagnostic evaluation (schema v2)
 
-The Diagnostic panel exports one round as structured JSON. It separates Hider technical validity (XML/SVG validation, SCHEME presence, PNG rasterization) from end-to-end encoding quality (exact recovery by blind Seekers). `encodingValid` and `schemeConsistency` remain `null` because the client does not claim to prove the Hider's private encoding from its own explanation. The primary and independent Seeker payload audits verify that the locally constructed request includes an image and excludes the expected secret and SCHEME before dispatch. Provider usage metadata, actual response model, finish reason, latency, parsing failures and exact-match outcomes are recorded when available.
+The Research Mode diagnostic panel exports one round as structured JSON. It separates Hider technical validity (XML/SVG validation, SCHEME presence, PNG rasterization) from end-to-end encoding quality (exact recovery by blind Seekers). `encodingValid` and `schemeConsistency` remain `null` because the client does not claim to prove the Hider's private encoding from its own explanation. The primary and independent Seeker payload audits verify that the locally constructed request includes an image and excludes the expected secret and SCHEME before dispatch. Provider usage metadata, actual response model, finish reason, latency, parsing failures and exact-match outcomes are recorded when available.
 
 Local model aggregates are stored in the existing `nc` progression record: Hider render/validation and downstream exact-recovery rates, plus Seeker exact-match, similarity, latency, token and request-failure counts. They are browser-local and are not a cross-user benchmark. A second Seeker still requires an explicit additional paid API request; no extra model call is made for ordinary diagnostics.
+
+
+## Player experience and research separation
+
+The player-facing modes are Daily, Learn, AI vs AI Duel, and You hide, AI seeks. XP, ranks, achievements, and the Cipher Codex are not part of the game UI. Training completion remains available to guide the Learn sequence. Research Mode is a separate workspace for Independent Seeker validation, image Robustness Test, the aggregate Report Card, and round diagnostics. Existing `nc` LocalStorage data remains readable; legacy XP and achievement fields are ignored and are omitted on the next save.
