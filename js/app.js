@@ -312,7 +312,7 @@ function daily(){
     if($('#status').textContent.startsWith(`Daily cipher #${n-20000}`))say(msg());
   },30000);
 }
-$('#osch').innerHTML=TRAIN.map((t,i)=>`<option value="${i}">Unknown Cipher #${String(i+1).padStart(2,'0')}</option>`).join('');
+$('#osch').innerHTML=TRAIN.map((t,i)=>`<option value="${i}">Scheme #${String(i+1).padStart(2,'0')}</option>`).join('');
 $('#ohide').onclick=async()=>{const w=norm($('#omsg').value);if(!/^[A-Z]{2,10}$/.test(w))return say('Use 2–10 letters A–Z.','bad');
 if(!conn||!conn.apiKey)return say('Connect your Pollinations account first (button, top right).','bad');
 const t=TRAIN[$('#osch').value],nm=`Cipher #${String(+$('#osch').value+1).padStart(2,'0')}`;start({mode:'own',schemeIdx:+$('#osch').value,secret:w,svg:t.g(w,Math.random()*1e6|0),scheme:t.s,sname:nm,hints:[]});R.done=true;$('#game').hidden=false;$('#guess').hidden=true;$('#guess').previousElementSibling.hidden=true;$('#go').parentElement.hidden=true;$('#hints').hidden=true;$('#giveup').hidden=true;$('#revealHow').hidden=false;
@@ -321,7 +321,7 @@ $('#res').innerHTML=`<b>Your puzzle: “${esc(w)}” hidden with ${esc(nm)}.</b>
 /* ---------- tabs & models ---------- */
 function train(i){const t=TRAIN[i],w=t.m,seed=hash32('training-art-'+i);$('#duel').hidden=true;start({mode:'train',schemeIdx:i,secret:w,svg:t.g(w,seed),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});say(`Level ${i+1} · ${t.n}. Find the hidden message. You have 3 tries.`)}
 const tabs=$('#tabs'),levels=$('#levels'),allTabs=[];
-const IDLE={duel:'Choose a secret message. AI Hider will hide it in an image, then AI Seeker will try to decode it.',own:'Pick a word and a hiding scheme on the right, then press “Challenge the AI”.'};
+const IDLE={duel:'AI Hider conceals your message in an image. AI Seeker then tries to decode it.',own:'Pick a word and a hiding scheme on the right, then press “Challenge the AI”.'};
 function stageIdle(m){$('#imgbox').textContent=m;$('#res').innerHTML='';$('#robustnessReport').innerHTML=''}
 const INTRO={daily:'Every picture hides a word. Spot the pattern, then type the word on the right. One puzzle a day, the same for everyone.',learn:'Every picture hides a word. Spot the pattern, then type it on the right. Hints cost points.',duel:'Choose a secret message and watch two AI models compete: AI Hider conceals it in an image, then AI Seeker tries to recover it. You are the referee.',own:'Choose a word and a hiding scheme, then see whether an AI seeker can read your picture.'};
 function learn(){const lv=allTabs.filter(x=>x.dataset.kind==='training'),i=Math.max(0,TRAIN.findIndex((_,k)=>!(T.levels&&T.levels[k])));lv[i].click()}
