@@ -88,6 +88,7 @@ const hasSecretLeak=(input,secret,{strictWords=true}={})=>{
       if(word.length>=4&&!stopwords.has(word)&&haySet.has(word))return true;
     }
   }
+  
   // Detect encoded complete secret phrases in both modes. In strict mode,
   // also detect encoded individual non-trivial words (SVG text/metadata).
   const rawLower=raw.toLowerCase(),tokens=rawLower.split(/[^a-z0-9%+/_=-]+/i);
