@@ -19,7 +19,7 @@ const score=()=>{
  const seek=Object.entries(T.s||{}).map(([k,v])=>`<li>${esc(k)}: ${v.ok}/${v.n} recovered</li>`),qh=Object.entries(T.qh||{}).map(([k,v])=>`<li>Independent quality · ${esc(k)}: both exact ${v.bothExact}/${v.n}, agreement ${v.agreement}/${v.n}</li>`),hm=Object.entries(T.hm||{}).map(([k,v])=>`<li>Hider · ${esc(k)}: rendered ${v.rendered}/${v.attempts}, primary exact ${v.primaryExact}/${v.primaryEvaluated||0}, independent exact ${v.independentExact}/${v.independentEvaluated||0} · avg ${Math.round(v.totalDurationMs/Math.max(1,v.attempts))} ms / ${Math.round(v.totalTokens/Math.max(1,v.attempts))} tokens</li>`),sm=Object.entries(T.sm||{}).map(([k,v])=>`<li>Seeker · ${esc(k)}: exact ${v.exact}/${v.attempts} · failed ${v.failed} · avg ${Math.round(v.totalDurationMs/Math.max(1,v.attempts))} ms / ${Math.round(v.totalTokens/Math.max(1,v.attempts))} tokens</li>`),stl=Object.entries(T.sh||{}).map(([k,v])=>`<li>${esc(k)}: avg stealth ${(v.s/v.n).toFixed(1)}/10 (${v.n})</li>`),rb=Object.entries(T.rb||{}).map(([k,v])=>`<li>Robustness · ${esc(k)}: ${v.ok}/${v.n} recovered, mean similarity ${Math.round(100*v.sim/v.n)}%</li>`);
  $('#report').innerHTML=[...hm,...sm,...seek,...qh,...stl,...rb].join('')||'<li>No research data yet. Complete an AI round, then run optional validation experiments.</li>';
 };
-const say=(m,c='')=>{const s=$('#status');s.textContent=m;s.className=c};
+const say=(m,c='')=>{const research=!$('#researchMode').hidden,s=$(research?'#researchStatus':'#status');s.textContent=m;s.className=c};
 let diagnostics=null;
 const modelStat=(bucket,model)=>{T[bucket]=T[bucket]||{};return T[bucket][model]=T[bucket][model]||{attempts:0,exact:0,failed:0,totalSimilarity:0,totalDurationMs:0,totalTokens:0}};
 const recordHiderOutcome=success=>{
