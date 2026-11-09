@@ -159,15 +159,16 @@ test('all AI model selectors expose only the seven approved Pollinations models'
   }
 });
 
-test('AI model settings are open by default, collapsible, and carry the budget tooltip', async ({ page }) => {
+test('AI model settings are tucked away by default and remain available in Advanced', async ({ page }) => {
   await page.locator('#tabs button', { hasText: 'Duel' }).click();
+  await expect(page.locator('details.adv')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#hider')).toBeHidden();
+  await page.locator('details.adv > summary').click();
   await expect(page.locator('#hider')).toBeVisible();
   await expect(page.locator('#hider')).toHaveAttribute('title', /budget caps the spending/);
   await expect(page.locator('details.adv')).not.toContainText('catalog metadata');
   await page.locator('details.adv > summary').click();
   await expect(page.locator('#hider')).toBeHidden();
-  await page.locator('details.adv > summary').click();
-  await expect(page.locator('#hider')).toBeVisible();
 });
 
 test('AI Hider authors the complete organic image and Seeker receives only the blind image', async ({ page }) => {
@@ -376,4 +377,52 @@ test('Hider prompt carries an output budget that matches what the sanitizer real
   expect(r.allowedOk).toBe(true);
   expect(r.useHref).toBe(true);
   expect(r.rejected).toEqual(['style', 'pattern', 'marker', 'animate']);
+});
+
+
+test('training levels use a fixed canonical word and illustration across visits', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Learn' }).click();
+  await page.locator('#levels button').nth(0).click();
+  const first = await page.locator('#imgbox img').getAttribute('src');
+  const firstMessage = await page.locator('#status').textContent();
+  await page.locator('#levels button').nth(0).click();
+  const second = await page.locator('#imgbox img').getAttribute('src');
+  expect(second).toBe(first);
+  expect(firstMessage).toContain('Skyline');
+});
+
+test('Daily never applies the artificial two-try Time Pressure modifier', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Daily' }).click();
+  await expect(page.locator('#status')).toContainText(/3 tries/);
+  await expect(page.locator('#status')).not.toContainText('Time Pressure');
+  await expect(page.locator('#status')).not.toContainText('Easy');
+  await expect(page.locator('#status')).not.toContainText('Medium');
+  await expect(page.locator('#status')).not.toContainText('Hard');
+});
+
+test('Duel Next returns to setup without starting or charging a new Hider request', async ({ page }) => {
+  let calls = 0;
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/></svg>';
+  await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    calls++;
+    await route.fulfill({json:{choices:[{message:{content:svg+'\\nSCHEME: A simple test encoding.'},finish_reason:'stop'}],usage:{total_tokens:10}}});
+  });
+  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({json:{data:[{id:'openai/gpt-6.1-sol'}]}}));
+  await page.reload();
+  await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
+  await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
+  await page.fill('#msg','LANTERN');
+  await page.click('#hide');
+  await expect(page.locator('#imgbox img')).toBeVisible();
+  await page.click('#next');
+  await expect(page.locator('#duel')).toBeVisible();
+  await expect(page.locator('#game')).toBeHidden();
+  expect(calls).toBe(1);
+});
+
+test('Hint button displays used and available hint count', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Learn' }).click();
+  await expect(page.locator('#hint')).toContainText('0/');
+  await page.click('#hint');
+  await expect(page.locator('#hint')).toContainText('1/');
 });
