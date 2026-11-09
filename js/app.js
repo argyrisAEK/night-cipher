@@ -42,7 +42,6 @@ const recordSeekerOutcome=(record,role='primary')=>{
   if(hs&&role==='independent'&&record.status==='completed'){hs.independentEvaluated++;if(record.exactMatch===true)hs.independentExact++;}
   save();score();
 };
-
 const renderDiagnostics=()=>{
   const root=$('#diagnosticsContent');if(!root)return;
   if(!diagnostics){root.innerHTML='<small>No AI output captured yet. Start an AI vs AI Duel to inspect the Hider and Seeker responses.</small>';return}
