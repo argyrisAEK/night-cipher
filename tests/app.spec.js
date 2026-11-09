@@ -410,6 +410,30 @@ test('Research Mode is a separate workspace and does not replace game navigation
   await expect(page.locator('#researchMode')).toBeHidden();
 });
 
+test('Research report groups saved experiment history into readable tables', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('nc', JSON.stringify({
+    n:3,hm:{'openai/gpt-6.1-sol':{attempts:2,rendered:2,primaryEvaluated:0,primaryExact:0,independentEvaluated:0,independentExact:0,totalTokens:200,totalDurationMs:4000}},
+    sm:{'openai/gpt-6.1-terra':{attempts:2,exact:1,failed:1,totalTokens:120,totalDurationMs:4000}},
+    s:{'hider openai/gpt-6.1-sol → openai/gpt-6.1-terra · visual':{n:2,ok:1}},
+    qh:{'openai/gpt-6.1-sol → openai/gpt-6.1-terra + openai/gpt-6-luna':{n:2,bothExact:1,agreement:2}},
+    sh:{'openai/gpt-6.1-sol':{s:16,n:2}},
+    rb:{'openai/gpt-6.1-terra · jpg85':{n:2,ok:1,sim:1.7}},
+    st:{s:16,n:2},bestTimes:{a:12000},levels:{0:true}
+  })));
+  await page.reload();
+  await page.locator('#tabs button',{hasText:'Research'}).click();
+  await expect(page.locator('#report .report-group')).toHaveCount(5);
+  await expect(page.locator('#report')).toContainText('Model leaderboard');
+  await expect(page.locator('#report')).toContainText('openai/gpt-6.1-sol');
+  await expect(page.locator('#report')).toContainText('Not tested');
+  await expect(page.locator('#researchStats')).toContainText('320');
+  await expect(page.locator('#researchStats')).toContainText('Saved tokens · this browser');
+  await page.locator('#report .report-group').filter({hasText:'Matchups'}).locator('summary').click();
+  await expect(page.locator('#report')).toContainText('openai/gpt-6.1-terra');
+  await page.locator('#report .report-group').filter({hasText:'Robustness'}).locator('summary').click();
+  await expect(page.locator('#report')).toContainText('jpg85');
+});
+
 test('default models: Seeker is terra, independent validation is luna, and the Hider never grades itself', async ({ page }) => {
   await page.locator('#tabs button', { hasText: 'Duel' }).click();
   await expect(page.locator('#hider')).toHaveValue('openai/gpt-6.1-sol');
