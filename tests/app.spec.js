@@ -12,6 +12,21 @@ test('loads all game modes and the BYOP connect control', async ({ page }) => {
   await expect(page.locator('#status')).not.toBeEmpty();
 });
 
+test('header and AI duel image copy describe the visual steganography game', async ({ page }) => {
+  await expect(page.locator('header .sub')).toContainText('A visual steganography game');
+  await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
+  await expect(page.locator('#imgbox')).toContainText('AI Hider conceals your message in an image. AI Seeker then tries to decode it.');
+});
+
+test('You hide, AI seeks uses numbered scheme labels without unknown wording', async ({ page }) => {
+  await page.locator('#tabs button',{hasText:'You hide, AI seeks'}).click();
+  const labels=await page.locator('#osch option').allTextContents();
+  expect(labels).toHaveLength(10);
+  expect(labels[0]).toBe('Scheme #01');
+  expect(labels[9]).toBe('Scheme #10');
+  expect(labels.join(' ')).not.toMatch(/unknown/i);
+});
+
 test('Learn opens the ten training levels', async ({ page }) => {
   await page.locator('#tabs button', { hasText: 'Learn' }).click();
   await expect(page.locator('#levels')).toBeVisible();
