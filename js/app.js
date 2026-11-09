@@ -27,8 +27,8 @@ const score=()=>{
   <div><b>${rate(exact,attempts)}</b><small>Seeker exact recovery</small></div><div><b>${hiders?rendered+'/'+hiders:'Not tested'}</b><small>Valid rendered SVGs</small></div>
   <div><b>${T.st?.n?(T.st.s/T.st.n).toFixed(1)+'/10':'Not tested'}</b><small>Mean stealth rating</small></div>
   <div><b>${levels}/${TRAIN.length}</b><small>Training levels completed</small></div><div><b>${bests.length?(Math.min(...bests)/1000).toFixed(1)+'s':'—'}</b><small>Best solve time</small></div>
-  <div><b>${tok?tok.toLocaleString():'—'}</b><small>Session tokens · since page load</small></div><div><b>${savedTokens?savedTokens.toLocaleString():'—'}</b><small>Saved tokens · this browser</small></div>
- </div><p class="report-footnote">Session usage resets when this page is reloaded. Saved totals are accumulated locally in this browser and are not account-wide.</p>`;
+  <div><b>${tok?tok.toLocaleString():'—'}</b><small>Session tokens · since page load</small></div><div><b>${savedTokens?savedTokens.toLocaleString():'—'}</b><small>Saved Hider + Seeker tokens</small></div>
+ </div><p class="report-footnote">Session usage includes all calls since page load. Saved Hider and Seeker token totals persist locally in this browser; they are not account-wide.</p>`;
  const hiderRows=hiderStats.map(([model,v])=>row([esc(model),`${count(v.rendered)}/${count(v.attempts)}`,rate(count(v.primaryExact),count(v.primaryEvaluated)),rate(count(v.independentExact),count(v.independentEvaluated)),avg(v.totalTokens,count(v.attempts),'tokens'),avg(v.totalDurationMs,count(v.attempts),'ms')]));
  const seekerRows=seekerStats.map(([model,v])=>row([esc(model),`${count(v.exact)}/${count(v.attempts)}`,rate(count(v.exact),count(v.attempts)),count(v.failed).toLocaleString(),avg(v.totalTokens,count(v.attempts),'tokens'),avg(v.totalDurationMs,count(v.attempts),'ms')]));
  const modelContent=`<h4>Hider models</h4>${table(['Model','Valid SVGs','Primary exact','Independent exact','Avg tokens','Avg time'],hiderRows,'No Hider runs recorded yet.')}`+
