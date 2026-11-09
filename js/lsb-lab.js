@@ -25,10 +25,6 @@ export function mountLsbLab(root) {
     const scale = 18;
     inspector.width = scale * 8; inspector.height = scale * 8;
     zoom.imageSmoothingEnabled = false;
-    values.forEach((v, i) => {
-      zoom.fillStyle = `rgb(${i === 0 ? v : 0},${i === 1 ? v : 0},${i === 2 ? v : 0})`;
-      zoom.fillRect(0, i * 0, 0, 0);
-    });
     zoom.fillStyle = `rgb(${values[0]},${values[1]},${values[2]})`;
     zoom.fillRect(0, 0, inspector.width, inspector.height);
     zoom.strokeStyle = 'rgba(255,255,255,.45)';
