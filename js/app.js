@@ -309,7 +309,7 @@ const t=TRAIN[$('#osch').value],nm=`Cipher #${String(+$('#osch').value+1).padSta
 $('#res').innerHTML=`<b>Your puzzle: “${esc(w)}” hidden with ${esc(nm)}.</b>`;$('#ai').disabled=false;$('#ai').click()};
 
 /* ---------- tabs & models ---------- */
-function train(i){const t=TRAIN[i],w=DW[i],seed=hash32('training-art-'+i);$('#duel').hidden=true;start({mode:'train',schemeIdx:i,secret:w,svg:t.g(w,seed),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});say(`Level ${i+1} · ${t.n}. Find the hidden message. You have 3 tries.`)}
+function train(i){const t=TRAIN[i],w=t.m,seed=hash32('training-art-'+i);$('#duel').hidden=true;start({mode:'train',schemeIdx:i,secret:w,svg:t.g(w,seed),scheme:t.s,hints:[...t.h,`It starts with “${w[0]}”.`]});say(`Level ${i+1} · ${t.n}. Find the hidden message. You have 3 tries.`)}
 const tabs=$('#tabs'),levels=$('#levels'),allTabs=[];
 const IDLE={duel:'Choose a secret message. AI Hider will hide it in an image, then AI Seeker will try to decode it.',own:'Pick a word and a hiding scheme on the right, then press “Challenge the AI”.'};
 function stageIdle(m){$('#imgbox').textContent=m;$('#res').innerHTML='';$('#robustnessReport').innerHTML=''}
