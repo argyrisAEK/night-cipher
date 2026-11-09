@@ -7,5 +7,5 @@ export const POLLINATIONS_MODELS = Object.freeze([
   'openai/gpt-6-astra',
   'community/vendouple/gpt-6-luna',
   'community/vendouple/gpt-6-astra',
- 'community/JustScriptzz/claude-opus-4.6'
+ 'community/JustScriptzz/gpt-5.6-terra'
 ]);
