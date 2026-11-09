@@ -351,6 +351,18 @@ test('Diagnostics live in Research Mode, separate from the game layout', async (
   expect(order).toBe(true);
 });
 
+test('Research Mode is a separate workspace and does not replace game navigation', async ({ page }) => {
+  await page.locator('#tabs button',{hasText:'Research'}).click();
+  await expect(page.locator('#researchMode')).toBeVisible();
+  await expect(page.locator('#mainGame')).toBeHidden();
+  await expect(page.locator('#diagnostics')).toBeVisible();
+  await expect(page.locator('#independent')).toBeHidden();
+  await expect(page.locator('#robustness')).toBeHidden();
+  await page.locator('#tabs button',{hasText:'Daily'}).click();
+  await expect(page.locator('#mainGame')).toBeVisible();
+  await expect(page.locator('#researchMode')).toBeHidden();
+});
+
 test('default models: Seeker is terra, independent validation is luna, and the Hider never grades itself', async ({ page }) => {
   await page.locator('#tabs button', { hasText: 'Duel' }).click();
   await expect(page.locator('#hider')).toHaveValue('openai/gpt-6.1-sol');
