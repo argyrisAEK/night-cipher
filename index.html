@@ -29,6 +29,29 @@
 <div id="setup" class="warn" hidden><b>Setup:</b> replace <code>pk_REPLACE_ME</code> (twice: the &lt;polli-connect&gt; tag and <code>APP_KEY</code>) with your App Key and add this page's URL as a Redirect URI.</div>
 <nav id="tabs"></nav>
 <nav id="levels" hidden aria-label="Training levels"></nav>
+
+<section id="lsbLab" class="card lsb-lab" hidden aria-labelledby="lsbTitle">
+<h2 id="lsbTitle">Classic LSB Steganography Lab</h2>
+<p class="diag-intro">Hide UTF-8 text in the least-significant bits of RGB image channels. This is a local browser experiment: no AI calls or uploads are made.</p>
+<div class="lsb-grid">
+<div class="lsb-controls">
+<label for="lsbFile">1. Choose a cover image</label><input id="lsbFile" type="file" accept="image/png,image/jpeg,image/webp">
+<label for="lsbMessage">2. Message to hide</label><textarea id="lsbMessage" rows="3" maxlength="2000" placeholder="Enter a short message…"></textarea>
+<p id="lsbCapacity" class="lsb-capacity" aria-live="polite">Load an image to calculate its capacity.</p>
+<div class="row"><button id="lsbEncode" class="pri" disabled>Encode message</button><button id="lsbDecode" disabled>Decode current image</button></div>
+<div class="row"><button id="lsbDownload" disabled>Download PNG</button><button id="lsbReset">Reset</button></div>
+<label for="lsbDecoded">3. Recovered message</label><textarea id="lsbDecoded" rows="3" readonly placeholder="Decoded text will appear here…"></textarea>
+<p id="lsbStatus" role="status" aria-live="polite">Load an image to begin.</p>
+</div>
+<div class="lsb-visual"><h3>Image canvas</h3><p class="diag-intro">Click any pixel to inspect its RGB channel values.</p>
+<canvas id="lsbImage" aria-label="Image used for LSB encoding and decoding"></canvas>
+<h3>Pixel inspector</h3><canvas id="lsbInspector" width="144" height="144" aria-label="Magnified selected pixel"></canvas>
+<p id="lsbPixelInfo" class="lsb-pixel-info">Select a pixel in the image to inspect its RGB channels.</p></div>
+</div>
+<details class="lsb-explainer"><summary>How LSB encoding works</summary>
+<ol><li>Each red, green and blue channel is an 8-bit number from 0 to 255.</li><li>The least-significant bit (LSB) is the final binary digit. Changing it alters a channel value by at most 1.</li><li>This lab writes one message bit into each RGB channel, in row-major pixel order. Alpha values are left untouched.</li><li>A small header identifies this lab's format and stores the UTF-8 message length. The header consumes 7 bytes of capacity.</li></ol>
+<p><b>Important:</b> export and share the result as PNG. JPEG is lossy and may change the embedded bits. This simple educational encoder is not encrypted, authenticated, or designed to resist steganalysis.</p></details>
+</section>
 <main id="mainGame">
 <section class="card"><p id="intro" class="intro"></p><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div>
 </section>
