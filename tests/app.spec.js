@@ -603,3 +603,11 @@ test('all ten cipher walkthrough tables derive one conversion row per training l
     await expect(page.locator('.walk-table')).not.toBeEmpty();
   }
 });
+
+test('Failure Analysis helpers summarize, filter and export structured evidence',async({page})=>{
+ const r=await page.evaluate(async()=>{const{summarizeEvidence,filterEvidence,evidenceToCSV}=await import('/js/failure-analysis.js');const rows=[{type:'primary',outcome:'failure',category:'message_mismatch',seekerModel:'model-a',expectedMessage:'LANTERN',decodedMessage:'LATER'},{type:'independent',outcome:'success',category:'exact_recovery',seekerModel:'model-b',expectedMessage:'LANTERN',decodedMessage:'LANTERN'},{type:'hider',outcome:'failure',category:'missing_scheme',hiderModel:'model-a'}];return{summary:summarizeEvidence(rows),filtered:filterEvidence(rows,{type:'primary',outcome:'failure',model:'model-a',query:'later'}).length,csv:evidenceToCSV(rows)}});
+ expect(r.summary.total).toBe(3);expect(r.summary.failures).toBe(2);expect(r.summary.successes).toBe(1);expect(r.summary.failureRate).toBeCloseTo(2/3);expect(r.summary.byCategory.message_mismatch).toBe(1);expect(r.filtered).toBe(1);expect(r.csv).toContain('timestamp,type,outcome,category');expect(r.csv).toContain('""LANTERN""');
+});
+test('Research Mode renders the local Failure Analysis workspace and empty state',async({page})=>{
+ await page.locator('#tabs button',{hasText:'Research'}).click();await expect(page.locator('#failureAnalysis')).toBeVisible();await expect(page.locator('#evidenceStats')).toContainText('Recorded events');await expect(page.locator('#evidenceTable')).toContainText('No experiments recorded yet');await expect(page.locator('#evidenceJson')).toBeVisible();await expect(page.locator('#evidenceCsv')).toBeVisible();
+});

@@ -112,6 +112,19 @@
 <section id="researchMode" class="card research-mode" hidden>
 <h2>Research Mode</h2><p id="researchStatus" role="status" class="research-status"></p><p class="diag-intro">Controlled evaluation tools for Hider quality, blind Seeker recovery and image robustness. Additional model calls use your Pollen.</p>
 <section class="research-section"><h3>Experiments</h3><p class="diag-intro">Select an AI round first. Independent Seeker compares a second model against the primary blind result. Robustness Test sends the same image through PNG and two JPEG encodings.</p><div class="row research-actions"><button id="independent" title="Runs one additional blind vision-model request; uses Pollen" hidden>Independent Seeker validation · 1 call</button><button id="robustness" title="Runs three additional vision-model calls; uses Pollen" hidden>Robustness Test · 3 calls</button></div><div id="robustnessReport" aria-live="polite"></div></section>
+<section class="research-section" id="failureAnalysis">
+<h3>Failure Analysis &amp; Evidence Log</h3>
+<p class="diag-intro">A local, bounded record of Hider, primary/independent Seeker and image-variant outcomes. Evidence is stored in this browser only; prompts, raw provider responses and API credentials are not copied into the log.</p>
+<div id="evidenceStats" class="research-metrics evidence-metrics" aria-live="polite"></div>
+<div class="evidence-controls">
+<label>Experiment <select id="evidenceType"><option value="all">All experiments</option><option value="hider">Hider</option><option value="primary">Primary Seeker</option><option value="independent">Independent Seeker</option><option value="robustness">Image robustness</option></select></label>
+<label>Outcome <select id="evidenceOutcome"><option value="all">All outcomes</option><option value="failure">Failures only</option><option value="success">Successes only</option></select></label>
+<label>Model <select id="evidenceModel"><option value="">All models</option></select></label>
+<label>Search <input id="evidenceSearch" type="search" placeholder="Model, message, failure type…"></label></div>
+<div class="row evidence-actions"><button id="evidenceJson" type="button">Export JSON</button><button id="evidenceCsv" type="button">Export CSV</button><button id="evidenceClear" type="button" class="secondary">Clear evidence log</button></div>
+<div id="evidenceTable" class="evidence-table-wrap" aria-live="polite"><p class="report-empty">No experiments recorded yet. Run an AI Hider / Seeker duel to begin collecting evidence.</p></div>
+<p class="report-footnote">Up to 200 recent events are retained. Export before clearing browser data. Exact recovery compares normalized message text; similarity is a separate diagnostic metric.</p>
+</section>
 <section class="research-section"><h3>Research report</h3><p class="diag-intro">Historical experiment results grouped by model, matchup and evaluation type.</p><div id="researchStats"></div><div id="report" class="research-report" aria-live="polite"></div></section>
 <details id="diagnostics" class="diagnostics"><summary>Round diagnostics &amp; raw output</summary><p class="diag-intro">Inspect SVG/XML validation, PNG rasterization, private SCHEME presence, blind-payload audits, exact recovery, model usage, latency and request failures. Diagnostic exports exclude API keys and authorization headers.</p><div id="diagnosticsContent"><small>No AI output captured yet. Start an AI vs AI Duel to inspect a round.</small></div></details>
 </section>

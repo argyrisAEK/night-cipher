@@ -7,6 +7,7 @@ import { parseSeekerResponse, compareSeekers, auditBlindRequest, normalizeMessag
 import { POLLINATIONS_MODELS } from './models.js';
 import { mountLsbLab } from './lsb-lab.js';
 import { mountCipherWalkthrough } from './walkthrough.js';
+import { summarizeEvidence, filterEvidence, evidenceToCSV } from './failure-analysis.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]/gu,'');
@@ -15,6 +16,9 @@ const sim=(a,b)=>{a=norm(a);b=norm(b);const m=Math.max(a.length,b.length);return
 const simMessage=(a,b)=>{a=normalizeMessage(a);b=normalizeMessage(b);const m=Math.max(a.length,b.length);return m?1-lev(a,b)/m:0};
 let R=null,T=loadState(),tok=0;const save=()=>saveState(T);
 const chat=createChat({getConnection:()=>conn,getTokenCount:()=>tok,setTokenCount:v=>tok=v,onUsage:()=>score()});
+const recordEvidence=event=>{T.evidence=Array.isArray(T.evidence)?T.evidence:[];T.evidence.unshift({id:globalThis.crypto?.randomUUID?.()||String(Date.now()),timestamp:new Date().toISOString(),...event});T.evidence=T.evidence.slice(0,200);save();renderEvidence()};
+const renderEvidence=()=>{const root=$('#evidenceTable');if(!root)return;const events=Array.isArray(T.evidence)?T.evidence:[],type=$('#evidenceType')?.value||'all',outcome=$('#evidenceOutcome')?.value||'all',model=$('#evidenceModel')?.value||'',query=$('#evidenceSearch')?.value||'',models=[...new Set(events.flatMap(e=>[e.hiderModel,e.seekerModel]).filter(Boolean))].sort(),sel=$('#evidenceModel'),selected=sel?.value||'';if(sel){sel.innerHTML='<option value="">All models</option>'+models.map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join('');sel.value=models.includes(selected)?selected:''}const rows=filterEvidence(events,{type,outcome,model,query}),s=summarizeEvidence(events);$('#evidenceStats').innerHTML=[['Recorded events',s.total],['Failures',s.failures],['Successful checks',s.successes],['Failure rate',s.failureRate==null?'Not tested':Math.round(s.failureRate*100)+'%']].map(([a,b])=>'<div><b>'+b+'</b><small>'+a+'</small></div>').join('');if(!rows.length){root.innerHTML='<p class="report-empty">'+(events.length?'No events match these filters.':'No experiments recorded yet. Run an AI Hider / Seeker duel to begin collecting evidence.')+'</p>';return}const c=v=>esc(v==null||v===''?'—':v);root.innerHTML='<table class="evidence-table"><thead><tr><th>Time</th><th>Experiment</th><th>Outcome</th><th>Failure / check</th><th>Hider</th><th>Seeker</th><th>Expected</th><th>Decoded</th><th>Exact</th><th>Similarity</th><th>Duration</th><th>Tokens</th></tr></thead><tbody>'+rows.slice(0,100).map(e=>'<tr><td>'+c(new Date(e.timestamp).toLocaleString())+'</td><td>'+c(e.type)+'</td><td class="evidence-outcome-'+c(e.outcome)+'">'+c(e.outcome)+'</td><td>'+c(e.category)+'</td><td>'+c(e.hiderModel)+'</td><td>'+c(e.seekerModel)+'</td><td>'+c(e.expectedMessage)+'</td><td>'+c(e.decodedMessage)+'</td><td>'+c(e.exactMatch==null?'—':e.exactMatch?'Yes':'No')+'</td><td>'+c(e.similarity==null?'—':Math.round(e.similarity*100)+'%')+'</td><td>'+c(e.durationMs==null?'—':e.durationMs+' ms')+'</td><td>'+c(e.tokens)+'</td></tr>').join('')+'</tbody></table><p class="report-footnote">Showing '+Math.min(rows.length,100)+' of '+rows.length+' matching events.</p>'};
+const downloadEvidence=format=>{const rows=filterEvidence(T.evidence||[],{type:$('#evidenceType').value,outcome:$('#evidenceOutcome').value,model:$('#evidenceModel').value,query:$('#evidenceSearch').value}),data=format==='csv'?evidenceToCSV(rows):JSON.stringify({schemaVersion:1,exportedAt:new Date().toISOString(),events:rows},null,2),blob=new Blob([data],{type:format==='csv'?'text/csv;charset=utf-8':'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='night-cipher-evidence-'+new Date().toISOString().slice(0,10)+'.'+format;a.click();URL.revokeObjectURL(url)};
 const score=()=>{
  const hiderStats=Object.entries(T.hm||{}),seekerStats=Object.entries(T.sm||{}),matchStats=Object.entries(T.s||{}),qualityStats=Object.entries(T.qh||{}),stealthStats=Object.entries(T.sh||{}),robustStats=Object.entries(T.rb||{});
  const sum=(rows,key)=>rows.reduce((n,[,v])=>n+(Number(v[key])||0),0);
@@ -41,7 +45,8 @@ const score=()=>{
  const qualityRows=qualityStats.map(([key,v])=>{const parts=key.split(' → '),models=(parts[1]||'').split(' + ');return row([esc(parts[0]||key),esc(models[0]||'—'),esc(models[1]||'—'),rate(count(v.bothExact),count(v.n)),rate(count(v.agreement),count(v.n)),count(v.n)])});
  const stealthRows=stealthStats.map(([model,v])=>row([esc(model),v.n?(v.s/v.n).toFixed(1)+'/10':'Not tested',count(v.n)]));
  const robustRows=robustStats.map(([key,v])=>{const cut=key.lastIndexOf(' · ');return row([esc(cut<0?key:key.slice(0,cut)),esc(cut<0?'—':key.slice(cut+3)),`${count(v.ok)}/${count(v.n)}`,rate(count(v.ok),count(v.n)),v.n?Math.round(100*v.sim/v.n)+'%':'Not tested'])});
- $('#report').innerHTML=[details('Model leaderboard','Hider and Seeker performance',modelContent,true),details('Matchups','Exact recovery by Hider → Seeker pair',table(['Hider model / scheme','Seeker model','Exact','Win rate'],matchupRows,'No matchup results recorded yet.')),details('Quality & independent validation','Agreement and dual-model exact recovery',table(['Hider','Primary Seeker','Independent Seeker','Both exact','Agreement','Runs'],qualityRows,'No independent validation runs recorded yet.')),details('Stealth ratings','Average visual innocuousness by model',table(['Hider model','Mean rating','Ratings'],stealthRows,'No stealth ratings recorded yet.')),details('Robustness','Recovery across PNG and JPEG variants',table(['Seeker model','Image variant','Recovered','Recovery rate','Mean similarity'],robustRows,'No robustness tests recorded yet.'))].join('');
+ $('#report').innerHTML=[details('Model leaderboard','Hider and Seeker performance',modelContent,true),details('Matchups','Exact recovery by Hider → Seeker pair',table(['Hider model / scheme','Seeker model','Exact','Win rate'],matchupRows,'No matchup results recorded yet.')),details('Quality & independent validation','Agreement and dual-model exact recovery',table(['Hider','Primary Seeker','Independent Seeker','Both exact','Agreement','Runs'],qualityRows,'No independent validation runs recorded yet.')),details('Stealth ratings','Average visual innocuousness by model',table(['Hider model','Mean rating','Ratings'],stealthRows,'No stealth ratings recorded yet.')),details('Robustness','Recovery across PNG and JPEG variants',table(['Seeker model','Image variant','Recovered','Recovery rate','Mean similarity'],robustRows,'No robustness tests recorded yet.'))] .join('');
+ renderEvidence();
 };
 const say=(m,c='')=>{const research=!$('#researchMode').hidden,s=$(research?'#researchStatus':'#status');s.textContent=m;s.className=c};
 let diagnostics=null;
@@ -51,7 +56,7 @@ const recordHiderOutcome=success=>{
   T.hm=T.hm||{};const s=T.hm[h.model]=T.hm[h.model]||{attempts:0,validSvg:0,rendered:0,schemePresent:0,failed:0,primaryEvaluated:0,primaryExact:0,independentEvaluated:0,independentExact:0,totalDurationMs:0,totalTokens:0};
   s.attempts++;if(h.validation?.svgValid===true)s.validSvg++;if(h.validation?.renderValid===true)s.rendered++;if(h.validation?.schemePresent===true)s.schemePresent++;if(!success)s.failed++;
   s.totalDurationMs+=h.durationMs||0;s.totalTokens+=h.usage?.total_tokens||h.totalTokens||h.completionTokens||0;
-  h.statsRecorded=true;save();score();
+  h.statsRecorded=true;const hv=h.validation||{},failureText=(hv.errors||[]).join(' ')+' '+(diagnostics?.errors||[]).join(' '),category=success?'valid_hider_output':!hv.svgValid?'invalid_or_missing_svg':!hv.renderValid?'png_rasterization_failed':!hv.schemePresent?'missing_scheme':/secret|leak/i.test(failureText)?'secret_leak':'hider_generation_error';recordEvidence({type:'hider',outcome:success?'success':'failure',category,hiderModel:h.model,expectedMessage:diagnostics?.encoding?.expectedMessage||null,svgValid:hv.svgValid,renderValid:hv.renderValid,schemePresent:hv.schemePresent,durationMs:h.durationMs,tokens:h.usage?.total_tokens||h.totalTokens||h.completionTokens||null,error:success?null:failureText.trim()});save();score();
 };
 const recordSeekerOutcome=(record,role='primary')=>{
   if(!record||record.statsRecorded)return;
@@ -60,7 +65,7 @@ const recordSeekerOutcome=(record,role='primary')=>{
   else s.failed++;
   s.totalTokens+=record.usage?.total_tokens||record.tokens||0;
   s.totalDurationMs+=record.durationMs||0;
-  record.statsRecorded=true;
+  record.statsRecorded=true;const failed=record.status!=='completed',roleType=role==='independent'?'independent':'primary',failureCategory=failed?(record.blindAudit?.verified===false?'blind_payload_audit_failed':/MESSAGE line|parse|valid MESSAGE/i.test(record.failureReason||record.error||'')?'seeker_response_parse_error':'seeker_request_error'):(record.exactMatch?'exact_recovery':'message_mismatch');recordEvidence({type:roleType,outcome:!failed&&record.exactMatch?'success':'failure',category:failureCategory,hiderModel:diagnostics?.hider?.model||null,seekerModel:record.model||null,scheme:diagnostics?.encoding?.method||null,expectedMessage:diagnostics?.encoding?.expectedMessage||null,decodedMessage:record.decodedMessage||null,exactMatch:record.exactMatch??null,similarity:record.similarity??null,durationMs:record.durationMs??null,tokens:record.usage?.total_tokens||record.tokens||null,blindAuditVerified:record.blindAudit?.verified??null,error:failed?(record.failureReason||record.error||null):null});
   const hs=diagnostics?.hider?.model&&T.hm?.[diagnostics.hider.model];
   if(hs&&role==='primary'&&record.status==='completed'){hs.primaryEvaluated++;if(record.exactMatch===true)hs.primaryExact++;}
   if(hs&&role==='independent'&&record.status==='completed'){hs.independentEvaluated++;if(record.exactMatch===true)hs.independentExact++;}
@@ -267,7 +272,7 @@ $('#robustness').onclick=async()=>{
     if(R!==round)return;
     round.robustness=rows;
     T.rb=T.rb||{};
-    for(const row of rows){if(row.s==null)continue;const key=model+' · '+row.id,v=T.rb[key]=T.rb[key]||{n:0,ok:0,sim:0};v.n++;v.sim+=row.s;if(row.ok)v.ok++}
+    for(const row of rows){if(row.s==null)continue;const key=model+' · '+row.id,v=T.rb[key]=T.rb[key]||{n:0,ok:0,sim:0};v.n++;v.sim+=row.s;if(row.ok)v.ok++;recordEvidence({type:'robustness',outcome:row.ok?'success':'failure',category:row.ok?'image_variant_recovered':'image_variant_mismatch',hiderModel:diagnostics?.hider?.model||null,seekerModel:model,expectedMessage:round.secret,decodedMessage:row.guess||null,exactMatch:normalizeMessage(row.guess||'')===normalizeMessage(round.secret),similarity:row.s,variant:row.id,tokens:row.tokens??null,error:row.error||null})}
     save();score();
     const valid=rows.filter(r=>r.s!=null),wins=valid.filter(r=>r.ok).length;
     say(`Robustness test complete: ${wins}/${valid.length} image variants recovered${rows.some(r=>r.error)?' (some requests failed)':''}.` ,wins===3?'ok':'');
@@ -396,7 +401,7 @@ fill('#seeker2',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
 fill('#seekerAudit',POLLINATIONS_MODELS,/^openai\/gpt-6-luna$/i);
 fill('#judgeModel',POLLINATIONS_MODELS,/openai\/gpt-6\.1-sol/i);
 ['#hider','#seeker','#seeker2','#seekerAudit','#judgeModel'].forEach(sel=>{$(sel).disabled=false});
-if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();mountLsbLab($('#lsbLab'));mountCipherWalkthrough($('#cipherWalkthrough'));allTabs[0].click();
+if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();mountLsbLab($('#lsbLab'));mountCipherWalkthrough($('#cipherWalkthrough'));$('#evidenceType').addEventListener('change',renderEvidence);$('#evidenceOutcome').addEventListener('change',renderEvidence);$('#evidenceModel').addEventListener('change',renderEvidence);$('#evidenceSearch').addEventListener('input',renderEvidence);$('#evidenceJson').onclick=()=>downloadEvidence('json');$('#evidenceCsv').onclick=()=>downloadEvidence('csv');$('#evidenceClear').onclick=()=>{if(!T.evidence?.length)return;if(!confirm('Clear the locally saved Failure Analysis evidence log?'))return;T.evidence=[];save();renderEvidence()};allTabs[0].click();
 /* ---------- first-visit "How to play" ---------- */
 const howto=$('#howto'),HOWTO_KEY='nc-howto-seen';
 const openHowto=()=>{if(!howto.open){howto.showModal();howto.scrollTop=0}};
