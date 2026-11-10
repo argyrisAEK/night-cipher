@@ -12,7 +12,7 @@ Run:
 npm test -- tests/blind-seeker-dataset.spec.js
 ```
 
-The Playwright test creates 200 PNG trials: 10 ciphers × 5 message lengths (5, 10, 15, 20, 26) × 4 image conditions:
+The Playwright test creates 200 image trials: 10 ciphers × 5 message lengths (5, 10, 15, 20, 26) × 4 image conditions:
 
 - Original PNG baseline
 - JPEG quality 55%
