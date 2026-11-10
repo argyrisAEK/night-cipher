@@ -52,6 +52,30 @@
 <ol><li>Each red, green and blue channel is an 8-bit number from 0 to 255.</li><li>The least-significant bit (LSB) is the final binary digit. Changing it alters a channel value by at most 1.</li><li>This lab writes one message bit into each RGB channel, in row-major pixel order. Alpha values are left untouched.</li><li>A small header identifies this lab's format and stores the UTF-8 message length. The header consumes 7 bytes of capacity.</li></ol>
 <p><b>Important:</b> export and share the result as PNG. JPEG is lossy and may change the embedded bits. This simple educational encoder is not encrypted, authenticated, or designed to resist steganalysis.</p></details>
 </section>
+<section id="cipherWalkthrough" class="card cipher-walkthrough" hidden aria-labelledby="walkTitle">
+<h2 id="walkTitle">Interactive Cipher Walkthrough</h2>
+<p class="diag-intro">Learn how each of the ten deterministic training ciphers turns visible patterns into letters. This workspace is local and makes no AI requests.</p>
+<div class="walk-toolbar">
+<label for="walkScheme">Choose a training cipher</label>
+<select id="walkScheme"></select>
+<span id="walkProgress" class="walk-progress" aria-live="polite">Step 1 of 4</span>
+</div>
+<div class="walk-layout">
+<div class="walk-image-panel">
+<h3>Training image</h3>
+<img id="walkImage" alt="Training cipher example">
+<p class="walk-image-note">The image is generated from the same fixed training definition used in Learn.</p>
+</div>
+<div class="walk-instruction-panel">
+<div id="walkStepContent" aria-live="polite"></div>
+<div class="row walk-controls">
+<button id="walkPrevious" type="button" disabled>← Previous</button>
+<button id="walkReveal" type="button" hidden>Show annotated solution →</button>
+<button id="walkNext" type="button" class="pri">Next step →</button>
+</div>
+</div>
+</div>
+</section>
 <main id="mainGame">
 <section class="card"><p id="intro" class="intro"></p><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div>
 </section>
