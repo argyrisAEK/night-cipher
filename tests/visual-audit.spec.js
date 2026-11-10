@@ -19,8 +19,8 @@ const SELECTORS=[
 const OVERLAP_THRESHOLD=0.10;
 
 test('Visual Audit: deterministic geometry, clipping and screenshot baseline for all 10 ciphers', async ({ page }, testInfo) => {
-  const { TRAIN } = await page.evaluate(async () => await import('/js/ciphers.js'));
-  expect(TRAIN).toHaveLength(10);
+  const cipherNames = await page.evaluate(async () => (await import('/js/ciphers.js')).TRAIN.map(item=>item.n));
+  expect(cipherNames).toHaveLength(10);
 
   const auditDir=path.resolve('test-results/visual-audit');
   await mkdir(auditDir,{recursive:true});
@@ -35,22 +35,17 @@ test('Visual Audit: deterministic geometry, clipping and screenshot baseline for
     ciphers:[]
   };
 
-  for(let cipherIndex=0;cipherIndex<TRAIN.length;cipherIndex++){
-    const cipher=TRAIN[cipherIndex];
+  for(let cipherIndex=0;cipherIndex<cipherNames.length;cipherIndex++){
+    const cipher={n:cipherNames[cipherIndex]};
     const cipherReport={index:cipherIndex,name:cipher.n,measurements:[]};
 
     for(const length of LENGTHS){
       const message=ALPHABET.slice(0,length);
       const seed=9000+cipherIndex*100+length;
-      const svg=await page.evaluate(({cipherIndex,message,seed})=>{
-        const {TRAIN}=window.__visualAuditModules;
+      const svg=await page.evaluate(async ({cipherIndex,message,seed})=>{
+        const {TRAIN}=await import('/js/ciphers.js');
         return TRAIN[cipherIndex].g(message,seed);
-      },{cipherIndex,message,seed}).catch(async()=>{
-        return await page.evaluate(async ({cipherIndex,message,seed})=>{
-          const {TRAIN}=await import('/js/ciphers.js');
-          return TRAIN[cipherIndex].g(message,seed);
-        },{cipherIndex,message,seed});
-      });
+      },{cipherIndex,message,seed});
 
       const selector=SELECTORS[cipherIndex];
       const metrics=await page.evaluate(({svg,selector})=>{
@@ -83,7 +78,6 @@ test('Visual Audit: deterministic geometry, clipping and screenshot baseline for
         const bounds=root.getBBox();
         const result={
           symbolBoxes:boxes.length,
-          expectedCharacters:messageLengthPlaceholder,
           clippedSymbolBoxes:clipped,
           overlappingPairs:overlaps,
           maxPairwiseOverlapRatio:Number(maxOverlapRatio.toFixed(4)),
@@ -92,7 +86,8 @@ test('Visual Audit: deterministic geometry, clipping and screenshot baseline for
         };
         host.remove();
         return result;
-      },{svg,selector}).then(x=>({...x,expectedCharacters:length}));
+      },{svg,selector});
+      metrics.expectedCharacters=length;
 
       cipherReport.measurements.push({length,seed,...metrics});
 
