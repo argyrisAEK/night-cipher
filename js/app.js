@@ -465,7 +465,7 @@ fill('#seeker',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
 fill('#seeker2',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
 fill('#seekerAudit',POLLINATIONS_MODELS,/^openai\/gpt-6-luna$/i);
 fill('#judgeModel',POLLINATIONS_MODELS,/openai\/gpt-6\.1-sol/i);
-fill('#roundSeeker',POLLINATIONS_MODELS,/^openai\\/gpt-6\\.1-terra$/i);
+fill('#roundSeeker',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
 ['#hider','#seeker','#seeker2','#seekerAudit','#judgeModel','#roundSeeker'].forEach(sel=>{$(sel).disabled=false});
 const MODEL_META_TARGETS=[['#hider','#hiderMeta',false],['#seeker','#seekerMeta',true],['#seeker2','#seeker2Meta',true],['#seekerAudit','#seekerAuditMeta',true],['#judgeModel','#judgeModelMeta',true],['#roundSeeker','#roundSeekerMeta',true]];
 function updateModelMeta(selectSelector,metaSelector,requiresVision=false){const model=getModelMetadata(modelCatalog,$(selectSelector)?.value);const target=$(metaSelector);if(target)target.textContent=describeModel(model,{requiresVision})}
