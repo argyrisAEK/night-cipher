@@ -7,6 +7,7 @@ import { parseSeekerResponse, compareSeekers, auditBlindRequest, normalizeMessag
 import { POLLINATIONS_MODELS } from './models.js';
 import { mountLsbLab } from './lsb-lab.js';
 import { mountCipherWalkthrough } from './walkthrough.js';
+import { mountStructuralSandbox } from './structural-sandbox.js';
 import { summarizeEvidence, filterEvidence, evidenceToCSV } from './failure-analysis.js';
 import { createDegradationVariants } from './degradation.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
@@ -362,7 +363,7 @@ const tabDefs=[
   ...TRAIN.map((t,i)=>['🎓 Level '+(i+1)+(T.levels&&T.levels[i]?' ✓':''),()=>train(i),'training']),
   ['⚔ AI vs AI Duel 💰',()=>{if(!(R&&R.mode==='duel'))stageIdle(IDLE.duel);$('#duel').hidden=false;$('#game').hidden=!(R&&R.mode=='duel');say('Choose the secret message and AI models, then start the duel.')},'duel'],
   ['🕵 You hide, AI seeks 💰',()=>{if(!(R&&R.mode==='own'))stageIdle(IDLE.own);$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own'],
-  ['🧬 LSB Lab',()=>say('Explore classic pixel-level steganography with a local RGB LSB encoder and decoder.'),'lab'],
+  ['🧬 Interactive Sandbox',()=>say('Experiment with pixel-level LSB editing and live structural cipher encoding in your browser.'),'lab'],
   ['🧭 Cipher Walkthrough',()=>say('Explore the ten training ciphers step by step, from visible clues to decoded letters.'),'walkthrough'],
   ['🧪 Image Degradation Lab',()=>{refreshDegradationLab();say('Test Seeker recovery after controlled image degradation. Each run makes five additional vision requests.')},'degradation']
 ];
@@ -448,7 +449,7 @@ fill('#seeker2',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
 fill('#seekerAudit',POLLINATIONS_MODELS,/^openai\/gpt-6-luna$/i);
 fill('#judgeModel',POLLINATIONS_MODELS,/openai\/gpt-6\.1-sol/i);
 ['#hider','#seeker','#seeker2','#seekerAudit','#judgeModel'].forEach(sel=>{$(sel).disabled=false});
-if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();mountLsbLab($('#lsbLab'));mountCipherWalkthrough($('#cipherWalkthrough'));refreshDegradationLab();$('#evidenceType').addEventListener('change',renderEvidence);$('#evidenceOutcome').addEventListener('change',renderEvidence);$('#evidenceModel').addEventListener('change',renderEvidence);$('#evidenceSearch').addEventListener('input',renderEvidence);$('#evidenceJson').onclick=()=>downloadEvidence('json');$('#evidenceCsv').onclick=()=>downloadEvidence('csv');$('#evidenceClear').onclick=()=>{if(!T.evidence?.length)return;if(!confirm('Clear the locally saved Failure Analysis evidence log?'))return;T.evidence=[];save();renderEvidence()};allTabs[0].click();
+if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();mountLsbLab($('#lsbLab'));mountCipherWalkthrough($('#cipherWalkthrough'));mountStructuralSandbox($('#structuralSandbox'));refreshDegradationLab();$('#evidenceType').addEventListener('change',renderEvidence);$('#evidenceOutcome').addEventListener('change',renderEvidence);$('#evidenceModel').addEventListener('change',renderEvidence);$('#evidenceSearch').addEventListener('input',renderEvidence);$('#evidenceJson').onclick=()=>downloadEvidence('json');$('#evidenceCsv').onclick=()=>downloadEvidence('csv');$('#evidenceClear').onclick=()=>{if(!T.evidence?.length)return;if(!confirm('Clear the locally saved Failure Analysis evidence log?'))return;T.evidence=[];save();renderEvidence()};allTabs[0].click();
 /* ---------- first-visit "How to play" ---------- */
 const howto=$('#howto'),HOWTO_KEY='nc-howto-seen';
 const openHowto=()=>{if(!howto.open){howto.showModal();howto.scrollTop=0}};
