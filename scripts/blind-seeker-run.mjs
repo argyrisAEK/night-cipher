@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile, appendFile } from 'node:fs/promises';
+import { mkdir, readFile, appendFile } from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { SEEK } from '../js/api.js';
@@ -28,10 +28,10 @@ function argsOf(argv) {
 }
 
 function parseMessage(text) {
-  const match = String(text ?? '').match(/^MESSAGE:\\s*(.*)$/im);
+  const match = String(text ?? '').match(/^MESSAGE:\s*(.*)$/im);
   if (!match) throw new Error('seeker_response_parse_error: missing MESSAGE line');
   const message = match[1].trim();
-  const method = (String(text).match(/^METHOD:\\s*(.*)$/im) || [])[1]?.trim() || '';
+  const method = (String(text).match(/^METHOD:\s*(.*)$/im) || [])[1]?.trim() || '';
   return { message, method };
 }
 
@@ -105,7 +105,7 @@ async function main() {
   if (manifest.trials.some(item => !answerIds.has(item.trialId))) throw new Error('Public manifest and local answer key do not match.');
   const existing = new Set();
   try {
-    for (const line of (await readFile(RESULTS, 'utf8')).split(/\\r?\\n/).filter(Boolean)) {
+    for (const line of (await readFile(RESULTS, 'utf8')).split(/\r?\n/).filter(Boolean)) {
       try { existing.add(JSON.parse(line).trialId); } catch {}
     }
   } catch {}
@@ -123,13 +123,13 @@ async function main() {
     note: 'One isolated request per image; no answer-key fields are sent to the model.'
   };
   await mkdir(ROOT, { recursive: true });
-  await appendFile(RESULTS, JSON.stringify(runInfo) + '\\n');
+  await appendFile(RESULTS, JSON.stringify(runInfo) + '\n');
   console.log(JSON.stringify(runInfo, null, 2));
   for (let i = 0; i < todo.length; i++) {
     const trial = todo[i];
     const result = await request(path.join(PUBLIC_DIR, trial.image), apiKey);
     const record = { trialId: trial.trialId, model: MODEL, promptSha256, attemptedAt: new Date().toISOString(), ...result };
-    await appendFile(RESULTS, JSON.stringify(record) + '\\n');
+    await appendFile(RESULTS, JSON.stringify(record) + '\n');
     console.log((i + 1) + '/' + todo.length + ' ' + trial.trialId + ' ' + result.status + ' ' + (result.durationMs ?? '—') + 'ms');
     if (i < todo.length - 1 && options.delay) await sleep(options.delay);
   }
