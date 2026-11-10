@@ -717,7 +717,7 @@ test('LSB Pixel Inspector can manually toggle a selected RGB channel bit', async
   await expect(page.locator('#lsbStatus')).toContainText('Image loaded');
   await page.fill('#lsbMessage', 'A');
   await expect(page.locator('#lsbCapacity')).toContainText('7-byte format header');
-  await expect(page.locator('#lsbCapacity')).toContainText('1529-byte maximum payload');
+  await expect(page.locator('#lsbCapacity')).toContainText('1,529-byte maximum payload');
   await expect(page.locator('#lsbEncode')).toBeEnabled();
   await page.evaluate(() => {
     const canvas = document.querySelector('#lsbImage');
