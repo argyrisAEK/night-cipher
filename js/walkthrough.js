@@ -119,7 +119,7 @@ export function mountCipherWalkthrough(root) {
     previous.disabled = step === 0;
     next.disabled = step === 3;
     reveal.hidden = step !== 2;
-    next.textContent = step === 2 ? 'Show annotated solution →' : 'Next step →';
+    next.textContent = 'Next step →';
 
     const panels = [
       `<h3>1. Observe the picture</h3>
