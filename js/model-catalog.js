@@ -81,5 +81,5 @@ export function estimatePollenCost(model, usage) {
 
 export function formatPollenCost(value) {
   if (!Number.isFinite(Number(value))) return 'Unavailable';
-  return `${Number(value).toFixed(6).replace(/0+$/, '').replace(/\\.$/, '')} Pollen (estimate)`;
+  return `${Number(value).toFixed(6).replace(/0+$/, '').replace(/[.]$/, '')} Pollen (estimate)`;
 }
