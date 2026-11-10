@@ -789,7 +789,7 @@ test('Daily and Learn require an explicit Seeker choice and disclose live model 
   const requests=[];
   await page.route('https://gen.pollinations.ai/text/models?reliability=all', route => route.fulfill({
     json:{data:[
-      {id:'openai/gpt-6.1-terra',publisher:'OpenAI',input_modalities:['text','image'],pricing:{promptTextTokens:0.000001,completionTextTokens:0.000002}},
+      {id:'openai/gpt-6.1-terra',publisher:'OpenAI',input_modalities:['text','image'],pricing:{promptTextTokens:0.000001,promptImageTokens:0.000003,completionTextTokens:0.000002}},
       {id:'community/vendouple/gpt-6-luna',publisher:'Vendouple',input_modalities:['text','image'],pricing:{promptTextTokens:0.000001,completionTextTokens:0.000002}}
     ]}
   }));
@@ -799,12 +799,12 @@ test('Daily and Learn require an explicit Seeker choice and disclose live model 
     await route.fulfill({json:{
       model:body.model,
       choices:[{message:{content:'MESSAGE: NONE\\nMETHOD: No defensible decoding was possible.'},finish_reason:'stop'}],
-      usage:{prompt_tokens:100,completion_tokens:10,total_tokens:110}
+      usage:{prompt_tokens:100,completion_tokens:10,total_tokens:110,prompt_tokens_details:{image_tokens:20}}
     }});
   });
   await page.reload();
   await expect(page.locator('#roundSeekerMeta')).toContainText('Publisher: OpenAI');
-  await expect(page.locator('#roundSeekerMeta')).toContainText('Input 1 Pollen / 1M tokens');
+  await expect(page.locator('#roundSeekerMeta')).toContainText('Input text 1 Pollen / 1M tokens');
   await expect(page.locator('#seekerMeta')).toContainText('Publisher: OpenAI');
   const visionChoices=await page.locator('#roundSeeker option').evaluateAll(options=>options.map(option=>option.value));
   expect(visionChoices).toEqual(['openai/gpt-6.1-terra','community/vendouple/gpt-6-luna']);
@@ -819,7 +819,7 @@ test('Daily and Learn require an explicit Seeker choice and disclose live model 
   await page.click('#runSelectedSeeker');
   await expect.poll(()=>requests.length).toBe(1);
   expect(requests[0].model).toBe('community/vendouple/gpt-6-luna');
-  await expect(page.locator('#res')).toContainText('0.00012 Pollen (estimate)');
+  await expect(page.locator('#res')).toContainText('0.00016 Pollen (estimate)');
 
   await page.locator('#tabs button',{hasText:'Learn'}).click();
   await page.click('#ai');
