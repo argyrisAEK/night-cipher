@@ -72,8 +72,9 @@ const groupBy = (field, extra) => {
       n: group.length,
       attempted: attempted.length,
       exactRecoveries: completed.filter(row => row.exact).length,
-      exactRecoveryRate: completed.length ? completed.filter(row => row.exact).length / completed.length : null,
-      meanCharacterAccuracy: completed.length ? mean(completed.map(row => row.characterAccuracy)) : null,
+      exactRecoveryRate: attempted.length ? attempted.filter(row => row.exact).length / attempted.length : null,
+      completedResponseExactRate: completed.length ? completed.filter(row => row.exact).length / completed.length : null,
+      meanCharacterAccuracy: attempted.length ? mean(attempted.map(row => row.characterAccuracy)) : null,
       meanLatencyMs: mean(latencies),
       medianLatencyMs: percentile(latencies, .5),
       p95LatencyMs: percentile(latencies, .95),
@@ -91,8 +92,8 @@ const report = {
   attempted: rows.filter(row => row.status !== 'not_attempted').length,
   total: rows.length,
   definitions: {
-    exactRecoveryRate: 'Exact matches / completed model responses; NONE is a valid miss, not an API failure.',
-    characterAccuracy: '1 - Levenshtein distance / max(expected length, decoded length); request and parse failures score 0.',
+    exactRecoveryRate: 'Exact matches / all attempted requests; request and parse failures count as misses. NONE is a valid miss, not an API failure.',
+    characterAccuracy: '1 - Levenshtein distance / max(expected length, decoded length); NONE and request/parse failures score 0.',
     failureRate: 'Request, timeout and response-parse failures / attempted requests. NONE is excluded.',
     latency: 'Median and p95 over all attempted requests with a measured duration.'
   },
