@@ -293,3 +293,28 @@ a{color:#c4b5fd}
   border-top:1px solid rgba(132,151,205,.15);
 }
 .ai-attempt-history small{color:#aebbd8;line-height:1.5}
+
+.model-summary{
+  display:grid;
+  gap:8px;
+  margin:12px 0 7px;
+  padding:10px 11px;
+  border:1px solid rgba(132,151,205,.18);
+  border-radius:10px;
+  background:rgba(7,13,28,.34);
+}
+.model-summary b{color:#d9d0ff;font-size:.78rem}
+.model-summary code{color:#d7e4ff;font-size:.72rem;overflow-wrap:anywhere}
+.model-summary small{
+  display:block;
+  margin-top:3px;
+  color:#9eabc9;
+  font-size:.68rem;
+  line-height:1.45;
+}
+.model-manage{
+  width:100%;
+  margin:0 0 10px;
+  padding:7px 10px;
+  font-size:.76rem;
+}
