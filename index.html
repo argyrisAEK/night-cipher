@@ -76,6 +76,17 @@
 </div>
 </div>
 </section>
+<section id="degradationLab" class="card degradation-lab" hidden aria-labelledby="degradationTitle">
+<h2 id="degradationTitle">Image Degradation Lab</h2>
+<p class="diag-intro">Measure how controlled image damage affects AI Seeker recovery. The lab uses the active AI round and sends five additional vision requests to the selected Seeker model. All image transformations run locally in your browser.</p>
+<div class="degradation-source">
+<div><b>Source image</b><p id="degradationSource" role="status">Start an AI vs AI Duel or You hide, AI seeks round first.</p></div>
+<div class="degradation-cost"><b>5 additional AI calls</b><small>Uses Pollen · confirmation required</small></div>
+</div>
+<div class="row degradation-actions"><button id="degradationRun" class="pri" type="button" disabled>Run 5 degradation tests</button><span id="degradationStatus" role="status" aria-live="polite">Waiting for an active AI round.</span></div>
+<div id="degradationResults" class="degradation-results" aria-live="polite"><p class="report-empty">Results will appear here after the experiment.</p></div>
+<p class="report-footnote">Profiles: JPEG quality 55%, 50% downscale/upscale, 2 px blur, deterministic ±18 RGB noise, and 12% center crop. Recovery is successful at ≥90% normalized text similarity. These are controlled browser transformations, not a complete model of real-world social-media processing.</p>
+</section>
 <main id="mainGame">
 <section class="card"><p id="intro" class="intro"></p><div id="imgbox">Pick a training level, or start a Duel.</div><p id="status" role="status"></p><div id="res"></div>
 </section>
