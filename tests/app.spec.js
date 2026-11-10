@@ -611,3 +611,24 @@ test('Failure Analysis helpers summarize, filter and export structured evidence'
 test('Research Mode renders the local Failure Analysis workspace and empty state',async({page})=>{
  await page.locator('#tabs button',{hasText:'Research'}).click();await expect(page.locator('#failureAnalysis')).toBeVisible();await expect(page.locator('#evidenceStats')).toContainText('Recorded events');await expect(page.locator('#evidenceTable')).toContainText('No experiments recorded yet');await expect(page.locator('#evidenceJson')).toBeVisible();await expect(page.locator('#evidenceCsv')).toBeVisible();
 });
+
+test('AI duel outcomes are saved to the Failure Analysis evidence log',async({page})=>{
+ const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/><circle cx="180" cy="180" r="48" fill="#f1c987"/></svg>';
+ const scheme='The number of bright circles encodes each letter by alphabet position.';
+ await page.route('https://gen.pollinations.ai/v1/models',route=>route.fulfill({json:{data:[{id:'openai/gpt-6.1-sol'},{id:'openai/gpt-6.1-terra',input_modalities:['image']}]}}));
+ await page.route('https://gen.pollinations.ai/v1/chat/completions',async route=>{
+  const body=route.request().postDataJSON(),hider=body.model==='openai/gpt-6.1-sol';
+  await route.fulfill({json:{model:body.model,choices:[{message:{content:hider?svg+'\\nSCHEME: '+scheme:'MESSAGE: LATER\\nMETHOD: I guessed from the bright circle.'},finish_reason:'stop'}],usage:{total_tokens:36,completion_tokens:20}}});
+ });
+ await page.reload();await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='openai/gpt-6.1-sol'));
+ await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
+ await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();await page.fill('#msg','LANTERN');await page.click('#hide');
+ await expect(page.locator('#imgbox img')).toBeVisible({timeout:10000});await page.click('#ai');
+ await expect(page.locator('#res')).toContainText('LATER',{timeout:10000});
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('nc')).evidence);
+ expect(saved.map(x=>x.type)).toEqual(['primary','hider']);
+ expect(saved[0].outcome).toBe('failure');expect(saved[0].category).toBe('message_mismatch');expect(saved[0].expectedMessage).toBe('LANTERN');expect(saved[0].decodedMessage).toBe('LATER');
+ expect(saved[1].outcome).toBe('success');expect(saved[1].category).toBe('valid_hider_output');
+ await page.locator('#tabs button',{hasText:'Research'}).click();await expect(page.locator('#evidenceTable')).toContainText('message_mismatch');
+ await page.selectOption('#evidenceOutcome','failure');await expect(page.locator('#evidenceTable')).toContainText('message_mismatch');await expect(page.locator('#evidenceTable')).not.toContainText('valid_hider_output');
+});
