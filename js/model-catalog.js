@@ -38,7 +38,9 @@ export function modelSupportsVision(model) {
 
 const rateFor = (model, key) => {
   const pricing = model?.pricing && typeof model.pricing === 'object' ? model.pricing : model;
-  const value = Number(pricing?.[key]);
+  const raw = pricing?.[key];
+  if (raw == null || raw === '') return null;
+  const value = Number(raw);
   return Number.isFinite(value) && value >= 0 ? value : null;
 };
 
