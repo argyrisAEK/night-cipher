@@ -744,3 +744,42 @@ test('Structural Sandbox renders every deterministic training scheme', async ({ 
     await expect(page.locator('#structuralBreakdown tbody tr')).toHaveCount(5);
   }
 });
+
+
+test('Night Cipher carries its nocturnal brand into the visual identity', async ({ page }) => {
+  await expect(page.locator('.brand-tagline')).toHaveText('Hidden in plain sight.');
+  const scene = await page.evaluate(async () => {
+    const { TRAIN } = await import('/js/ciphers.js');
+    return TRAIN.map(cipher => {
+      const doc = new DOMParser().parseFromString(cipher.g(cipher.m, 20261110), 'image/svg+xml');
+      return {
+        name: cipher.n,
+        valid: doc.documentElement.nodeName === 'svg',
+        nightBackground: !!doc.querySelector('#nebulaG'),
+        moon: !!doc.querySelector('circle[fill="url(#moonG)"]'),
+        visualSkin: !!doc.querySelector('style')
+      };
+    });
+  });
+  expect(scene).toHaveLength(10);
+  for (const item of scene) {
+    expect(item.valid, item.name).toBe(true);
+    expect(item.nightBackground, item.name).toBe(true);
+    expect(item.moon, item.name).toBe(true);
+    expect(item.visualSkin, item.name).toBe(true);
+  }
+});
+
+test('nocturnal SVG art direction preserves every deterministic decoder', async ({ page }) => {
+  const results = await page.evaluate(async () => {
+    const [{ TRAIN, P }, { DEC }] = await Promise.all([
+      import('/js/ciphers.js'),
+      import('/js/selftest.js')
+    ]);
+    return TRAIN.map((cipher, index) => {
+      const svg = cipher.g('MIDNIGHT', 7331 + index);
+      return { name: cipher.n, actual: DEC[index](P(svg)) };
+    });
+  });
+  for (const result of results) expect(result.actual, result.name).toBe('MIDNIGHT');
+});
