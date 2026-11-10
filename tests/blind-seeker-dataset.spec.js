@@ -5,7 +5,10 @@ import path from 'node:path';
 const LENGTHS = [5, 10, 15, 20, 26];
 const VARIANTS = ['original', 'jpeg55', 'downscale50', 'blur2'];
 const OUTPUT = path.resolve('test-results/blind-seeker');
-
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('nc-howto-seen', '1'); } catch {} });
+  await page.goto('/');
+});
 test('Blind Seeker dataset: export blinded images and a separate answer key', async ({ page }) => {
   test.setTimeout(120_000);
   const generated = await page.evaluate(async ({ lengths, variants }) => {
