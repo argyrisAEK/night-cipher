@@ -1,4 +1,4 @@
-import { encodeLSB, decodeLSB, lsbCapacityBytes } from './lsb.js';
+import { encodeLSB, decodeLSB, lsbCapacityBytes, LSB_HEADER_BYTES } from './lsb.js';
 
 export function mountLsbLab(root) {
   if (!root || root.dataset.mounted === '1') return;
@@ -7,14 +7,22 @@ export function mountLsbLab(root) {
   const file = $('#lsbFile'), message = $('#lsbMessage'), image = $('#lsbImage');
   const inspector = $('#lsbInspector'), pixelInfo = $('#lsbPixelInfo');
   const status = $('#lsbStatus'), capacity = $('#lsbCapacity'), encode = $('#lsbEncode');
-  let loaded = false, currentName = 'image';
+  let loaded = false, currentName = 'image', selectedPixel = null;
 
   const say = (text, type = '') => { status.textContent = text; status.className = type; };
   const refreshCapacity = () => {
     if (!loaded) { capacity.textContent = 'Load an image to calculate its capacity.'; encode.disabled = true; return; }
+    const channels = image.width * image.height * 3;
+    const rawBytes = Math.floor(channels / 8);
     const bytes = lsbCapacityBytes(image.width, image.height);
-    capacity.textContent = `${image.width} × ${image.height} pixels · ${(image.width * image.height * 3).toLocaleString()} RGB channels · ${bytes.toLocaleString()} UTF-8 payload bytes maximum`;
-    encode.disabled = !message.value.length || bytes < 1;
+    const messageBytes = new TextEncoder().encode(message.value).length;
+    const remaining = bytes - messageBytes;
+    capacity.textContent = image.width + ' × ' + image.height + ' pixels · ' +
+      channels.toLocaleString() + ' RGB channels (' + rawBytes.toLocaleString() + ' raw bytes) · ' +
+      LSB_HEADER_BYTES + '-byte format header · ' + bytes.toLocaleString() +
+      '-byte maximum payload · current message: ' + messageBytes + ' bytes · ' +
+      (remaining >= 0 ? remaining.toLocaleString() + ' bytes remaining' : Math.abs(remaining).toLocaleString() + ' bytes over capacity');
+    encode.disabled = !message.value.length || bytes < 1 || messageBytes > bytes;
   };
   const drawInspector = (x, y) => {
     const ctx = image.getContext('2d', { willReadFrequently: true });
@@ -32,6 +40,15 @@ export function mountLsbLab(root) {
       zoom.beginPath(); zoom.moveTo(i * scale, 0); zoom.lineTo(i * scale, inspector.height); zoom.stroke();
       zoom.beginPath(); zoom.moveTo(0, i * scale); zoom.lineTo(inspector.width, i * scale); zoom.stroke();
     }
+    selectedPixel = { x, y };
+    const manual = $('#lsbManualBits');
+    if (manual) {
+      manual.disabled = false;
+      ['#lsbBitR', '#lsbBitG', '#lsbBitB'].forEach((selector, index) => {
+        const input = $(selector);
+        if (input) input.checked = !!(values[index] & 1);
+      });
+    }
     pixelInfo.textContent = `Pixel (${x}, ${y}) · R ${values[0]} = ${bits[0]} · G ${values[1]} = ${bits[1]} · B ${values[2]} = ${bits[2]} · LSBs: ${values.map(v => v & 1).join(' / ')}`;
   };
 
@@ -45,7 +62,7 @@ export function mountLsbLab(root) {
       image.width = Math.max(1, Math.round(bitmap.naturalWidth * factor));
       image.height = Math.max(1, Math.round(bitmap.naturalHeight * factor));
       image.getContext('2d', { willReadFrequently: true }).drawImage(bitmap, 0, 0, image.width, image.height);
-      URL.revokeObjectURL(url); loaded = true; currentName = selected.name.replace(/\.[^.]+$/, '') || 'image';
+      URL.revokeObjectURL(url); loaded = true; selectedPixel = null; $('#lsbManualBits').disabled = true; currentName = selected.name.replace(/\.[^.]+$/, '') || 'image';
       refreshCapacity(); say('Image loaded. Click a pixel to inspect its RGB values and least-significant bits.');
       pixelInfo.textContent = 'Select a pixel in the image to inspect its RGB channels.';
       const ctx = inspector.getContext('2d'); ctx.clearRect(0, 0, inspector.width, inspector.height);
@@ -54,6 +71,17 @@ export function mountLsbLab(root) {
     bitmap.src = url;
   });
   message.addEventListener('input', refreshCapacity);
+  ['#lsbBitR', '#lsbBitG', '#lsbBitB'].forEach((selector, channel) => {
+    $(selector).addEventListener('change', event => {
+      if (!loaded || !selectedPixel) return;
+      const ctx = image.getContext('2d', { willReadFrequently: true });
+      const pixel = ctx.getImageData(selectedPixel.x, selectedPixel.y, 1, 1);
+      pixel.data[channel] = (pixel.data[channel] & 0xfe) | (event.target.checked ? 1 : 0);
+      ctx.putImageData(pixel, selectedPixel.x, selectedPixel.y);
+      drawInspector(selectedPixel.x, selectedPixel.y);
+      say('Manually changed the selected pixel’s ' + ['red', 'green', 'blue'][channel] + ' LSB. Decode or export the modified image to inspect the result.', 'ok');
+    });
+  });
   image.addEventListener('click', event => {
     if (!loaded) return;
     const rect = image.getBoundingClientRect();
@@ -91,7 +119,7 @@ export function mountLsbLab(root) {
     }, 'image/png');
   });
   $('#lsbReset').addEventListener('click', () => {
-    loaded = false; file.value = ''; message.value = ''; $('#lsbDecoded').value = '';
+    loaded = false; selectedPixel = null; file.value = ''; message.value = ''; $('#lsbDecoded').value = ''; $('#lsbManualBits').disabled = true;
     image.width = 0; image.height = 0; inspector.width = 0; inspector.height = 0;
     refreshCapacity(); say('Reset. Load an image to begin.');
     pixelInfo.textContent = 'Select a pixel in the image to inspect its RGB channels.';
