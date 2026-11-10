@@ -10,6 +10,17 @@ export function mountLsbLab(root) {
   let loaded = false, currentName = 'image', selectedPixel = null;
 
   const say = (text, type = '') => { status.textContent = text; status.className = type; };
+  const showSandboxPanel = structural => {
+    $('#pixelSandboxPanel').hidden = structural;
+    $('#structuralSandbox').hidden = !structural;
+    $('#sandboxPixelTab').classList.toggle('active', !structural);
+    $('#sandboxStructuralTab').classList.toggle('active', structural);
+    $('#sandboxPixelTab').setAttribute('aria-selected', String(!structural));
+    $('#sandboxStructuralTab').setAttribute('aria-selected', String(structural));
+  };
+  $('#sandboxPixelTab').addEventListener('click', () => showSandboxPanel(false));
+  $('#sandboxStructuralTab').addEventListener('click', () => showSandboxPanel(true));
+  showSandboxPanel(false);
   const refreshCapacity = () => {
     if (!loaded) { capacity.textContent = 'Load an image to calculate its capacity.'; encode.disabled = true; return; }
     const channels = image.width * image.height * 3;
