@@ -55,7 +55,7 @@ test('Blind Seeker dataset: export blinded images and a separate answer key', as
     for (let cipherIndex = 0; cipherIndex < TRAIN.length; cipherIndex++) {
       for (const length of lengths) {
         const message = Array.from({ length }, (_, i) =>
-          alphabet[(i * 11 + cipherIndex * 7 + length * 3) % 26]
+          alphabet[(i * 11 + length * 3) % 26]
         ).join('');
         const seed = 9000 + cipherIndex * 100 + length;
         const canvas = await rasterize(TRAIN[cipherIndex].g(message, seed));
