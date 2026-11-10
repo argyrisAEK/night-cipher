@@ -1,7 +1,8 @@
 const CATALOG_URL = 'https://gen.pollinations.ai/text/models?reliability=all';
 const MODEL_PRICE_KEYS = Object.freeze({
-  promptTextTokens: 'Input',
-  completionTextTokens: 'Output',
+  promptTextTokens: 'Input text',
+  promptImageTokens: 'Input image',
+  completionTextTokens: 'Output text',
   promptCachedTokens: 'Cached input'
 });
 
@@ -67,18 +68,29 @@ export function describeModel(model, { requiresVision = false } = {}) {
   return [`Publisher: ${publisher}`, capability, priceText, health].filter(Boolean).join(' · ');
 }
 
-export function estimatePollenCost(model, usage) {
+export function estimatePollenCost(model, usage, { includesImage = false } = {}) {
   if (!model || !usage) return null;
   const promptTokens = Number(usage.prompt_tokens);
   const completionTokens = Number(usage.completion_tokens);
   if (!Number.isFinite(promptTokens) || !Number.isFinite(completionTokens)) return null;
   const cachedTokens = Number(usage.prompt_tokens_details?.cached_tokens || 0);
+  const rawImageTokens = usage.prompt_tokens_details?.image_tokens ?? usage.prompt_image_tokens ?? usage.image_tokens;
+  const imageTokens = rawImageTokens == null ? null : Number(rawImageTokens);
+  if (includesImage && (imageTokens == null || !Number.isFinite(imageTokens))) return null;
   const inputRate = rateFor(model, 'promptTextTokens');
+  const imageRate = rateFor(model, 'promptImageTokens');
   const outputRate = rateFor(model, 'completionTextTokens');
   const cachedRate = rateFor(model, 'promptCachedTokens');
-  const uncachedInput = Math.max(0, promptTokens - cachedTokens);
-  if ((uncachedInput > 0 && inputRate == null) || (completionTokens > 0 && outputRate == null) || (cachedTokens > 0 && cachedRate == null)) return null;
-  return uncachedInput * (inputRate || 0) + completionTokens * (outputRate || 0) + cachedTokens * (cachedRate || 0);
+  const billableImageTokens = includesImage ? Math.max(0, imageTokens) : 0;
+  const uncachedTextTokens = Math.max(0, promptTokens - cachedTokens - billableImageTokens);
+  if ((uncachedTextTokens > 0 && inputRate == null) ||
+      (billableImageTokens > 0 && imageRate == null) ||
+      (completionTokens > 0 && outputRate == null) ||
+      (cachedTokens > 0 && cachedRate == null)) return null;
+  return uncachedTextTokens * (inputRate || 0) +
+    billableImageTokens * (imageRate || 0) +
+    completionTokens * (outputRate || 0) +
+    cachedTokens * (cachedRate || 0);
 }
 
 export function formatPollenCost(value) {
