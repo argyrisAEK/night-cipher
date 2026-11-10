@@ -1,5 +1,6 @@
 const MAGIC = [0x4e, 0x43, 0x31]; // "NC1"
-const HEADER_BYTES = 7; // magic (3) + UTF-8 payload length (4)
+export const LSB_HEADER_BYTES = 7; // magic (3) + UTF-8 payload length (4)
+const HEADER_BYTES = LSB_HEADER_BYTES;
 
 /** Maximum UTF-8 payload bytes for RGB, one LSB per channel. */
 export function lsbCapacityBytes(width, height) {
