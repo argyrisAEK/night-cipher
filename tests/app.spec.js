@@ -671,7 +671,8 @@ test('Image Degradation Lab runs five seeker checks and records each variant',as
  await page.locator('#tabs button',{hasText:'Image Degradation Lab'}).click();
  await expect(page.locator('#degradationRun')).toBeEnabled();
  await page.click('#degradationRun');
- await expect(page.locator('.degradation-card')).toHaveCount(5,{timeout:20000});
+ await expect(page.locator('#degradationStatus')).toContainText('Completed',{timeout:20000});
+ await expect(page.locator('.degradation-card')).toHaveCount(5);
  expect(seekerCalls).toBe(5);
  const evidence=await page.evaluate(()=>JSON.parse(localStorage.getItem('nc')).evidence.filter(x=>x.variant?.startsWith('lab-')));
  expect(evidence).toHaveLength(5);expect(evidence.every(x=>x.type==='robustness'&&x.expectedMessage==='LANTERN'&&x.similarity===1)).toBeTruthy();
