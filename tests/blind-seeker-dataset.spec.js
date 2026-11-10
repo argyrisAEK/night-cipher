@@ -6,13 +6,6 @@ const LENGTHS = [5, 10, 15, 20, 26];
 const VARIANTS = ['original', 'jpeg55', 'downscale50', 'blur2'];
 const OUTPUT = path.resolve('test-results/blind-seeker');
 
-function corpusMessage(cipherIndex, length) {
-  // Deterministic, balanced A-Z corpus. The secret is kept out of public filenames/manifest.
-  return Array.from({ length }, (_, i) =>
-    String.fromCharCode(65 + ((i * 11 + length * 3) % 26))
-  ).join('');
-}
-
 test('Blind Seeker dataset: export blinded images and a separate answer key', async ({ page }) => {
   test.setTimeout(120_000);
   const generated = await page.evaluate(async ({ lengths, variants }) => {
