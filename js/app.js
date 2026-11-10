@@ -147,7 +147,6 @@ const stealthLine=()=>R&&R.stealth?`<p>🕵️ <b>Stealth ${R.stealth}/10</b> �
 const JUDGE='Study this picture carefully. It may or may not hide a secret message encoded somewhere in its visual structure. Rate how INNOCENT it looks to a casual viewer: 10 = completely ordinary, nothing seems off; 1 = obviously suspicious or unnatural. Then give one short sentence of justification.\nReply with exactly two lines:\nSTEALTH: <integer 1-10>\nNOTE: <one sentence>';
 async function judgeStealth(r){const key=conn&&conn.apiKey;if(!key)return null;try{const round=r,png=await toPng(round.svg),out=await chat($('#judgeModel').value,[{role:'user',content:[{type:'text',text:JUDGE},{type:'image_url',image_url:{url:png}}]}],1000,60000);if(round!==R)return null;const s=Math.max(1,Math.min(10,parseInt((out.match(/STEALTH:\s*(\d+)/i)||[,'5'])[1])||5)),note=(out.match(/NOTE:\s*(.*)/i)||[,''])[1].trim();round.stealth=s;round.stealthNote=note;T.st=T.st||{s:0,n:0};T.st.s+=s;T.st.n++;const hn=round.hider;if(hn){T.sh=T.sh||{};const e=T.sh[hn]=T.sh[hn]||{s:0,n:0};e.s+=s;e.n++}save();score();if(round===R&&round.done)$('#res').innerHTML+=stealthLine();return{s,note}}catch(e){if(r===R&&!R.done)say(e.message,'bad');return null}}
 
-
 $('#revealHow').onclick=()=>{
   const round=R;if(!round)return;
   if(round.schemeIdx!=null){
