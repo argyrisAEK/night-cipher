@@ -32,7 +32,7 @@ function describeCipher(index, word) {
         break;
       case 4: {
         const pattern = BR[value - 1];
-        symbol = pattern.split(',').join(' · ');
+        symbol = [...pattern].join(' · ');
         conversion = `Raised Braille dot positions: ${pattern}`;
         break;
       }
