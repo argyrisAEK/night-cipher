@@ -6,7 +6,7 @@ const KEY = path.join(ROOT, 'private', 'answer-key.json');
 const RESULTS = path.join(ROOT, 'seeker-results.jsonl');
 const OUTPUT = path.join(ROOT, 'scored-report.json');
 
-const normalize = value => String(value ?? '').toUpperCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^A-Z]/g, '');
+const normalize = value => String(value ?? '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z]/g, '');
 function editDistance(a, b) {
   const previous = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i++) {
@@ -32,7 +32,7 @@ const percentile = (values, p) => {
 const mean = values => values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
 
 const key = JSON.parse(await readFile(KEY, 'utf8'));
-const records = (await readFile(RESULTS, 'utf8')).split(/\\r?\\n/).filter(Boolean).map(line => JSON.parse(line)).filter(row => row.trialId);
+const records = (await readFile(RESULTS, 'utf8')).split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line)).filter(row => row.trialId);
 const byId = new Map();
 for (const record of records) byId.set(record.trialId, record);
 const rows = key.trials.map(answer => {
@@ -101,6 +101,6 @@ const report = {
   byCipherLengthAndVariant: groupBy('cipher', ['length', 'variant']),
   trials: rows
 };
-await writeFile(OUTPUT, JSON.stringify(report, null, 2) + '\\n');
+await writeFile(OUTPUT, JSON.stringify(report, null, 2) + '\n');
 console.log('Wrote ' + OUTPUT);
 console.log(JSON.stringify({ attempted: report.attempted, total: report.total, byCipher: report.byCipher }, null, 2));
