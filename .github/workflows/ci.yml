@@ -35,3 +35,20 @@ jobs:
           path: test-results/visual-audit/
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Upload blind Seeker public dataset
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: night-cipher-blind-seeker-public
+          path: test-results/blind-seeker/public/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload blind Seeker evaluator answer key
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: night-cipher-blind-seeker-private-answer-key
+          path: test-results/blind-seeker/private/answer-key.json
+          if-no-files-found: warn
+          retention-days: 14
