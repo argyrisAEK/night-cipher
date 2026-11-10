@@ -521,9 +521,9 @@ test('Hint button displays used and available hint count', async ({ page }) => {
 });
 
 
-test('Classic LSB lab is available as a separate educational workspace', async ({ page }) => {
-  await expect(page.locator('#tabs button', {hasText:'LSB Lab'})).toHaveCount(1);
-  await page.locator('#tabs button', {hasText:'LSB Lab'}).click();
+test('Interactive Sandbox opens the local pixel-level LSB workspace', async ({ page }) => {
+  await expect(page.locator('#tabs button', {hasText:'Interactive Sandbox'})).toHaveCount(1);
+  await page.locator('#tabs button', {hasText:'Interactive Sandbox'}).click();
   await expect(page.locator('#lsbLab')).toBeVisible();
   await expect(page.locator('#mainGame')).toBeHidden();
   await expect(page.locator('#researchMode')).toBeHidden();
@@ -680,4 +680,57 @@ test('Image Degradation Lab runs five seeker checks and records each variant',as
  await page.locator('#tabs button',{hasText:'Research'}).click();
  await page.selectOption('#evidenceType','robustness');
  await expect(page.locator('#evidenceTable')).toContainText('lab-jpeg55');
+});
+
+test('Structural Sandbox reuses all ten training encoders and exposes live letter states', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Interactive Sandbox' }).click();
+  await expect(page.locator('#lsbLab')).toBeVisible();
+  await page.click('#sandboxStructuralTab');
+  await expect(page.locator('#structuralSandbox')).toBeVisible();
+  await expect(page.locator('#structuralScheme option')).toHaveCount(10);
+  await expect(page.locator('#structuralPreview')).toHaveAttribute('src', /^data:image\/svg\+xml/);
+  await expect(page.locator('#structuralBreakdown tbody tr')).toHaveCount(5);
+  const initial = await page.locator('#structuralPreview').getAttribute('src');
+  await page.fill('#structuralMessage', 'BEAT');
+  await page.selectOption('#structuralScheme', '9');
+  await expect(page.locator('#structuralBreakdown tbody tr')).toHaveCount(4);
+  await expect(page.locator('#structuralBreakdown')).toContainText('Tall = 1, short = 0');
+  await expect(page.locator('#structuralCapacity')).toContainText('theoretical bits');
+  const updated = await page.locator('#structuralPreview').getAttribute('src');
+  expect(updated).not.toBe(initial);
+  await page.locator('#structuralSeed').fill('91');
+  await expect(page.locator('#structuralSeedValue')).toHaveText('91');
+});
+
+test('LSB Pixel Inspector can manually toggle a selected RGB channel bit', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Interactive Sandbox' }).click();
+  const png = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'rgb(120, 80, 40)'; ctx.fillRect(0, 0, 64, 64);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.locator('#lsbFile').setInputFiles({
+    name: 'manual-pixel.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64')
+  });
+  await expect(page.locator('#lsbStatus')).toContainText('Image loaded');
+  await page.fill('#lsbMessage', 'A');
+  await expect(page.locator('#lsbCapacity')).toContainText('7-byte format header');
+  await expect(page.locator('#lsbCapacity')).toContainText('1529-byte maximum payload');
+  await expect(page.locator('#lsbEncode')).toBeEnabled();
+  await page.evaluate(() => {
+    const canvas = document.querySelector('#lsbImage');
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(new MouseEvent('click', {
+      bubbles: true, clientX: rect.left + 1, clientY: rect.top + 1
+    }));
+  });
+  await expect(page.locator('#lsbManualBits')).toBeEnabled();
+  const before = await page.evaluate(() => document.querySelector('#lsbImage').getContext('2d').getImageData(0, 0, 1, 1).data[0]);
+  if (before & 1) await page.locator('#lsbBitR').uncheck();
+  else await page.locator('#lsbBitR').check();
+  const after = await page.evaluate(() => document.querySelector('#lsbImage').getContext('2d').getImageData(0, 0, 1, 1).data[0]);
+  expect(after & 1).toBe((before & 1) ^ 1);
+  expect(Math.abs(after - before)).toBe(1);
 });
