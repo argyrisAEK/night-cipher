@@ -805,6 +805,9 @@ test('Daily and Learn require an explicit Seeker choice and disclose live model 
   await page.reload();
   await expect(page.locator('#roundSeekerMeta')).toContainText('Publisher: OpenAI');
   await expect(page.locator('#roundSeekerMeta')).toContainText('Input 1 Pollen / 1M tokens');
+  await expect(page.locator('#seekerMeta')).toContainText('Publisher: OpenAI');
+  const visionChoices=await page.locator('#roundSeeker option').evaluateAll(options=>options.map(option=>option.value));
+  expect(visionChoices).toEqual(['openai/gpt-6.1-terra','community/vendouple/gpt-6-luna']);
   await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
 
   await page.locator('#tabs button',{hasText:'Daily'}).click();
