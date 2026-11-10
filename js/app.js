@@ -472,8 +472,10 @@ fill('#roundSeeker',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
 ['#hider','#seeker','#seeker2','#seekerAudit','#judgeModel','#roundSeeker'].forEach(sel=>{$(sel).disabled=false});
 const MODEL_META_TARGETS=[['#hider','#hiderMeta',false],['#seeker','#seekerMeta',true],['#seeker2','#seeker2Meta',true],['#seekerAudit','#seekerAuditMeta',true],['#judgeModel','#judgeModelMeta',true],['#roundSeeker','#roundSeekerMeta',true]];
 function updateModelMeta(selectSelector,metaSelector,requiresVision=false){const model=getModelMetadata(modelCatalog,$(selectSelector)?.value);const target=$(metaSelector);if(target)target.textContent=describeModel(model,{requiresVision})}
-function refreshModelMeta(){for(const [selectSelector,metaSelector,requiresVision] of MODEL_META_TARGETS)updateModelMeta(selectSelector,metaSelector,requiresVision)}
-MODEL_META_TARGETS.forEach(([selectSelector,metaSelector,requiresVision])=>$(selectSelector)?.addEventListener('change',()=>updateModelMeta(selectSelector,metaSelector,requiresVision)));
+function renderDuelModelSummary(){const root=$('#duelModelSummary');if(!root)return;const hider=$('#hider').value,seeker=$('#seeker').value;root.innerHTML='<div><b>AI Hider</b> · <code>'+esc(hider)+'</code><small>'+esc(describeModel(getModelMetadata(modelCatalog,hider)))+'</small></div><div><b>Primary AI Seeker</b> · <code>'+esc(seeker)+'</code><small>'+esc(describeModel(getModelMetadata(modelCatalog,seeker),{requiresVision:true}))+'</small></div>'}
+function refreshModelMeta(){for(const [selectSelector,metaSelector,requiresVision] of MODEL_META_TARGETS)updateModelMeta(selectSelector,metaSelector,requiresVision);renderDuelModelSummary()}
+MODEL_META_TARGETS.forEach(([selectSelector,metaSelector,requiresVision])=>$(selectSelector)?.addEventListener('change',()=>{updateModelMeta(selectSelector,metaSelector,requiresVision);renderDuelModelSummary()}));
+$('#manageModels').onclick=()=>{const settings=$('details.adv');if(settings){settings.open=true;settings.scrollIntoView({behavior:'smooth',block:'nearest'})}};
 refreshModelMeta();
 function applyRoundVisionFilter(){const current=$('#roundSeeker').value,visionModels=POLLINATIONS_MODELS.filter(id=>modelSupportsVision(getModelMetadata(modelCatalog,id)));if(visionModels.length){fill('#roundSeeker',visionModels,/^openai\/gpt-6\.1-terra$/i);if(visionModels.includes(current))$('#roundSeeker').value=current}refreshModelMeta()}
 loadModelCatalog().then(catalog=>{modelCatalog=catalog;applyRoundVisionFilter()}).catch(()=>refreshModelMeta());
