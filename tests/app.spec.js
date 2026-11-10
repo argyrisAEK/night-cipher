@@ -698,7 +698,7 @@ test('Structural Sandbox reuses all ten training encoders and exposes live lette
   await expect(page.locator('#structuralCapacity')).toContainText('theoretical bits');
   const updated = await page.locator('#structuralPreview').getAttribute('src');
   expect(updated).not.toBe(initial);
-  await page.locator('#structuralSeed').fill('91');
+  await page.locator('#structuralSeed').evaluate(el => { el.value = '91'; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await expect(page.locator('#structuralSeedValue')).toHaveText('91');
 });
 
@@ -733,4 +733,14 @@ test('LSB Pixel Inspector can manually toggle a selected RGB channel bit', async
   const after = await page.evaluate(() => document.querySelector('#lsbImage').getContext('2d').getImageData(0, 0, 1, 1).data[0]);
   expect(after & 1).toBe((before & 1) ^ 1);
   expect(Math.abs(after - before)).toBe(1);
+});
+
+test('Structural Sandbox renders every deterministic training scheme', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Interactive Sandbox' }).click();
+  await page.click('#sandboxStructuralTab');
+  for (let index = 0; index < 10; index++) {
+    await page.selectOption('#structuralScheme', String(index));
+    await expect(page.locator('#structuralPreview')).toHaveAttribute('src', /^data:image\/svg\+xml/);
+    await expect(page.locator('#structuralBreakdown tbody tr')).toHaveCount(5);
+  }
 });
