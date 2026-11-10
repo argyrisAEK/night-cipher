@@ -7,6 +7,7 @@ const esc = value => String(value).replace(/[&<>"]/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'
 }[char]));
 
+
 function describeCipher(index, word) {
   const entries = [...word].map((letter, position) => {
     const value = alpha(letter);
