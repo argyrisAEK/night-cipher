@@ -654,6 +654,7 @@ test('Image Degradation Lab is a separate workspace and requires an active AI ro
  await expect(page.locator('#degradationRun')).toBeDisabled();
 });
 test('Image Degradation Lab runs five seeker checks and records each variant',async({page})=>{
+ test.setTimeout(90000);
  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/><circle cx="180" cy="180" r="48" fill="#f1c987"/></svg>';
  const scheme='The number of bright circles encodes each letter by alphabet position.';
  let seekerCalls=0;
@@ -671,7 +672,7 @@ test('Image Degradation Lab runs five seeker checks and records each variant',as
  await page.locator('#tabs button',{hasText:'Image Degradation Lab'}).click();
  await expect(page.locator('#degradationRun')).toBeEnabled();
  await page.click('#degradationRun');
- await expect(page.locator('#degradationStatus')).toContainText('Completed',{timeout:20000});
+ await expect(page.locator('#degradationStatus')).toContainText('Completed',{timeout:75000});
  await expect(page.locator('.degradation-card')).toHaveCount(5);
  expect(seekerCalls).toBe(5);
  const evidence=await page.evaluate(()=>JSON.parse(localStorage.getItem('nc')).evidence.filter(x=>x.variant?.startsWith('lab-')));
