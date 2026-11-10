@@ -618,7 +618,7 @@ test('AI duel outcomes are saved to the Failure Analysis evidence log',async({pa
  await page.route('https://gen.pollinations.ai/v1/models',route=>route.fulfill({json:{data:[{id:'openai/gpt-6.1-sol'},{id:'openai/gpt-6.1-terra',input_modalities:['image']}]}}));
  await page.route('https://gen.pollinations.ai/v1/chat/completions',async route=>{
   const body=route.request().postDataJSON(),hider=body.model==='openai/gpt-6.1-sol';
-  await route.fulfill({json:{model:body.model,choices:[{message:{content:hider?svg+'\\nSCHEME: '+scheme:'MESSAGE: LATER\\nMETHOD: I guessed from the bright circle.'},finish_reason:'stop'}],usage:{total_tokens:36,completion_tokens:20}}});
+  await route.fulfill({json:{model:body.model,choices:[{message:{content:hider?svg+'\nSCHEME: '+scheme:'MESSAGE: LATER\nMETHOD: I guessed from the bright circle.'},finish_reason:'stop'}],usage:{total_tokens:36,completion_tokens:20}}});
  });
  await page.reload();await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='openai/gpt-6.1-sol'));
  await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
