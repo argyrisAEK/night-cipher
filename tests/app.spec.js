@@ -834,3 +834,65 @@ test('Daily and Learn require an explicit Seeker choice and disclose live model 
   await page.click('#manageModels');
   await expect(page.locator('details.adv')).toHaveAttribute('open','');
 });
+
+
+test('Hider leakage audit runs on the original SVG before sanitization, including metadata and comments', async ({ page }) => {
+  const payloads = [
+    { message: 'LANTERN', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><metadata>LANTERN</metadata><rect width="800" height="500" fill="#11182b"/></svg>' },
+    { message: 'LANTERN', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><!-- LANTERN --><rect width="800" height="500" fill="#11182b"/></svg>' },
+    { message: 'OPEN THE BLUE DOOR', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><!-- OPEN THE BLUE DOOR --><rect width="800" height="500" fill="#11182b"/></svg>' }
+  ];
+  let hiderCalls = 0, seekerCalls = 0;
+  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
+    json: { data: [{ id: 'openai/gpt-6.1-sol' }, { id: 'openai/gpt-6.1-terra', input_modalities: ['image'] }] }
+  }));
+  await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    const body = route.request().postDataJSON();
+    if (body.model !== 'openai/gpt-6.1-sol') {
+      seekerCalls++;
+      return route.fulfill({ json: { model: body.model, choices: [{ message: { content: 'MESSAGE: NONE' } }] } });
+    }
+    const item = payloads[hiderCalls++];
+    await route.fulfill({ json: {
+      model: body.model,
+      choices: [{ message: { content: item.svg + '\\nSCHEME: A visual pattern encodes the message.' }, finish_reason: 'stop' }],
+      usage: { total_tokens: 20, completion_tokens: 10 }
+    } });
+  });
+  await page.reload();
+  await page.waitForFunction(() => [...document.querySelectorAll('#hider option')].some(o => o.value === 'openai/gpt-6.1-sol'));
+  await page.evaluate(() => { Object.defineProperty(document.querySelector('polli-connect'), 'apiKey', { value: 'test-key', configurable: true }); });
+  await page.locator('#tabs button', { hasText: 'AI vs AI Duel' }).click();
+  for (const item of payloads) {
+    await page.fill('#msg', item.message);
+    await page.click('#hide');
+    await expect(page.locator('#status')).toContainText('leaked the complete secret message', { timeout: 10000 });
+    await expect(page.locator('#imgbox img')).toHaveCount(0);
+  }
+  expect(hiderCalls).toBe(3);
+  expect(seekerCalls).toBe(0);
+});
+
+test('all 26 letters round-trip through every deterministic cipher and annotated reveal', async ({ page }) => {
+  const failures = await page.evaluate(async () => {
+    const [{ TRAIN, P, annotate }, { DEC }] = await Promise.all([
+      import('/js/ciphers.js'),
+      import('/js/selftest.js')
+    ]);
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const errors = [];
+    for (let index = 0; index < TRAIN.length; index++) {
+      const cipher = TRAIN[index];
+      for (const letter of alphabet) {
+        const svg = cipher.g(letter, 20261110 + index);
+        const decoded = DEC[index](P(svg));
+        if (decoded !== letter) errors.push(cipher.n + ' ' + letter + ' round-trip: ' + decoded);
+        const revealed = annotate(svg, index);
+        const revealedDecoded = DEC[index](P(revealed));
+        if (revealedDecoded !== letter) errors.push(cipher.n + ' ' + letter + ' annotated round-trip: ' + revealedDecoded);
+      }
+    }
+    return errors;
+  });
+  expect(failures).toEqual([]);
+});
