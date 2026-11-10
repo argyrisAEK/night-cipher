@@ -317,10 +317,16 @@ $('#hide').onclick=async()=>{
     const out=await chat(hiderModel,[{role:'system',content:'You are a creative SVG artist and steganographer. Output only what is asked.'},{role:'user',content:hiderPrompt}],16000,120000,{requestType:'hider',onRawResponse:meta=>{diagnostics.hider.rawResponse=meta.text;diagnostics.hider.responseModel=meta.model;diagnostics.hider.estimatedPollen=meta.estimatedPollen??null;diagnostics.hider.finishReason=meta.finishReason;diagnostics.hider.usage=meta.usage||null;diagnostics.hider.promptTokens=meta.promptTokens??null;diagnostics.hider.completionTokens=meta.completionTokens;diagnostics.hider.totalTokens=meta.totalTokens??null;diagnostics.hider.durationMs=Date.now()-hiderStarted;renderDiagnostics()}});
     diagnostics.hider.rawResponse=out;diagnostics.hider.durationMs=Date.now()-hiderStarted;renderDiagnostics();
     const m=out.match(/<svg[\s\S]*?<\/svg>/i);if(!m){diagnostics.hider.validation.errors.push('No complete SVG found in Hider response.');throw Error('No complete SVG came back (the model may have run out of tokens). Try again or use another model.')}
+    // Audit the original model-authored SVG before clean() can remove metadata,
+    // comments, title/desc nodes, or other non-rendered content.
+    if(hasSecretLeak(m[0],secret,{strictWords:false})){
+      diagnostics.hider.validation.errors.push('The complete secret message was detected in the original SVG before sanitization.');
+      throw Error('The Hider leaked the complete secret message in the original SVG, so the round was voided. Try again.');
+    }
     let safe;try{safe=clean(m[0]);diagnostics.hider.validation.xmlValid=true;diagnostics.hider.validation.svgValid=true;diagnostics.hider.svg=safe}catch(e){diagnostics.hider.validation.xmlValid=false;diagnostics.hider.validation.svgValid=false;diagnostics.hider.validation.errors.push(e.message);throw e}
     renderDiagnostics();
     if(/<(?:text|tspan)\b/i.test(safe)){diagnostics.hider.validation.errors.push('Readable text elements are not allowed in the hidden artwork.');throw Error('The Hider added readable text or labels to the artwork. The image must communicate through visual details only; try again.')}
-    if(secret.includes(' ')&&hasSecretLeak(safe,secret,{strictWords:false})){diagnostics.hider.validation.errors.push('The complete secret message was detected in SVG content.');throw Error('The Hider leaked the complete secret message in the SVG, so the round was voided. Try again.')}
+
     const sc=(out.split(/SCHEME:/i)[1]||'').trim().slice(0,400),words=secret.split(/\s+/).length;
     diagnostics.hider.validation.schemePresent=!!sc;
     if(!sc){diagnostics.hider.validation.errors.push('Missing SCHEME explanation.');throw Error('The hider did not provide a SCHEME explanation. Try again.')}
