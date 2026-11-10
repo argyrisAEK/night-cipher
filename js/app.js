@@ -5,7 +5,7 @@ import { loadState, saveState } from './state.js';
 import { runSelfTest } from './selftest.js';
 import { parseSeekerResponse, compareSeekers, auditBlindRequest, normalizeMessage } from './quality.js';
 import { POLLINATIONS_MODELS } from './models.js';
-import { loadModelCatalog, getModelMetadata, describeModel, estimatePollenCost, formatPollenCost } from './model-catalog.js';
+import { loadModelCatalog, getModelMetadata, modelSupportsVision, describeModel, estimatePollenCost, formatPollenCost } from './model-catalog.js';
 import { mountLsbLab } from './lsb-lab.js';
 import { mountCipherWalkthrough } from './walkthrough.js';
 import { mountStructuralSandbox } from './structural-sandbox.js';
@@ -187,7 +187,7 @@ $('#saveSvg').onclick=()=>{
 };
 function openRoundModelPicker(round){
   if(!round||!['daily','train'].includes(round.mode))return;
-  $('#roundSeeker').value=round.selectedSeekerModel||$('#seeker').value;
+  $('#roundSeeker').value=round.selectedSeekerModel||$('#roundSeeker').value||$('#seeker').value;
   updateModelMeta('#roundSeeker','#roundSeekerMeta',true);
   $('#roundModelPicker').hidden=false;
   say('Choose the vision model for this attempt. No AI request has been sent yet.');
@@ -475,7 +475,8 @@ function updateModelMeta(selectSelector,metaSelector,requiresVision=false){const
 function refreshModelMeta(){for(const [selectSelector,metaSelector,requiresVision] of MODEL_META_TARGETS)updateModelMeta(selectSelector,metaSelector,requiresVision)}
 MODEL_META_TARGETS.forEach(([selectSelector,metaSelector,requiresVision])=>$(selectSelector)?.addEventListener('change',()=>updateModelMeta(selectSelector,metaSelector,requiresVision)));
 refreshModelMeta();
-loadModelCatalog().then(catalog=>{modelCatalog=catalog;refreshModelMeta()}).catch(()=>refreshModelMeta());
+function applyRoundVisionFilter(){const current=$('#roundSeeker').value,visionModels=POLLINATIONS_MODELS.filter(id=>modelSupportsVision(getModelMetadata(modelCatalog,id)));if(visionModels.length){fill('#roundSeeker',visionModels,/^openai\\/gpt-6\\.1-terra$/i);if(visionModels.includes(current))$('#roundSeeker').value=current}refreshModelMeta()}
+loadModelCatalog().then(catalog=>{modelCatalog=catalog;applyRoundVisionFilter()}).catch(()=>refreshModelMeta());
 if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();mountLsbLab($('#lsbLab'));mountCipherWalkthrough($('#cipherWalkthrough'));mountStructuralSandbox($('#structuralSandbox'));refreshDegradationLab();$('#evidenceType').addEventListener('change',renderEvidence);$('#evidenceOutcome').addEventListener('change',renderEvidence);$('#evidenceModel').addEventListener('change',renderEvidence);$('#evidenceSearch').addEventListener('input',renderEvidence);$('#evidenceJson').onclick=()=>downloadEvidence('json');$('#evidenceCsv').onclick=()=>downloadEvidence('csv');$('#evidenceClear').onclick=()=>{if(!T.evidence?.length)return;if(!confirm('Clear the locally saved Failure Analysis evidence log?'))return;T.evidence=[];save();renderEvidence()};allTabs[0].click();
 /* ---------- first-visit "How to play" ---------- */
 const howto=$('#howto'),HOWTO_KEY='nc-howto-seen';
