@@ -100,7 +100,8 @@ test('Blind Seeker dataset: export blinded images and a separate answer key', as
   };
 
   for (const item of generated) {
-    const filename = item.trialId + '.png';
+    const extension = item.answer.variant === 'jpeg55' ? '.jpg' : '.png';
+    const filename = item.trialId + extension;
     const base64 = item.imageDataUrl.slice(item.imageDataUrl.indexOf(',') + 1);
     await writeFile(path.join(publicDir, filename), Buffer.from(base64, 'base64'));
     publicManifest.trials.push({ trialId: item.trialId, image: filename });
