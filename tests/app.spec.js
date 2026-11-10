@@ -827,4 +827,10 @@ test('Daily and Learn require an explicit Seeker choice and disclose live model 
   expect(requests).toHaveLength(1);
   await page.click('#cancelModelChoice');
   expect(requests).toHaveLength(1);
+
+  await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
+  await expect(page.locator('#duelModelSummary')).toContainText('openai/gpt-6.1-sol');
+  await expect(page.locator('#duelModelSummary')).toContainText('openai/gpt-6.1-terra');
+  await page.click('#manageModels');
+  await expect(page.locator('details.adv')).toHaveAttribute('open','');
 });
