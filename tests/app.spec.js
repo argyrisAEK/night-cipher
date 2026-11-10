@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 });
 test('loads all game modes and the BYOP connect control', async ({ page }) => {
   await expect(page.locator('polli-connect')).toHaveAttribute('models', 'text');
-  await expect(page.locator('#tabs button')).toHaveCount(6);
+  await expect(page.locator('#tabs button')).toHaveCount(7);
   await expect(page.locator('#levels button')).toHaveCount(10);
   await expect(page.locator('#levels')).toBeHidden();
   await expect(page.locator('#status')).not.toBeEmpty();
@@ -562,4 +562,44 @@ test('LSB encoder rejects oversized messages and decoder rejects unencoded image
   });
   expect(result.oversized).toContain('Message is too large');
   expect(result.missing).toContain('No Night Cipher LSB payload found');
+});
+
+
+test('Cipher Walkthrough is a separate local educational workspace', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Cipher Walkthrough' }).click();
+  await expect(page.locator('#cipherWalkthrough')).toBeVisible();
+  await expect(page.locator('#mainGame')).toBeHidden();
+  await expect(page.locator('#researchMode')).toBeHidden();
+  await expect(page.locator('#walkScheme option')).toHaveCount(10);
+  await expect(page.locator('#walkProgress')).toHaveText('Step 1 of 4');
+  await expect(page.locator('#walkImage')).toHaveAttribute('src', /^data:image\/svg\+xml/);
+  await expect(page.locator('#walkPrevious')).toBeDisabled();
+  await page.click('#walkNext');
+  await expect(page.locator('#walkStepContent')).toContainText('Identify the encoding rule');
+  await page.click('#walkNext');
+  await expect(page.locator('#walkStepContent')).toContainText('Convert each group');
+  await expect(page.locator('.walk-table tbody tr')).toHaveCount(3);
+  await page.click('#walkReveal');
+  await expect(page.locator('#walkStepContent')).toContainText('BEE');
+  await expect(page.locator('#walkImage')).toHaveAttribute('alt', /Annotated Skyline/);
+  await expect(page.locator('#walkNext')).toBeDisabled();
+  await page.selectOption('#walkScheme', '9');
+  await expect(page.locator('#walkProgress')).toHaveText('Step 1 of 4');
+  await page.click('#walkNext');
+  await expect(page.locator('#walkStepContent')).toContainText('five bars');
+  await page.click('#walkNext');
+  await expect(page.locator('.walk-table tbody tr td:nth-child(2)').allTextContents()).resolves.toEqual(['B', 'E', 'A', 'T']);
+  await expect(page.locator('#walkImage')).toHaveAttribute('alt', /Rhythm cipher example/);
+});
+
+test('all ten cipher walkthrough tables derive one conversion row per training letter', async ({ page }) => {
+  await page.locator('#tabs button', { hasText: 'Cipher Walkthrough' }).click();
+  for (let i = 0; i < 10; i++) {
+    await page.selectOption('#walkScheme', String(i));
+    await page.click('#walkNext');
+    await page.click('#walkNext');
+    const rowCount = await page.locator('.walk-table tbody tr').count();
+    expect(rowCount).toBeGreaterThan(0);
+    await expect(page.locator('.walk-table')).not.toBeEmpty();
+  }
 });

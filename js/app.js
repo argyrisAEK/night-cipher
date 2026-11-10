@@ -6,6 +6,7 @@ import { runSelfTest } from './selftest.js';
 import { parseSeekerResponse, compareSeekers, auditBlindRequest, normalizeMessage } from './quality.js';
 import { POLLINATIONS_MODELS } from './models.js';
 import { mountLsbLab } from './lsb-lab.js';
+import { mountCipherWalkthrough } from './walkthrough.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]/gu,'');
@@ -355,7 +356,8 @@ const tabDefs=[
   ...TRAIN.map((t,i)=>['🎓 Level '+(i+1)+(T.levels&&T.levels[i]?' ✓':''),()=>train(i),'training']),
   ['⚔ AI vs AI Duel 💰',()=>{if(!(R&&R.mode==='duel'))stageIdle(IDLE.duel);$('#duel').hidden=false;$('#game').hidden=!(R&&R.mode=='duel');say('Choose the secret message and AI models, then start the duel.')},'duel'],
   ['🕵 You hide, AI seeks 💰',()=>{if(!(R&&R.mode==='own'))stageIdle(IDLE.own);$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own'],
-  ['🧬 LSB Lab',()=>say('Explore classic pixel-level steganography with a local RGB LSB encoder and decoder.'),'lab']
+  ['🧬 LSB Lab',()=>say('Explore classic pixel-level steganography with a local RGB LSB encoder and decoder.'),'lab'],
+  ['🧭 Cipher Walkthrough',()=>say('Explore the ten training ciphers step by step, from visible clues to decoded letters.'),'walkthrough']
 ];
 tabDefs.forEach(([label,fn,kind])=>{
   const b=document.createElement('button');
@@ -365,9 +367,10 @@ tabDefs.forEach(([label,fn,kind])=>{
     allTabs.forEach(x=>x.classList.remove('on','in'));researchTab.classList.remove('on');
     const inLearn=kind==='training'||kind==='learn';
     const inLab=kind==='lab';
+    const inWalkthrough=kind==='walkthrough';
     b.classList.add(kind==='learn'?'in':'on');
     if(kind==='training')allTabs.find(x=>x.dataset.kind==='learn').classList.add('in');
-    levels.hidden=!inLearn;$('#mainGame').hidden=inLab;$('#researchMode').hidden=true;$('#lsbLab').hidden=!inLab;
+    levels.hidden=!inLearn;$('#mainGame').hidden=inLab||inWalkthrough;$('#researchMode').hidden=true;$('#lsbLab').hidden=!inLab;$('#cipherWalkthrough').hidden=!inWalkthrough;
     $('#intro').textContent=INTRO[inLearn&&kind!=='daily'?'learn':kind]||'';
     $('#duel').hidden=$('#own').hidden=true;
     fn();
@@ -375,7 +378,7 @@ tabDefs.forEach(([label,fn,kind])=>{
   allTabs.push(b);(kind==='training'?levels:tabs).append(b);
 });
 const researchTab=document.createElement('button');researchTab.type='button';researchTab.textContent='🧪 Research';researchTab.dataset.kind='research';
-researchTab.onclick=()=>{allTabs.forEach(x=>x.classList.remove('on','in'));researchTab.classList.add('on');$('#mainGame').hidden=true;$('#lsbLab').hidden=true;$('#researchMode').hidden=false;$('#intro').textContent='Evaluate Hider and Seeker performance with controlled experiments, independent blind validation and round-level diagnostics.';score();renderDiagnostics()};tabs.append(researchTab);
+researchTab.onclick=()=>{allTabs.forEach(x=>x.classList.remove('on','in'));researchTab.classList.add('on');$('#mainGame').hidden=true;$('#lsbLab').hidden=true;$('#cipherWalkthrough').hidden=true;$('#researchMode').hidden=false;$('#intro').textContent='Evaluate Hider and Seeker performance with controlled experiments, independent blind validation and round-level diagnostics.';score();renderDiagnostics()};tabs.append(researchTab);
 
 /* ---------- fixed Pollinations model allowlist ---------- */
 function fill(sel,ids,pref){
@@ -394,7 +397,7 @@ fill('#seeker2',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
 fill('#seekerAudit',POLLINATIONS_MODELS,/^openai\/gpt-6-luna$/i);
 fill('#judgeModel',POLLINATIONS_MODELS,/openai\/gpt-6\.1-sol/i);
 ['#hider','#seeker','#seeker2','#seekerAudit','#judgeModel'].forEach(sel=>{$(sel).disabled=false});
-if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();mountLsbLab($('#lsbLab'));allTabs[0].click();
+if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();mountLsbLab($('#lsbLab'));mountCipherWalkthrough($('#cipherWalkthrough'));allTabs[0].click();
 /* ---------- first-visit "How to play" ---------- */
 const howto=$('#howto'),HOWTO_KEY='nc-howto-seen';
 const openHowto=()=>{if(!howto.open){howto.showModal();howto.scrollTop=0}};
