@@ -17,7 +17,10 @@ const SELECTORS=[
   'rect[width="84"]'
 ];
 const OVERLAP_THRESHOLD=0.10;
-
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('nc-howto-seen', '1'); } catch {} });
+  await page.goto('/');
+});
 test('Visual Audit: deterministic geometry, clipping and screenshot baseline for all 10 ciphers', async ({ page }, testInfo) => {
   const cipherNames = await page.evaluate(async () => (await import('/js/ciphers.js')).TRAIN.map(item=>item.n));
   expect(cipherNames).toHaveLength(10);
