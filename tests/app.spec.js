@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 });
 test('loads all game modes and the BYOP connect control', async ({ page }) => {
   await expect(page.locator('polli-connect')).toHaveAttribute('models', 'text');
-  await expect(page.locator('#tabs button')).toHaveCount(7);
+  await expect(page.locator('#tabs button')).toHaveCount(8);
   await expect(page.locator('#levels button')).toHaveCount(10);
   await expect(page.locator('#levels')).toBeHidden();
   await expect(page.locator('#status')).not.toBeEmpty();
@@ -631,4 +631,52 @@ test('AI duel outcomes are saved to the Failure Analysis evidence log',async({pa
  expect(saved[1].outcome).toBe('success');expect(saved[1].category).toBe('valid_hider_output');
  await page.locator('#tabs button',{hasText:'Research'}).click();await expect(page.locator('#evidenceTable')).toContainText('message_mismatch');
  await page.selectOption('#evidenceOutcome','failure');await expect(page.locator('#evidenceTable')).toContainText('message_mismatch');await expect(page.locator('#evidenceTable')).not.toContainText('valid_hider_output');
+});
+
+test('Image Degradation Lab creates five deterministic browser-local variants',async({page})=>{
+ const result=await page.evaluate(async()=>{
+  const{createDegradationVariants,DEGRADATION_PROFILES}=await import('/js/degradation.js');
+  const c=document.createElement('canvas');c.width=32;c.height=24;const x=c.getContext('2d');x.fillStyle='#d4a34f';x.fillRect(0,0,32,24);x.fillStyle='#14223a';x.fillRect(8,6,16,12);
+  const variants=await createDegradationVariants(c.toDataURL('image/png'));
+  return{profiles:DEGRADATION_PROFILES.map(p=>p.id),variants:variants.map(v=>({id:v.id,mime:v.mime,width:v.width,height:v.height,bytes:v.bytes,dataUrl:v.dataUrl}))};
+ });
+ expect(result.profiles).toEqual(['jpeg55','downscale50','blur2','noise18','crop12']);
+ expect(result.variants).toHaveLength(5);
+ expect(result.variants.map(v=>v.id)).toEqual(result.profiles);
+ for(const v of result.variants){expect(v.width).toBe(32);expect(v.height).toBe(24);expect(v.bytes).toBeGreaterThan(0);expect(v.dataUrl).toMatch(/^data:image\/(png|jpeg);base64,/)}
+ expect(result.variants[0].mime).toBe('image/jpeg');expect(result.variants.slice(1).every(v=>v.mime==='image/png')).toBeTruthy();
+});
+test('Image Degradation Lab is a separate workspace and requires an active AI round',async({page})=>{
+ await page.locator('#tabs button',{hasText:'Image Degradation Lab'}).click();
+ await expect(page.locator('#degradationLab')).toBeVisible();
+ await expect(page.locator('#mainGame')).toBeHidden();
+ await expect(page.locator('#degradationSource')).toContainText('Start an AI vs AI Duel');
+ await expect(page.locator('#degradationRun')).toBeDisabled();
+ await expect(page.locator('#degradationCost')).toHaveCount(0);
+});
+test('Image Degradation Lab runs five seeker checks and records each variant',async({page})=>{
+ const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/><circle cx="180" cy="180" r="48" fill="#f1c987"/></svg>';
+ const scheme='The number of bright circles encodes each letter by alphabet position.';
+ let seekerCalls=0;
+ await page.route('https://gen.pollinations.ai/v1/models',route=>route.fulfill({json:{data:[{id:'openai/gpt-6.1-sol'},{id:'openai/gpt-6.1-terra',input_modalities:['image']}]}}));
+ await page.route('https://gen.pollinations.ai/v1/chat/completions',async route=>{
+  const body=route.request().postDataJSON(),hider=body.model==='openai/gpt-6.1-sol';
+  if(!hider)seekerCalls++;
+  await route.fulfill({json:{model:body.model,choices:[{message:{content:hider?svg+'\\nSCHEME: '+scheme:'MESSAGE: LANTERN\\nMETHOD: I counted the visible symbols.'},finish_reason:'stop'}],usage:{total_tokens:36,completion_tokens:20}}});
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ await page.reload();await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='openai/gpt-6.1-sol'));
+ await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
+ await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();await page.fill('#msg','LANTERN');await page.click('#hide');
+ await expect(page.locator('#imgbox img')).toBeVisible({timeout:10000});
+ await page.locator('#tabs button',{hasText:'Image Degradation Lab'}).click();
+ await expect(page.locator('#degradationRun')).toBeEnabled();
+ await page.click('#degradationRun');
+ await expect(page.locator('.degradation-card')).toHaveCount(5,{timeout:20000});
+ expect(seekerCalls).toBe(5);
+ const evidence=await page.evaluate(()=>JSON.parse(localStorage.getItem('nc')).evidence.filter(x=>x.variant?.startsWith('lab-')));
+ expect(evidence).toHaveLength(5);expect(evidence.every(x=>x.type==='robustness'&&x.expectedMessage==='LANTERN'&&x.similarity===1)).toBeTruthy();
+ await page.locator('#tabs button',{hasText:'Research'}).click();
+ await page.selectOption('#evidenceType','robustness');
+ await expect(page.locator('#evidenceTable')).toContainText('lab-jpeg55');
 });

@@ -8,6 +8,7 @@ import { POLLINATIONS_MODELS } from './models.js';
 import { mountLsbLab } from './lsb-lab.js';
 import { mountCipherWalkthrough } from './walkthrough.js';
 import { summarizeEvidence, filterEvidence, evidenceToCSV } from './failure-analysis.js';
+import { createDegradationVariants } from './degradation.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]/gu,'');
@@ -119,12 +120,13 @@ function renderTries(){const t=$('#tries');if(!R||R.mode==='own'||R.done){t.text
 function renderHintLabel(){const total=R?.hints?.length||0;$('#hint').textContent=total?`Hint (${R.used}/${total} · −20)`:'Hint (−20)';}
 function syncButtons(){
   renderTries();renderHintLabel();
-  ['#go','#giveup','#hint','#ai','#next','#independent','#robustness'].forEach(sel=>{const button=$(sel);if(button)button.disabled=uiBusy});
+  ['#go','#giveup','#hint','#ai','#next','#independent','#robustness','#degradationRun'].forEach(sel=>{const button=$(sel);if(button)button.disabled=uiBusy});
   $('#after').hidden=!(R&&(R.done||R.mode==='duel'));
   const researchRound=!!(R&&(R.mode==='duel'||R.mode==='own')&&R.svg);
   $('#independent').hidden=!(researchRound&&R.mode==='duel');
   $('#robustness').hidden=!researchRound;
   $('#independent').disabled=uiBusy||diagnostics?.independentSeeker?.status==='completed';$('#robustness').disabled=uiBusy||!R||!R.svg;
+  if($('#degradationRun'))$('#degradationRun').disabled=uiBusy||!R||!R.svg||!['duel','own'].includes(R.mode);
   if(!uiBusy&&R){
     $('#go').disabled=R.done;$('#giveup').disabled=R.done;
     $('#hint').disabled=R.done||R.used>=R.hints.length;
@@ -361,7 +363,8 @@ const tabDefs=[
   ['⚔ AI vs AI Duel 💰',()=>{if(!(R&&R.mode==='duel'))stageIdle(IDLE.duel);$('#duel').hidden=false;$('#game').hidden=!(R&&R.mode=='duel');say('Choose the secret message and AI models, then start the duel.')},'duel'],
   ['🕵 You hide, AI seeks 💰',()=>{if(!(R&&R.mode==='own'))stageIdle(IDLE.own);$('#own').hidden=false;$('#game').hidden=true;say('Hide a word with a scheme of your choice and see if the AI can read it.')},'own'],
   ['🧬 LSB Lab',()=>say('Explore classic pixel-level steganography with a local RGB LSB encoder and decoder.'),'lab'],
-  ['🧭 Cipher Walkthrough',()=>say('Explore the ten training ciphers step by step, from visible clues to decoded letters.'),'walkthrough']
+  ['🧭 Cipher Walkthrough',()=>say('Explore the ten training ciphers step by step, from visible clues to decoded letters.'),'walkthrough'],
+  ['🧪 Image Degradation Lab',()=>{refreshDegradationLab();say('Test Seeker recovery after controlled image degradation. Each run makes five additional vision requests.')},'degradation']
 ];
 tabDefs.forEach(([label,fn,kind])=>{
   const b=document.createElement('button');
@@ -372,9 +375,10 @@ tabDefs.forEach(([label,fn,kind])=>{
     const inLearn=kind==='training'||kind==='learn';
     const inLab=kind==='lab';
     const inWalkthrough=kind==='walkthrough';
+    const inDegradation=kind==='degradation';
     b.classList.add(kind==='learn'?'in':'on');
     if(kind==='training')allTabs.find(x=>x.dataset.kind==='learn').classList.add('in');
-    levels.hidden=!inLearn;$('#mainGame').hidden=inLab||inWalkthrough;$('#researchMode').hidden=true;$('#lsbLab').hidden=!inLab;$('#cipherWalkthrough').hidden=!inWalkthrough;
+    levels.hidden=!inLearn;$('#mainGame').hidden=inLab||inWalkthrough||inDegradation;$('#researchMode').hidden=true;$('#lsbLab').hidden=!inLab;$('#cipherWalkthrough').hidden=!inWalkthrough;$('#degradationLab').hidden=!inDegradation;
     $('#intro').textContent=INTRO[inLearn&&kind!=='daily'?'learn':kind]||'';
     $('#duel').hidden=$('#own').hidden=true;
     fn();
@@ -382,8 +386,50 @@ tabDefs.forEach(([label,fn,kind])=>{
   allTabs.push(b);(kind==='training'?levels:tabs).append(b);
 });
 const researchTab=document.createElement('button');researchTab.type='button';researchTab.textContent='🧪 Research';researchTab.dataset.kind='research';
-researchTab.onclick=()=>{allTabs.forEach(x=>x.classList.remove('on','in'));researchTab.classList.add('on');$('#mainGame').hidden=true;$('#lsbLab').hidden=true;$('#cipherWalkthrough').hidden=true;$('#researchMode').hidden=false;$('#intro').textContent='Evaluate Hider and Seeker performance with controlled experiments, independent blind validation and round-level diagnostics.';score();renderDiagnostics()};tabs.append(researchTab);
+researchTab.onclick=()=>{allTabs.forEach(x=>x.classList.remove('on','in'));researchTab.classList.add('on');$('#mainGame').hidden=true;$('#lsbLab').hidden=true;$('#cipherWalkthrough').hidden=true;$('#degradationLab').hidden=true;$('#researchMode').hidden=false;$('#intro').textContent='Evaluate Hider and Seeker performance with controlled experiments, independent blind validation and round-level diagnostics.';score();renderDiagnostics()};tabs.append(researchTab);
 
+/* ---------- interactive image degradation lab ---------- */
+let degradationInFlight=false;
+const refreshDegradationLab=()=>{
+ const source=$('#degradationSource'),button=$('#degradationRun');
+ const available=!!(R&&R.svg&&['duel','own'].includes(R.mode));
+ if(source)source.textContent=available?('Active round · '+(R.mode==='duel'?'AI vs AI Duel':'You hide, AI seeks')+' · '+R.svg.length.toLocaleString()+' SVG characters · message length '+String(R.secret||'').length):'Start an AI vs AI Duel or You hide, AI seeks round first.';
+ if(button)button.disabled=uiBusy||!available||degradationInFlight;
+};
+const degradationReport=rows=>'<div class="degradation-grid">'+rows.map(r=>'<article class="degradation-card"><div class="degradation-thumb"><img src="'+r.dataUrl+'" alt="'+esc(r.label)+' preview"></div><div class="degradation-card-body"><b>'+esc(r.label)+'</b><small>'+esc(r.description)+'</small><div class="degradation-result-row"><span class="'+(r.error?'bad':r.ok?'ok':'bad')+'">'+(r.error?'Request error':r.ok?'Recovered':'Not recovered')+'</span><strong>'+(r.similarity==null?'—':Math.round(r.similarity*100)+'%')+'</strong></div><p><small>Decoded: </small>'+esc(r.guess||'—')+'</p><small>'+((r.durationMs==null)?'—':Math.round(r.durationMs)+' ms')+' · '+(r.tokens??'—')+' tokens · '+(r.imageKB??'—')+' KB</small></div></article>').join('')+'</div>';
+$('#degradationRun').onclick=async()=>{
+ const round=R;if(!round||degradationInFlight||aiInFlight)return;
+ if(!conn||!conn.apiKey)return say('Connect your Pollinations account first. This experiment makes five additional paid vision requests.','bad');
+ const model=robustnessModel(round);if(!model)return say('Select a vision-capable seeker model first.','bad');
+ if(!confirm('Run five image degradation tests? This sends 5 additional requests to '+model+' and uses Pollen.'))return;
+ degradationInFlight=true;const button=$('#degradationRun'),root=$('#degradationResults'),rows=[];
+ button.disabled=true;root.innerHTML='<p class="report-empty">Generating five deterministic image variants…</p>';busy(true,'Preparing image degradation variants…');
+ try{
+  const source=await toRaster(round.svg,'image/png'),variants=await createDegradationVariants(source),prompt=buildSeekPrompt(round);
+  const audit=auditBlindRequest({prompt,secret:round.secret,scheme:round.scheme||'',schemeExpected:round.mode!=='duel'&&!!round.scheme,imageAttached:true});
+  if(!audit.verified)throw new Error('Blind Seeker request audit failed. The experiment was stopped before sending any image.');
+  root.innerHTML=degradationReport(variants.map(v=>({...v,guess:'Waiting…',similarity:null,ok:false,tokens:0,durationMs:null,imageKB:Math.round(v.bytes/102.4)/10})));
+  for(let i=0;i<variants.length;i++){
+   if(R!==round)break;
+   const variant=variants[i],before=tok,started=performance.now(),row={...variant,guess:'',similarity:null,ok:false,tokens:0,durationMs:null,imageKB:Math.round(variant.bytes/102.4)/10};
+   try{
+    const output=await chat(model,[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:variant.dataUrl}}]}],4000,90000);
+    const parsed=parseSeekerResponse(output);row.guess=parsed.message;row.method=parsed.method;row.similarity=simMessage(row.guess,round.secret);row.ok=row.similarity>=.9;
+   }catch(error){row.error=error.message}
+   row.tokens=tok-before;row.durationMs=performance.now()-started;rows.push(row);
+   const event={type:'robustness',outcome:row.ok?'success':'failure',category:row.error?'image_variant_request_error':row.ok?'image_variant_recovered':'image_variant_mismatch',hiderModel:diagnostics?.hider?.model||null,seekerModel:model,expectedMessage:round.secret,decodedMessage:row.guess||null,exactMatch:row.similarity==null?null:normalizeMessage(row.guess)===normalizeMessage(round.secret),similarity:row.similarity,durationMs:Math.round(row.durationMs),tokens:row.tokens,variant:'lab-'+variant.id,imageKB:row.imageKB,error:row.error||null});
+   recordEvidence(event);
+   root.innerHTML=degradationReport([...rows,...variants.slice(i+1).map(v=>({...v,guess:'Waiting…',similarity:null,ok:false,tokens:0,durationMs:null,imageKB:Math.round(v.bytes/102.4)/10}))]);
+   busy(true,'Test '+rows.length+' of '+variants.length+': '+variant.label);
+  }
+  if(R===round){
+   const completed=rows.filter(r=>r.similarity!=null),wins=completed.filter(r=>r.ok).length;
+   round.degradationLab={model,rows:rows.map(({dataUrl,...r})=>r),timestamp:new Date().toISOString()};
+   save();score();say('Image Degradation Lab complete: '+wins+'/'+completed.length+' variants recovered'+(rows.some(r=>r.error)?'; some requests failed.':'.'),wins===5?'ok':'');
+  }
+ }catch(error){say('Image Degradation Lab stopped: '+error.message,'bad');root.innerHTML='<p class="bad">'+esc(error.message)+'</p>'}
+ finally{degradationInFlight=false;busy(false);refreshDegradationLab()}
+};
 /* ---------- fixed Pollinations model allowlist ---------- */
 function fill(sel,ids,pref){
   $(sel).innerHTML=ids.map(id=>`<option value="${esc(id)}">${esc(id)}</option>`).join('');
@@ -401,7 +447,7 @@ fill('#seeker2',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
 fill('#seekerAudit',POLLINATIONS_MODELS,/^openai\/gpt-6-luna$/i);
 fill('#judgeModel',POLLINATIONS_MODELS,/openai\/gpt-6\.1-sol/i);
 ['#hider','#seeker','#seeker2','#seekerAudit','#judgeModel'].forEach(sel=>{$(sel).disabled=false});
-if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();mountLsbLab($('#lsbLab'));mountCipherWalkthrough($('#cipherWalkthrough'));$('#evidenceType').addEventListener('change',renderEvidence);$('#evidenceOutcome').addEventListener('change',renderEvidence);$('#evidenceModel').addEventListener('change',renderEvidence);$('#evidenceSearch').addEventListener('input',renderEvidence);$('#evidenceJson').onclick=()=>downloadEvidence('json');$('#evidenceCsv').onclick=()=>downloadEvidence('csv');$('#evidenceClear').onclick=()=>{if(!T.evidence?.length)return;if(!confirm('Clear the locally saved Failure Analysis evidence log?'))return;T.evidence=[];save();renderEvidence()};allTabs[0].click();
+if(APP_KEY.includes('REPLACE'))$('#setup').hidden=false;score();mountLsbLab($('#lsbLab'));mountCipherWalkthrough($('#cipherWalkthrough'));refreshDegradationLab();$('#evidenceType').addEventListener('change',renderEvidence);$('#evidenceOutcome').addEventListener('change',renderEvidence);$('#evidenceModel').addEventListener('change',renderEvidence);$('#evidenceSearch').addEventListener('input',renderEvidence);$('#evidenceJson').onclick=()=>downloadEvidence('json');$('#evidenceCsv').onclick=()=>downloadEvidence('csv');$('#evidenceClear').onclick=()=>{if(!T.evidence?.length)return;if(!confirm('Clear the locally saved Failure Analysis evidence log?'))return;T.evidence=[];save();renderEvidence()};allTabs[0].click();
 /* ---------- first-visit "How to play" ---------- */
 const howto=$('#howto'),HOWTO_KEY='nc-howto-seen';
 const openHowto=()=>{if(!howto.open){howto.showModal();howto.scrollTop=0}};
