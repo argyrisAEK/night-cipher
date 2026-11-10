@@ -9,7 +9,7 @@ const OUTPUT = path.resolve('test-results/blind-seeker');
 function corpusMessage(cipherIndex, length) {
   // Deterministic, balanced A-Z corpus. The secret is kept out of public filenames/manifest.
   return Array.from({ length }, (_, i) =>
-    String.fromCharCode(65 + ((i * 11 + cipherIndex * 7 + length * 3) % 26))
+    String.fromCharCode(65 + ((i * 11 + length * 3) % 26))
   ).join('');
 }
 
