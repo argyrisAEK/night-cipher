@@ -790,7 +790,7 @@ test('Daily and Learn require an explicit Seeker choice and disclose live model 
   await page.route('https://gen.pollinations.ai/text/models?reliability=all', route => route.fulfill({
     json:{data:[
       {id:'openai/gpt-6.1-terra',publisher:'OpenAI',input_modalities:['text','image'],pricing:{promptTextTokens:0.000001,promptImageTokens:0.000003,completionTextTokens:0.000002}},
-      {id:'community/vendouple/gpt-6-luna',publisher:'Vendouple',input_modalities:['text','image'],pricing:{promptTextTokens:0.000001,completionTextTokens:0.000002}}
+      {id:'community/vendouple/gpt-6-luna',publisher:'Vendouple',input_modalities:['text','image'],pricing:{promptTextTokens:0.000001,promptImageTokens:0.000003,completionTextTokens:0.000002}}
     ]}
   }));
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
