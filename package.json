@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "playwright test"
+    "test": "playwright test",
+    "experiment:blind-seeker": "node scripts/blind-seeker-run.mjs",
+    "experiment:blind-seeker:score": "node scripts/blind-seeker-score.mjs"
   },
   "devDependencies": {
     "vite": "^7.0.0",

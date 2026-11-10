@@ -21,6 +21,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Check benchmark script syntax
+        run: node --check scripts/blind-seeker-run.mjs && node --check scripts/blind-seeker-score.mjs
       - name: Production build
         run: npm run build
       - name: Install Playwright browser
@@ -42,13 +44,5 @@ jobs:
         with:
           name: night-cipher-blind-seeker-public
           path: test-results/blind-seeker/public/
-          if-no-files-found: warn
-          retention-days: 14
-      - name: Upload blind Seeker evaluator answer key
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: night-cipher-blind-seeker-private-answer-key
-          path: test-results/blind-seeker/private/answer-key.json
           if-no-files-found: warn
           retention-days: 14
