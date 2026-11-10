@@ -588,7 +588,7 @@ test('Cipher Walkthrough is a separate local educational workspace', async ({ pa
   await page.click('#walkNext');
   await expect(page.locator('#walkStepContent')).toContainText('five bars');
   await page.click('#walkNext');
-  await expect(page.locator('.walk-table')).toContainText('BEAT');
+  await expect(page.locator('.walk-table tbody tr td:nth-child(2)').allTextContents()).resolves.toEqual(['B', 'E', 'A', 'T']);
   await expect(page.locator('#walkImage')).toHaveAttribute('alt', /Rhythm cipher example/);
 });
 
