@@ -395,7 +395,7 @@ const refreshDegradationLab=()=>{
  const available=!!(R&&R.svg&&['duel','own'].includes(R.mode));
  if(source)source.textContent=available?('Active round · '+(R.mode==='duel'?'AI vs AI Duel':'You hide, AI seeks')+' · '+R.svg.length.toLocaleString()+' SVG characters · message length '+String(R.secret||'').length):'Start an AI vs AI Duel or You hide, AI seeks round first.';
  if(button)button.disabled=uiBusy||!available||degradationInFlight;
- if($('#degradationStatus'))$('#degradationStatus').textContent=available?'Ready · five additional vision requests will be sent after confirmation.':'Waiting for an active AI round.';
+ if($('#degradationStatus')&&!/^(Completed|Stopped)/.test($('#degradationStatus').textContent))$('#degradationStatus').textContent=available?'Ready · five additional vision requests will be sent after confirmation.':'Waiting for an active AI round.';
 };
 const degradationReport=rows=>'<div class="degradation-grid">'+rows.map(r=>'<article class="degradation-card"><div class="degradation-thumb"><img src="'+r.dataUrl+'" alt="'+esc(r.label)+' preview"></div><div class="degradation-card-body"><b>'+esc(r.label)+'</b><small>'+esc(r.description)+'</small><div class="degradation-result-row"><span class="'+(r.error?'bad':r.ok?'ok':'bad')+'">'+(r.error?'Request error':r.ok?'Recovered':'Not recovered')+'</span><strong>'+(r.similarity==null?'—':Math.round(r.similarity*100)+'%')+'</strong></div><p><small>Decoded: </small>'+esc(r.guess||'—')+'</p><small>'+((r.durationMs==null)?'—':Math.round(r.durationMs)+' ms')+' · '+(r.tokens??'—')+' tokens · '+(r.imageKB??'—')+' KB</small></div></article>').join('')+'</div>';
 $('#degradationRun').onclick=async()=>{
