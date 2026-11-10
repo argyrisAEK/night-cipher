@@ -21,6 +21,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Check benchmark script syntax
+        run: node --check scripts/blind-seeker-run.mjs && node --check scripts/blind-seeker-score.mjs
       - name: Production build
         run: npm run build
       - name: Install Playwright browser
