@@ -12,6 +12,7 @@ const loadImage = src => new Promise((resolve, reject) => {
   image.onerror = () => reject(new Error('Could not decode the source image.'));
   image.src = src;
 });
+
 const canvas = (width, height) => {
   const node = document.createElement('canvas');
   node.width = width; node.height = height;
