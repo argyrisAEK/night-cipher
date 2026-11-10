@@ -47,11 +47,13 @@ const formatRate = value => {
   return Number(perMillion.toFixed(6)).toLocaleString('en-US', { maximumFractionDigits: 6 });
 };
 
-export function describeModel(model) {
+export function describeModel(model, { requiresVision = false } = {}) {
   if (!model) return 'Live catalog details are unavailable. Pricing and capabilities could not be verified.';
   const publisher = model.publisher || model.brand || 'Not listed';
   const modalities = Array.isArray(model.input_modalities) ? model.input_modalities.join(', ') : '';
-  const vision = modelSupportsVision(model) ? 'Image input: supported' : modalities ? 'Image input: not listed' : 'Image input: unverified';
+  const capability = requiresVision
+    ? (modelSupportsVision(model) ? 'Vision input: supported' : modalities ? 'Vision input: not listed' : 'Vision input: unverified')
+    : (modalities ? `Input modalities: ${modalities}` : 'Input modalities: not listed');
   const prices = Object.entries(MODEL_PRICE_KEYS)
     .map(([key, label]) => {
       const rate = rateFor(model, key);
@@ -60,7 +62,7 @@ export function describeModel(model) {
     .filter(Boolean);
   const priceText = prices.length ? prices.join(' · ') : 'Token pricing: not published';
   const health = model.health?.status ? `Availability: ${model.health.status}` : '';
-  return [`Publisher: ${publisher}`, vision, priceText, health].filter(Boolean).join(' · ');
+  return [`Publisher: ${publisher}`, capability, priceText, health].filter(Boolean).join(' · ');
 }
 
 export function estimatePollenCost(model, usage) {
