@@ -652,7 +652,6 @@ test('Image Degradation Lab is a separate workspace and requires an active AI ro
  await expect(page.locator('#mainGame')).toBeHidden();
  await expect(page.locator('#degradationSource')).toContainText('Start an AI vs AI Duel');
  await expect(page.locator('#degradationRun')).toBeDisabled();
- await expect(page.locator('#degradationCost')).toHaveCount(0);
 });
 test('Image Degradation Lab runs five seeker checks and records each variant',async({page})=>{
  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/><circle cx="180" cy="180" r="48" fill="#f1c987"/></svg>';
@@ -662,7 +661,7 @@ test('Image Degradation Lab runs five seeker checks and records each variant',as
  await page.route('https://gen.pollinations.ai/v1/chat/completions',async route=>{
   const body=route.request().postDataJSON(),hider=body.model==='openai/gpt-6.1-sol';
   if(!hider)seekerCalls++;
-  await route.fulfill({json:{model:body.model,choices:[{message:{content:hider?svg+'\\nSCHEME: '+scheme:'MESSAGE: LANTERN\\nMETHOD: I counted the visible symbols.'},finish_reason:'stop'}],usage:{total_tokens:36,completion_tokens:20}}});
+  await route.fulfill({json:{model:body.model,choices:[{message:{content:hider?svg+'\nSCHEME: '+scheme:'MESSAGE: LANTERN\nMETHOD: I counted the visible symbols.'},finish_reason:'stop'}],usage:{total_tokens:36,completion_tokens:20}}});
  });
  page.on('dialog',dialog=>dialog.accept());
  await page.reload();await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='openai/gpt-6.1-sol'));

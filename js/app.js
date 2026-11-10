@@ -395,6 +395,7 @@ const refreshDegradationLab=()=>{
  const available=!!(R&&R.svg&&['duel','own'].includes(R.mode));
  if(source)source.textContent=available?('Active round · '+(R.mode==='duel'?'AI vs AI Duel':'You hide, AI seeks')+' · '+R.svg.length.toLocaleString()+' SVG characters · message length '+String(R.secret||'').length):'Start an AI vs AI Duel or You hide, AI seeks round first.';
  if(button)button.disabled=uiBusy||!available||degradationInFlight;
+ if($('#degradationStatus'))$('#degradationStatus').textContent=available?'Ready · five additional vision requests will be sent after confirmation.':'Waiting for an active AI round.';
 };
 const degradationReport=rows=>'<div class="degradation-grid">'+rows.map(r=>'<article class="degradation-card"><div class="degradation-thumb"><img src="'+r.dataUrl+'" alt="'+esc(r.label)+' preview"></div><div class="degradation-card-body"><b>'+esc(r.label)+'</b><small>'+esc(r.description)+'</small><div class="degradation-result-row"><span class="'+(r.error?'bad':r.ok?'ok':'bad')+'">'+(r.error?'Request error':r.ok?'Recovered':'Not recovered')+'</span><strong>'+(r.similarity==null?'—':Math.round(r.similarity*100)+'%')+'</strong></div><p><small>Decoded: </small>'+esc(r.guess||'—')+'</p><small>'+((r.durationMs==null)?'—':Math.round(r.durationMs)+' ms')+' · '+(r.tokens??'—')+' tokens · '+(r.imageKB??'—')+' KB</small></div></article>').join('')+'</div>';
 $('#degradationRun').onclick=async()=>{
@@ -403,7 +404,7 @@ $('#degradationRun').onclick=async()=>{
  const model=robustnessModel(round);if(!model)return say('Select a vision-capable seeker model first.','bad');
  if(!confirm('Run five image degradation tests? This sends 5 additional requests to '+model+' and uses Pollen.'))return;
  degradationInFlight=true;const button=$('#degradationRun'),root=$('#degradationResults'),rows=[];
- button.disabled=true;root.innerHTML='<p class="report-empty">Generating five deterministic image variants…</p>';busy(true,'Preparing image degradation variants…');
+ button.disabled=true;$('#degradationStatus').textContent='Preparing five deterministic image variants…';root.innerHTML='<p class="report-empty">Generating five deterministic image variants…</p>';busy(true,'Preparing image degradation variants…');
  try{
   const source=await toRaster(round.svg,'image/png'),variants=await createDegradationVariants(source),prompt=buildSeekPrompt(round);
   const audit=auditBlindRequest({prompt,secret:round.secret,scheme:round.scheme||'',schemeExpected:round.mode!=='duel'&&!!round.scheme,imageAttached:true});
@@ -420,14 +421,14 @@ $('#degradationRun').onclick=async()=>{
    const event={type:'robustness',outcome:row.ok?'success':'failure',category:row.error?'image_variant_request_error':row.ok?'image_variant_recovered':'image_variant_mismatch',hiderModel:diagnostics?.hider?.model||null,seekerModel:model,expectedMessage:round.secret,decodedMessage:row.guess||null,exactMatch:row.similarity==null?null:normalizeMessage(row.guess)===normalizeMessage(round.secret),similarity:row.similarity,durationMs:Math.round(row.durationMs),tokens:row.tokens,variant:'lab-'+variant.id,imageKB:row.imageKB,error:row.error||null});
    recordEvidence(event);
    root.innerHTML=degradationReport([...rows,...variants.slice(i+1).map(v=>({...v,guess:'Waiting…',similarity:null,ok:false,tokens:0,durationMs:null,imageKB:Math.round(v.bytes/102.4)/10}))]);
-   busy(true,'Test '+rows.length+' of '+variants.length+': '+variant.label);
+   $('#degradationStatus').textContent='Test '+rows.length+' of '+variants.length+': '+variant.label;busy(true,'Test '+rows.length+' of '+variants.length+': '+variant.label);
   }
   if(R===round){
    const completed=rows.filter(r=>r.similarity!=null),wins=completed.filter(r=>r.ok).length;
    round.degradationLab={model,rows:rows.map(({dataUrl,...r})=>r),timestamp:new Date().toISOString()};
-   save();score();say('Image Degradation Lab complete: '+wins+'/'+completed.length+' variants recovered'+(rows.some(r=>r.error)?'; some requests failed.':'.'),wins===5?'ok':'');
+   save();score();$('#degradationStatus').textContent='Completed · '+wins+'/'+completed.length+' variants recovered.';say('Image Degradation Lab complete: '+wins+'/'+completed.length+' variants recovered'+(rows.some(r=>r.error)?'; some requests failed.':'.'),wins===5?'ok':'');
   }
- }catch(error){say('Image Degradation Lab stopped: '+error.message,'bad');root.innerHTML='<p class="bad">'+esc(error.message)+'</p>'}
+ }catch(error){$('#degradationStatus').textContent='Stopped · '+error.message;say('Image Degradation Lab stopped: '+error.message,'bad');root.innerHTML='<p class="bad">'+esc(error.message)+'</p>'}
  finally{degradationInFlight=false;busy(false);refreshDegradationLab()}
 };
 /* ---------- fixed Pollinations model allowlist ---------- */
