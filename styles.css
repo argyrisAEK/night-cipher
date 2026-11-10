@@ -272,3 +272,24 @@ a{color:#c4b5fd}
   .model-picker .row{flex-direction:column}
   .model-picker button{width:100%}
 }
+
+.model-cost-note{
+  color:#98a8c8;
+  font-size:.7rem;
+  line-height:1.45;
+  margin:5px 0 12px;
+}
+.ai-attempt-history{
+  margin-top:12px;
+  padding:11px 12px;
+  border:1px solid rgba(132,151,205,.22);
+  border-radius:10px;
+  background:rgba(7,13,28,.42);
+}
+.ai-attempt-history> b{color:#d9d0ff}
+.ai-attempt-history p{
+  margin:9px 0 0;
+  padding-top:8px;
+  border-top:1px solid rgba(132,151,205,.15);
+}
+.ai-attempt-history small{color:#aebbd8;line-height:1.5}
