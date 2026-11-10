@@ -31,8 +31,13 @@
 <nav id="levels" hidden aria-label="Training levels"></nav>
 
 <section id="lsbLab" class="card lsb-lab" hidden aria-labelledby="lsbTitle">
-<h2 id="lsbTitle">Classic LSB Steganography Lab</h2>
-<p class="diag-intro">Hide UTF-8 text in the least-significant bits of RGB image channels. This is a local browser experiment: no AI calls or uploads are made.</p>
+<h2 id="lsbTitle">Interactive Steganography Sandbox</h2>
+<p class="diag-intro">Experiment with classic pixel-level LSB encoding and the structural visual ciphers used by Night Cipher. All encoding, rendering and inspection run locally in your browser; no AI calls or uploads are made.</p>
+<div class="sandbox-switcher" role="tablist" aria-label="Sandbox type">
+<button id="sandboxPixelTab" type="button" role="tab" aria-selected="true" aria-controls="pixelSandboxPanel" class="active">Pixel-level LSB</button>
+<button id="sandboxStructuralTab" type="button" role="tab" aria-selected="false" aria-controls="structuralSandbox">Structural schemes</button>
+</div>
+<div id="pixelSandboxPanel" class="sandbox-panel" role="tabpanel" aria-labelledby="sandboxPixelTab">
 <div class="lsb-grid">
 <div class="lsb-controls">
 <label for="lsbFile">1. Choose a cover image</label><input id="lsbFile" type="file" accept="image/png,image/jpeg,image/webp">
@@ -46,11 +51,34 @@
 <div class="lsb-visual"><h3>Image canvas</h3><p class="diag-intro">Click any pixel to inspect its RGB channel values.</p>
 <canvas id="lsbImage" aria-label="Image used for LSB encoding and decoding"></canvas>
 <h3>Pixel inspector</h3><canvas id="lsbInspector" width="144" height="144" aria-label="Magnified selected pixel"></canvas>
-<p id="lsbPixelInfo" class="lsb-pixel-info">Select a pixel in the image to inspect its RGB channels.</p></div>
+<p id="lsbPixelInfo" class="lsb-pixel-info">Select a pixel in the image to inspect its RGB channels.</p>
+<fieldset id="lsbManualBits" class="lsb-manual-bits" disabled>
+<legend>Manually edit this pixel’s LSBs</legend>
+<label><input id="lsbBitR" type="checkbox"> Red (R)</label>
+<label><input id="lsbBitG" type="checkbox"> Green (G)</label>
+<label><input id="lsbBitB" type="checkbox"> Blue (B)</label>
+<small>Changing a checkbox modifies the selected channel by at most ±1. Alpha is untouched.</small>
+</fieldset>
+</div>
 </div>
 <details class="lsb-explainer"><summary>How LSB encoding works</summary>
 <ol><li>Each red, green and blue channel is an 8-bit number from 0 to 255.</li><li>The least-significant bit (LSB) is the final binary digit. Changing it alters a channel value by at most 1.</li><li>This lab writes one message bit into each RGB channel, in row-major pixel order. Alpha values are left untouched.</li><li>A small header identifies this lab's format and stores the UTF-8 message length. The header consumes 7 bytes of capacity.</li></ol>
 <p><b>Important:</b> export and share the result as PNG. JPEG is lossy and may change the embedded bits. This simple educational encoder is not encrypted, authenticated, or designed to resist steganalysis.</p></details>
+</div>
+<div id="structuralSandbox" class="sandbox-panel structural-sandbox" role="tabpanel" aria-labelledby="sandboxStructuralTab" hidden>
+<p class="diag-intro">Change the message or cipher and watch the existing deterministic training encoder redraw the SVG. The table exposes the visible state assigned to every letter.</p>
+<div class="structural-controls">
+<label for="structuralScheme">Structural encoding scheme<select id="structuralScheme"></select></label>
+<label for="structuralMessage">Message · English letters A–Z<input id="structuralMessage" type="text" maxlength="12" value="NIGHT" autocomplete="off"></label>
+<label for="structuralSeed">Scene variation · decorative elements only <span id="structuralSeedValue">42</span><input id="structuralSeed" type="range" min="1" max="1000" value="42"></label>
+</div>
+<p id="structuralStatus" class="sandbox-status" role="status" aria-live="polite">Loading structural encoder…</p>
+<div id="structuralCapacity" class="structural-capacity" aria-live="polite">Nominal capacity will be calculated from the selected scheme.</div>
+<div class="structural-preview-wrap"><h3>Live SVG preview</h3><img id="structuralPreview" alt="Structural cipher preview"></div>
+<h3>Letter-by-letter encoding</h3>
+<div id="structuralBreakdown"><p class="report-empty">The letter-by-letter encoding breakdown will appear here.</p></div>
+<p class="report-footnote">Capacity is reported as a theoretical alphabet-state bound. It does not measure whether a human or vision model can reliably distinguish every state under noise, scaling, blur or compression. Morse is variable-length and is reported separately.</p>
+</div>
 </section>
 <section id="cipherWalkthrough" class="card cipher-walkthrough" hidden aria-labelledby="walkTitle">
 <h2 id="walkTitle">Interactive Cipher Walkthrough</h2>
