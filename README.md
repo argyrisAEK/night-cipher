@@ -15,7 +15,7 @@ You, the player, are the referee. You choose the secret, watch the AI compete, a
 
 The game also includes ten hand-built deterministic ciphers, a daily puzzle shared across timezones, and a full research mode for evaluating Hider/Seeker performance.
 
-**Live:** https://night-cipher.vercel.app/
+**Live:** https://night-cipher.vercel.app/ [![Made with pollinations.ai](https://raw.githubusercontent.com/pollinations/pollinations/main/packages/ui/src/brand/badge-made-with.svg)](https://pollinations.ai/?ref=badge)
 
 ---
 
