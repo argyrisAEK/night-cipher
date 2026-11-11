@@ -6,45 +6,63 @@ export function createChat({getConnection,getTokenCount,setTokenCount,onUsage}){
     const connection=getConnection();
     const key=connection&&connection.apiKey;
     if(!key)throw Error('Connect your Pollinations account first (button, top right).');
-    const ac=new AbortController();
-    const t=setTimeout(()=>ac.abort(),Math.max(10000,Math.min(timeoutMs,180000)));
-    try{
-      const r=await fetch(API+'/chat/completions',{
-        method:'POST',
-        headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},
-        body:JSON.stringify({model,messages,max_tokens:max}),
-        signal:ac.signal
-      });
-      if(!r.ok){
-        let m='';
-        try{m=(await r.json()).error?.message||''}catch{}
-        throw Error(r.status==402
-          ?'Not enough Pollen for this request. Top up from the Connect menu or pick a cheaper model.'
-          :r.status==401||r.status==403
-            ?'Your key was rejected, expired, or lacks permission for this model. Reconnect and authorize the required model categories.'
-            :`API error ${r.status} ${m}`);
+    let r;
+    for(let attempt=0;attempt<3;attempt++){
+      const ac=new AbortController();
+      const t=setTimeout(()=>ac.abort(),Math.max(10000,Math.min(timeoutMs,180000)));
+      try{
+        r=await fetch(API+'/chat/completions',{
+          method:'POST',
+          headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},
+          body:JSON.stringify({model,messages,max_tokens:max}),
+          signal:ac.signal
+        });
+      }catch(e){
+        throw e.name==='AbortError'
+          ?Error('Request timed out. Try a faster model or a shorter prompt.')
+          :e;
+      }finally{clearTimeout(t)}
+      if(r.ok)break;
+      const retryable=r.status===429||(r.status>=500&&r.status<=599);
+      if(retryable&&attempt<2){
+        const header=r.headers.get('Retry-After');
+        let retryAfterMs=0;
+        if(header){
+          const seconds=Number(header);
+          if(Number.isFinite(seconds)&&seconds>=0)retryAfterMs=seconds*1000;
+          else{
+            const date=Date.parse(header);
+            if(Number.isFinite(date))retryAfterMs=Math.max(0,date-Date.now());
+          }
+        }
+        const delayMs=Math.min(5000,Math.max(500*(2**attempt),retryAfterMs));
+        await new Promise(resolve=>setTimeout(resolve,delayMs));
+        continue;
       }
-      const j=await r.json();
-      setTokenCount(getTokenCount()+(j.usage?.total_tokens||0));
-      onUsage();
-      const choice=j.choices?.[0],content=choice?.message?.content;
-      const text=content==null?'':Array.isArray(content)
-        ?content.map(part=>part.text||'').join('')
-        :String(content);
-      onRawResponse?.({text,model:j.model||model,finishReason:choice?.finish_reason||null,usage:j.usage||null,promptTokens:j.usage?.prompt_tokens??null,completionTokens:j.usage?.completion_tokens??null,totalTokens:j.usage?.total_tokens??null});
-      if(requestType==='hider'&&!/<svg[\s\S]*?<\/svg>/i.test(text)){
-        const finishReason=choice?.finish_reason||'not provided';
-        const completionTokens=j.usage?.completion_tokens??'not provided';
-        const responseModel=j.model||model;
-        throw Error(`Hider returned no complete SVG (model: ${responseModel}; finish_reason: ${finishReason}; completion_tokens: ${completionTokens}). Try a faster model or a shorter message.`);
-      }
-      if(content==null)throw Error('The API returned no message content.');
-      return text;
-    }catch(e){
-      throw e.name=='AbortError'
-        ?Error('Request timed out. Try a faster model or a shorter prompt.')
-        :e;
-    }finally{clearTimeout(t)}
+      let m='';
+      try{m=(await r.json()).error?.message||''}catch{}
+      throw Error(r.status==402
+        ?'Not enough Pollen for this request. Top up from the Connect menu or pick a cheaper model.'
+        :r.status==401||r.status==403
+          ?'Your key was rejected, expired, or lacks permission for this model. Reconnect and authorize the required model categories.'
+          :`API error ${r.status} ${m}`);
+    }
+    const j=await r.json();
+    setTokenCount(getTokenCount()+(j.usage?.total_tokens||0));
+    onUsage();
+    const choice=j.choices?.[0],content=choice?.message?.content;
+    const text=content==null?'':Array.isArray(content)
+      ?content.map(part=>part.text||'').join('')
+      :String(content);
+    onRawResponse?.({text,model:j.model||model,finishReason:choice?.finish_reason||null,usage:j.usage||null,promptTokens:j.usage?.prompt_tokens??null,completionTokens:j.usage?.completion_tokens??null,totalTokens:j.usage?.total_tokens??null});
+    if(requestType==='hider'&&!/<svg[\\s\\S]*?<\\/svg>/i.test(text)){
+      const finishReason=choice?.finish_reason||'not provided';
+      const completionTokens=j.usage?.completion_tokens??'not provided';
+      const responseModel=j.model||model;
+      throw Error(`Hider returned no complete SVG (model: ${responseModel}; finish_reason: ${finishReason}; completion_tokens: ${completionTokens}). Try a faster model or a shorter message.`);
+    }
+    if(content==null)throw Error('The API returned no message content.');
+    return text;
   }
 }
 
