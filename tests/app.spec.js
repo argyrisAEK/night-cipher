@@ -240,11 +240,11 @@ test('AI Hider and Seeker show an accessible animated busy state while requests 
     if(body.model==='openai/gpt-6.1-sol'){
       signalHider();
       await hiderGate;
-      return route.fulfill({json:{model:body.model,choices:[{message:{content:svg+'\\nSCHEME: '+scheme},finish_reason:'stop'}],usage:{total_tokens:40,completion_tokens:20}}});
+      return route.fulfill({json:{model:body.model,choices:[{message:{content:svg+'\nSCHEME: '+scheme},finish_reason:'stop'}],usage:{total_tokens:40,completion_tokens:20}}});
     }
     signalSeeker();
     await seekerGate;
-    return route.fulfill({json:{model:body.model,choices:[{message:{content:'MESSAGE: LANTERN\\nMETHOD: I decoded the illuminated window sequence.'},finish_reason:'stop'}],usage:{total_tokens:30,completion_tokens:15}}});
+    return route.fulfill({json:{model:body.model,choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: I decoded the illuminated window sequence.'},finish_reason:'stop'}],usage:{total_tokens:30,completion_tokens:15}}});
   });
   await page.reload();
   await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='openai/gpt-6.1-sol'));
@@ -560,8 +560,8 @@ test('Duel Next returns to setup without starting or charging a new Hider reques
     calls++;
     const body=route.request().postDataJSON();
     const content=body.model==='openai/gpt-6.1-sol'
-      ? svg+'\\nSCHEME: A simple test encoding.'
-      : 'MESSAGE: NONE\\nMETHOD: No defensible pattern found.';
+      ? svg+'\nSCHEME: A simple test encoding.'
+      : 'MESSAGE: NONE\nMETHOD: No defensible pattern found.';
     await route.fulfill({json:{choices:[{message:{content},finish_reason:'stop'}],usage:{total_tokens:10}}});
   });
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({json:{data:[{id:'openai/gpt-6.1-sol'}]}}));
@@ -584,7 +584,7 @@ test('Pollinations chat retries a rate-limited request once and accounts usage o
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
     calls++;
     if(calls===1) return route.fulfill({status:429,headers:{'Retry-After':'0'},json:{error:{message:'rate limited'}}});
-    return route.fulfill({json:{model:'openai/gpt-6.1-terra',choices:[{message:{content:'MESSAGE: TEST\\nMETHOD: Test retry.'},finish_reason:'stop'}],usage:{total_tokens:12}}});
+    return route.fulfill({json:{model:'openai/gpt-6.1-terra',choices:[{message:{content:'MESSAGE: TEST\nMETHOD: Test retry.'},finish_reason:'stop'}],usage:{total_tokens:12}}});
   });
   const result=await page.evaluate(async()=>{
     const {createChat}=await import('/js/api.js');let tokens=0,usageCalls=0;
@@ -883,7 +883,7 @@ test('Daily and Learn require an explicit Seeker choice and disclose live model 
     requests.push(body);
     await route.fulfill({json:{
       model:body.model,
-      choices:[{message:{content:'MESSAGE: NONE\\nMETHOD: No defensible decoding was possible.'},finish_reason:'stop'}],
+      choices:[{message:{content:'MESSAGE: NONE\nMETHOD: No defensible decoding was possible.'},finish_reason:'stop'}],
       usage:{prompt_tokens:100,completion_tokens:10,total_tokens:110,prompt_tokens_details:{image_tokens:20}}
     }});
   });
@@ -940,7 +940,7 @@ test('Hider leakage audit runs on the original SVG before sanitization, includin
     const item = payloads[hiderCalls++];
     await route.fulfill({ json: {
       model: body.model,
-      choices: [{ message: { content: item.svg + '\\nSCHEME: A visual pattern encodes the message.' }, finish_reason: 'stop' }],
+      choices: [{ message: { content: item.svg + '\nSCHEME: A visual pattern encodes the message.' }, finish_reason: 'stop' }],
       usage: { total_tokens: 20, completion_tokens: 10 }
     } });
   });
