@@ -362,7 +362,7 @@ test('independent Seeker gets only the blind prompt and records exact recovery m
 
 test('quality helpers distinguish unmeasured validation from failed recovery and audit blind payloads', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const { auditBlindRequest, compareSeekers, normalizeMessage } = await import('/js/quality.js');
+    const { auditBlindRequest, compareSeekers, normalizeMessage, messageSimilarity } = await import('/js/quality.js');
     return {
       notRun: compareSeekers({ normalized: 'HELLO', exactMatch: true }, null),
       complete: compareSeekers({ normalized: 'HELLOWORLD', exactMatch: true }, { normalized: 'HELLOWORLD', exactMatch: true }),
@@ -372,7 +372,8 @@ test('quality helpers distinguish unmeasured validation from failed recovery and
       valid: auditBlindRequest({ prompt: 'Study the image and infer its visual rule', secret: 'HELLO WORLD', scheme: 'Read the stars', imageAttached: true }),
       commonWord: auditBlindRequest({ prompt: 'Study the image as a coherent scene and return one concise sentence', secret: 'THE', scheme: 'Read the stars', imageAttached: true }),
       spacedMessage: normalizeMessage('MEET ME AT MIDNIGHT'),
-      joinedMessage: normalizeMessage('MEETMEATMIDNIGHT')
+      joinedMessage: normalizeMessage('MEETMEATMIDNIGHT'),
+      joinedWordSimilarity: messageSimilarity('IRONMAIDEN','IRON MAIDEN')
     };
   });
   expect(result.notRun.complete).toBe(false);
@@ -380,6 +381,7 @@ test('quality helpers distinguish unmeasured validation from failed recovery and
   expect(result.notRun.bothExact).toBeNull();
   expect(result.notRun.primaryExact).toBe(true);
   expect(result.complete.bothExact).toBe(true);
+  expect(result.joinedWordSimilarity).toBe(0);
   expect(result.secretLeak.verified).toBe(false);
   expect(result.schemeLeak.verified).toBe(false);
   expect(result.guidedScheme.verified).toBe(true);
