@@ -460,8 +460,11 @@ $('#degradationRun').onclick=async()=>{
  finally{degradationInFlight=false;busy(false);refreshDegradationLab()}
 };
 /* ---------- fixed Pollinations model allowlist ---------- */
-function fill(sel,ids,pref){
-  $(sel).innerHTML=ids.map(id=>`<option value="${esc(id)}">${esc(id)}</option>`).join('');
+const PAID_FRONTIER_MODELS=Object.freeze(['anthropic/claude-fable-5.2','google/gemini-4-argon']);
+const HIDER_MODELS=[...POLLINATIONS_MODELS,...PAID_FRONTIER_MODELS];
+const SEEKER_MODELS=[...POLLINATIONS_MODELS,...PAID_FRONTIER_MODELS];
+function fill(sel,ids,pref,paidModels=[]){
+  $(sel).innerHTML=ids.map(id=>`<option value="${esc(id)}">${esc(id)}${paidModels.includes(id)?' · PAID':''}</option>`).join('');
   const preferred=ids.find(id=>pref.test(id));
   if(preferred)$(sel).value=preferred;
 }
@@ -470,16 +473,17 @@ const supportsVisionInput=m=>typeof m==='object'&&m!==null&&(
   Number(m.max_reference_images)>0
 );
 // One source of truth: add future approved model IDs to js/models.js.
-fill('#hider',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-sol$/i);
-fill('#seeker',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
+fill('#hider',HIDER_MODELS,/^openai\/gpt-6\.1-sol$/i,PAID_FRONTIER_MODELS);
+fill('#seeker',SEEKER_MODELS,/^openai\/gpt-6\.1-terra$/i,PAID_FRONTIER_MODELS);
 fill('#seeker2',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
-fill('#seekerAudit',POLLINATIONS_MODELS,/^openai\/gpt-6-luna$/i);
+fill('#seekerAudit',SEEKER_MODELS,/^openai\/gpt-6-luna$/i,PAID_FRONTIER_MODELS);
 fill('#judgeModel',POLLINATIONS_MODELS,/openai\/gpt-6\.1-sol/i);
 fill('#roundSeeker',POLLINATIONS_MODELS,/^openai\/gpt-6\.1-terra$/i);
 ['#hider','#seeker','#seeker2','#seekerAudit','#judgeModel','#roundSeeker'].forEach(sel=>{$(sel).disabled=false});
 const MODEL_META_TARGETS=[['#hider','#hiderMeta',false],['#seeker','#seekerMeta',true],['#seeker2','#seeker2Meta',true],['#seekerAudit','#seekerAuditMeta',true],['#judgeModel','#judgeModelMeta',true],['#roundSeeker','#roundSeekerMeta',true]];
-function updateModelMeta(selectSelector,metaSelector,requiresVision=false){const model=getModelMetadata(modelCatalog,$(selectSelector)?.value);const target=$(metaSelector);if(target)target.textContent=describeModel(model,{requiresVision})}
-function renderDuelModelSummary(){const root=$('#duelModelSummary');if(!root)return;const hider=$('#hider').value,seeker=$('#seeker').value;root.innerHTML='<div><b>AI Hider</b> · <code>'+esc(hider)+'</code><small>'+esc(describeModel(getModelMetadata(modelCatalog,hider)))+'</small></div><div><b>Primary AI Seeker</b> · <code>'+esc(seeker)+'</code><small>'+esc(describeModel(getModelMetadata(modelCatalog,seeker),{requiresVision:true}))+'</small></div>'}
+function modelDescription(id,requiresVision=false){const description=describeModel(getModelMetadata(modelCatalog,id),{requiresVision});return PAID_FRONTIER_MODELS.includes(id)?'PAID MODEL · Uses Pollen; check the live catalog rate before running. '+description:description}
+function updateModelMeta(selectSelector,metaSelector,requiresVision=false){const target=$(metaSelector);if(target)target.textContent=modelDescription($(selectSelector)?.value,requiresVision)}
+function renderDuelModelSummary(){const root=$('#duelModelSummary');if(!root)return;const hider=$('#hider').value,seeker=$('#seeker').value;root.innerHTML='<div><b>AI Hider</b> · <code>'+esc(hider)+'</code><small>'+esc(modelDescription(hider))+'</small></div><div><b>Primary AI Seeker</b> · <code>'+esc(seeker)+'</code><small>'+esc(modelDescription(seeker,true))+'</small></div>'}
 function refreshModelMeta(){for(const [selectSelector,metaSelector,requiresVision] of MODEL_META_TARGETS)updateModelMeta(selectSelector,metaSelector,requiresVision);renderDuelModelSummary()}
 MODEL_META_TARGETS.forEach(([selectSelector,metaSelector,requiresVision])=>$(selectSelector)?.addEventListener('change',()=>{updateModelMeta(selectSelector,metaSelector,requiresVision);renderDuelModelSummary()}));
 $('#manageModels').onclick=()=>{const settings=$('details.adv');if(settings){settings.open=true;settings.scrollIntoView({behavior:'smooth',block:'nearest'})}};
