@@ -254,7 +254,7 @@ test('AI Hider authors the complete organic image and Seeker receives only the b
   await expect(page.locator('#res')).toContainText('AI seeker said: “LANTERN”',{timeout:10000});
   await expect(page.locator('#ai')).toBeDisabled();
   await expect(page.locator('#ai')).toHaveText('AI Seeker complete');
-  await expect(page.locator('#researchStats')).toContainText(/1\\s*AI duels/);
+  await expect(page.locator('#researchStats')).toContainText(/1\s*AI duels/);
   expect(JSON.stringify(seekerBody.messages)).not.toContain('LANTERN');
   expect(JSON.stringify(seekerBody.messages)).not.toContain(scheme);
   expect(seekerBody.messages[0].content.some(part=>part.type==='image_url')).toBe(true);
