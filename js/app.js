@@ -13,8 +13,7 @@ import { summarizeEvidence, filterEvidence, evidenceToCSV } from './failure-anal
 import { createDegradationVariants } from './degradation.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const norm=s=>normalizeMessage(s);
-const lev=(a,b)=>{const d=Array.from({length:a.length+1},(_,i)=>[i,...Array(b.length).fill(0)]);for(let j=1;j<=b.length;j++)d[0][j]=j;for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length]};
+const norm=s=>s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]/gu,'');
 const sim=(a,b)=>messageSimilarity(a,b);
 const simMessage=sim;
 let R=null,T=loadState(),tok=0,modelCatalog=new Map(),latestChatMeta=null;const save=()=>saveState(T);
