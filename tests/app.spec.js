@@ -224,6 +224,53 @@ test('AI model settings are tucked away by default and remain available in Advan
   await expect(page.locator('#hider')).toBeHidden();
 });
 
+test('AI Hider and Seeker show an accessible animated busy state while requests are pending', async ({ page }) => {
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/><rect x="100" y="100" width="50" height="70" fill="#f1c987"/><rect x="220" y="100" width="50" height="70" fill="#f1c987"/></svg>';
+  const scheme='The illuminated windows encode alphabet positions from left to right.';
+  let releaseHider,releaseSeeker,signalHider,signalSeeker;
+  const hiderGate=new Promise(resolve=>{releaseHider=resolve});
+  const seekerGate=new Promise(resolve=>{releaseSeeker=resolve});
+  const hiderStarted=new Promise(resolve=>{signalHider=resolve});
+  const seekerStarted=new Promise(resolve=>{signalSeeker=resolve});
+  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
+    json:{data:[{id:'openai/gpt-6.1-sol'},{id:'openai/gpt-6.1-terra',input_modalities:['image']}]}
+  }));
+  await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    const body=route.request().postDataJSON();
+    if(body.model==='openai/gpt-6.1-sol'){
+      signalHider();
+      await hiderGate;
+      return route.fulfill({json:{model:body.model,choices:[{message:{content:svg+'\\nSCHEME: '+scheme},finish_reason:'stop'}],usage:{total_tokens:40,completion_tokens:20}}});
+    }
+    signalSeeker();
+    await seekerGate;
+    return route.fulfill({json:{model:body.model,choices:[{message:{content:'MESSAGE: LANTERN\\nMETHOD: I decoded the illuminated window sequence.'},finish_reason:'stop'}],usage:{total_tokens:30,completion_tokens:15}}});
+  });
+  await page.reload();
+  await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='openai/gpt-6.1-sol'));
+  await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
+  await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
+  await page.fill('#msg','LANTERN');
+  await page.click('#hide');
+  await hiderStarted;
+  await expect(page.locator('#status')).toHaveClass(/is-busy/);
+  await expect(page.locator('#status')).toHaveAttribute('aria-busy','true');
+  await expect(page.locator('#status')).toContainText('AI Hider is creating the image');
+  releaseHider();
+  await expect(page.locator('#imgbox img')).toBeVisible({timeout:10000});
+  await expect(page.locator('#status')).not.toHaveClass(/is-busy/);
+
+  await page.click('#ai');
+  await seekerStarted;
+  await expect(page.locator('#status')).toHaveClass(/is-busy/);
+  await expect(page.locator('#status')).toHaveAttribute('aria-busy','true');
+  await expect(page.locator('#status')).toContainText('AI seeker is studying the picture');
+  releaseSeeker();
+  await expect(page.locator('#res')).toContainText('AI seeker said: “LANTERN”',{timeout:10000});
+  await expect(page.locator('#status')).not.toHaveClass(/is-busy/);
+  await expect(page.locator('#status')).toHaveAttribute('aria-busy','false');
+});
+
 test('AI Hider authors the complete organic image and Seeker receives only the blind image', async ({ page }) => {
   const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/><rect x="100" y="100" width="50" height="70" fill="#f1c987"/><rect x="220" y="100" width="50" height="70" fill="#f1c987"/></svg>';
   const scheme='The illuminated windows in each natural cluster encode A=1 through Z=26, read left to right; wider gaps separate words.';
