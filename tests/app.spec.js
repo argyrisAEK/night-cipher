@@ -19,6 +19,8 @@ test('header and AI duel image copy describe the visual steganography game', asy
   await expect(page.locator('#howto')).toContainText('Interactive Cipher Walkthrough');
   await expect(page.locator('#howto')).toContainText('Independent Seeker');
   await expect(page.locator('#howto')).toContainText('export records as CSV or JSON');
+  await page.locator('#howtoClose').click();
+  await expect(page.locator('#howto')).toBeHidden();
   await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
   await expect(page.locator('#imgbox')).toContainText('AI Hider conceals your message in an image. AI Seeker then tries to decode it.');
 });
@@ -173,7 +175,7 @@ test('first visit shows How to play once, and it can be reopened', async ({ page
   await page.addInitScript(() => { try { localStorage.removeItem('nc-howto-seen'); } catch {} });
   await page.reload();
   await expect(page.locator('#howto')).toBeVisible();
-  await expect(page.locator('#howto')).toContainText('Study the picture');
+  await expect(page.locator('#howto')).toContainText('Read the image, not the text.');
   await page.click('#howtoClose');
   await expect(page.locator('#howto')).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('nc-howto-seen'))).toBe('1');
