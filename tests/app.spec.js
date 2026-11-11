@@ -52,6 +52,7 @@ test('You hide, AI seeks accepts its intentionally disclosed cipher rule without
   expect(textPart).toContain('DECODING RULE:');
   expect(textPart).not.toContain('FREEDOM');
   expect(seekerBody.messages[0].content.some(part=>part.type==='image_url'&&part.image_url.url.startsWith('data:image/png'))).toBe(true);
+  await expect(page.locator('#next')).toBeVisible();
 });
 
 test('Learn opens the ten training levels', async ({ page }) => {
@@ -251,6 +252,9 @@ test('AI Hider authors the complete organic image and Seeker receives only the b
   await expect(page.locator('#revealHow')).toBeHidden();
   await page.click('#ai');
   await expect(page.locator('#res')).toContainText('AI seeker said: “LANTERN”',{timeout:10000});
+  await expect(page.locator('#ai')).toBeDisabled();
+  await expect(page.locator('#ai')).toHaveText('AI Seeker complete');
+  await expect(page.locator('#researchStats')).toContainText(/1\\s*AI duels/);
   expect(JSON.stringify(seekerBody.messages)).not.toContain('LANTERN');
   expect(JSON.stringify(seekerBody.messages)).not.toContain(scheme);
   expect(seekerBody.messages[0].content.some(part=>part.type==='image_url')).toBe(true);
@@ -513,6 +517,25 @@ test('Duel Next returns to setup without starting or charging a new Hider reques
   await expect(page.locator('#game')).toBeHidden();
   expect(calls).toBe(2);
 });
+test('Pollinations chat retries a rate-limited request once and accounts usage only on success', async ({ page }) => {
+  let calls=0;
+  await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    calls++;
+    if(calls===1) return route.fulfill({status:429,headers:{'Retry-After':'0'},json:{error:{message:'rate limited'}}});
+    return route.fulfill({json:{model:'openai/gpt-6.1-terra',choices:[{message:{content:'MESSAGE: TEST\\nMETHOD: Test retry.'},finish_reason:'stop'}],usage:{total_tokens:12}}});
+  });
+  const result=await page.evaluate(async()=>{
+    const {createChat}=await import('/js/api.js');let tokens=0,usageCalls=0;
+    const chat=createChat({getConnection:()=>({apiKey:'test-key'}),getTokenCount:()=>tokens,setTokenCount:v=>tokens=v,onUsage:()=>usageCalls++});
+    const text=await chat('openai/gpt-6.1-terra',[{role:'user',content:'test'}],100,10000);
+    return {text,tokens,usageCalls};
+  });
+  expect(calls).toBe(2);
+  expect(result.text).toContain('MESSAGE: TEST');
+  expect(result.tokens).toBe(12);
+  expect(result.usageCalls).toBe(1);
+});
+
 test('Hint button displays used and available hint count', async ({ page }) => {
   await page.locator('#tabs button', { hasText: 'Learn' }).click();
   await expect(page.locator('#hint')).toContainText('0/');
