@@ -13,7 +13,7 @@ import { summarizeEvidence, filterEvidence, evidenceToCSV } from './failure-anal
 import { createDegradationVariants } from './degradation.js';
 const APP_KEY='pk_zERtArHJHymnUbNl',API='https://gen.pollinations.ai/v1',$=s=>document.querySelector(s),conn=$('polli-connect');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const norm=s=>s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]/gu,'');
+const norm=s=>normalizeMessage(s);
 const lev=(a,b)=>{const d=Array.from({length:a.length+1},(_,i)=>[i,...Array(b.length).fill(0)]);for(let j=1;j<=b.length;j++)d[0][j]=j;for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length]};
 const sim=(a,b)=>{a=norm(a);b=norm(b);const m=Math.max(a.length,b.length);return m?1-lev(a,b)/m:0};
 const simMessage=(a,b)=>{a=normalizeMessage(a);b=normalizeMessage(b);const m=Math.max(a.length,b.length);return m?1-lev(a,b)/m:0};
@@ -133,7 +133,7 @@ function syncButtons(){
   if(!uiBusy&&R){
     $('#go').disabled=R.done;$('#giveup').disabled=R.done;
     $('#hint').disabled=R.done||R.used>=R.hints.length;
-    $('#ai').disabled=(R.done&&R.mode!=='own'&&aiAttempted)||aiInFlight||aiAttempted;$('#ai').textContent=R.mode==='duel'?(R.aiHistory?.length?'Retry AI Seeker 💰':'Challenge AI Seeker 💰'):(aiAttempted?'AI answer locked':(R.aiHistory?.length?'Try another model 💰':'Let the AI try 💰'));
+    $('#ai').disabled=(R.done&&R.mode!=='own'&&aiAttempted)||aiInFlight||aiAttempted;$('#ai').textContent=R.mode==='duel'?(aiInFlight?'AI Seeker working…':aiAttempted?'AI Seeker complete':(R.aiHistory?.length?'Retry AI Seeker 💰':'Challenge AI Seeker 💰')):(aiAttempted?'AI answer locked':(R.aiHistory?.length?'Try another model 💰':'Let the AI try 💰'));
     $('#next').disabled=R.mode==='duel'?!R.ai:!R.done;
   }else if(!uiBusy){
     $('#go').disabled=true;$('#giveup').disabled=true;$('#hint').disabled=true;$('#ai').disabled=true;$('#next').disabled=true;
@@ -141,11 +141,12 @@ function syncButtons(){
 }
 function busy(b,m){uiBusy=!!b;syncButtons();if(m)say(m)}
 function start(r){R=Object.assign({tries:0,used:0,done:false,ai:null,maxTries:3,noHints:false},r);if(R.diagnostics)diagnostics=R.diagnostics;renderDiagnostics();R.startedAt=performance.now();aiInFlight=false;aiAttempted=false;$('#roundModelPicker').hidden=true;$('#imgbox').innerHTML=`<img alt="Puzzle picture" src="${uri(R.svg)}">`;$('#res').innerHTML='';$('#robustnessReport').innerHTML='';$('#hints').innerHTML='';$('#guess').value='';$('#game').hidden=false;const hiderDuel=R.mode==='duel';$('#game').classList.toggle('hider-duel',hiderDuel);$('#duelRoles').hidden=!hiderDuel;$('#guess').hidden=hiderDuel;$('#guess').previousElementSibling.hidden=hiderDuel;$('#go').parentElement.hidden=hiderDuel;$('#hints').hidden=hiderDuel;$('#giveup').hidden=hiderDuel;$('#next').hidden=true;$('#next').textContent=hiderDuel?'New Duel':'Next ▶';$('#hint').hidden=hiderDuel||!!R.noHints;$('#hint').disabled=hiderDuel||!!R.noHints;$('#ai').hidden=false;$('#revealHow').hidden=hiderDuel;$('#revealHow').textContent='✨ How was it hidden?';syncButtons();say(hiderDuel?'AI Hider has hidden your chosen message. Now watch the AI Seeker try to decode it.':'Find the hidden message. '+R.maxTries+' tries.');if(!hiderDuel)$('#guess').focus()}
+function countDuel(round){if(!round||round.mode!=='duel'||round.duelCounted)return;round.duelCounted=true;T.n++;save();score()}
 function finish(ok){
  if(!R||R.done)return;R.done=true;R.elapsedMs=Math.max(0,performance.now()-(R.startedAt||performance.now()));syncButtons();
  if(ok&&(R.mode==='train'||R.mode==='daily')){const k=R.mode==='daily'?`daily-${R.day}`:`training-${R.schemeIdx}`;T.bestTimes=T.bestTimes||{};if(!T.bestTimes[k]||R.elapsedMs<T.bestTimes[k])T.bestTimes[k]=R.elapsedMs;if(R.mode==='train'){T.levels=T.levels||{};T.levels[R.schemeIdx]=true;const tb=[...$('#tabs').children].find(x=>x.dataset.kind==='training'&&x.textContent.includes(`Level ${R.schemeIdx+1}`));if(tb)tb.textContent=`🎓 Level ${R.schemeIdx+1} ✓`;}else{T.dailyWins=T.dailyWins||[];if(!T.dailyWins.includes(R.day))T.dailyWins.push(R.day);}}
  const pts=ok?Math.max(10,100-20*R.used-15*(R.tries-1)):0;$('#res').innerHTML=`<b class="${ok?'ok':'bad'}">${ok?'Found it! +'+pts+' points':'Out of tries.'}</b> The message was “${esc(R.secret)}”.<br><small>How it was hidden: ${esc(R.scheme||'unknown')}</small>`+(ok&&(R.mode==='train'||R.mode==='daily')?`<br><small>Time: ${(R.elapsedMs/1000).toFixed(1)} seconds</small>`:'')+stealthLine()+(R.ai?aiLine():'');
- if(R.mode==='duel'){T.n++;if(ok)T.you++;save();score()}if(R.mode==='daily'){$('#res').innerHTML+='<p><button id="sh">Copy result</button></p>';$('#sh').onclick=()=>{navigator.clipboard.writeText(`Night Cipher #${R.day-20000} ${ok?'✅':'❌'} ${R.tries}/${R.maxTries} tries · ${R.used} hints\n${location.href}`);say('Result copied!')}}save();score();$('#next').hidden=false;say(ok?'Cipher solved. Progress saved locally.':'Round finished.');
+ if(R.mode==='duel'){countDuel(R);if(ok)T.you++;save();score()}if(R.mode==='daily'){$('#res').innerHTML+='<p><button id="sh">Copy result</button></p>';$('#sh').onclick=()=>{navigator.clipboard.writeText(`Night Cipher #${R.day-20000} ${ok?'✅':'❌'} ${R.tries}/${R.maxTries} tries · ${R.used} hints\n${location.href}`);say('Result copied!')}}save();score();$('#next').hidden=false;say(ok?'Cipher solved. Progress saved locally.':'Round finished.');
 }
 const aiLine=()=>`<section class="ai-attempt-history"><b>AI Seeker attempts</b>${(R.aiHistory||[R.ai]).map((attempt,index)=>`<p><b>AI seeker said: “${esc(attempt.guess)}”</b> — <span class="${attempt.ok?'ok':'bad'}">${attempt.ok?'recovered':'missed'}</span> (${Math.round(attempt.s*100)}% similar)<br><small>Attempt #${index+1} · Model: ${esc(attempt.model||'unknown')}${attempt.requestedModel&&attempt.requestedModel!==attempt.model?` (requested: ${esc(attempt.requestedModel)})`:''} · ${attempt.durationMs??'—'} ms · ${attempt.tokens??'—'} tokens · ${attempt.estimatedPollen==null?'Pollen estimate unavailable':esc(formatPollenCost(attempt.estimatedPollen))}<br>Method: ${esc(attempt.method||'—')}</small></p>`).join('')}</section>`;
 $('#go').onclick=()=>{if(!R||R.done)return;const g=$('#guess').value.trim();if(!g)return;R.tries++;renderTries();const s=sim(g,R.secret);
@@ -215,9 +216,10 @@ $('#ai').onclick=async()=>{
     if(round!==R)return;
     const parsed=parseSeekerResponse(out),g=parsed.message,mt=parsed.method,s=simMessage(g,round.secret),exact=normalizeMessage(g)===normalizeMessage(round.secret),elapsed=Date.now()-seekerStarted;
     if(diagnostics){Object.assign(diagnostics.seeker,{status:'completed',responseModel:responseMeta?.model||model,finishReason:responseMeta?.finishReason||null,usage:responseMeta?.usage||null,promptTokens:responseMeta?.promptTokens??null,completionTokens:responseMeta?.completionTokens??null,totalTokens:responseMeta?.totalTokens??null,rawResponse:out,durationMs:elapsed,tokens:tok-tokensBefore,decodedMessage:g,method:mt,exactMatch:exact,similarity:s});diagnostics.result={status:'completed',success:exact,exactMatch:exact,similarity:s};recordSeekerOutcome(diagnostics.seeker,'primary');renderDiagnostics()}
-    round.ai={guess:g,method:mt,s,ok:round.mode==='duel'?exact:s>=.9,model:responseMeta?.model||model,requestedModel:model,estimatedPollen:responseMeta?.estimatedPollen??null,durationMs:Date.now()-attemptStarted,tokens:tok-tokensBefore};if(round.mode==='duel')$('#revealHow').hidden=false;round.aiHistory=round.aiHistory||[];round.aiHistory.push({...round.ai,at:Date.now()});
+    round.ai={guess:g,method:mt,s,ok:round.mode==='duel'?exact:s>=.9,model:responseMeta?.model||model,requestedModel:model,estimatedPollen:responseMeta?.estimatedPollen??null,durationMs:Date.now()-attemptStarted,tokens:tok-tokensBefore};if(round.mode==='duel')$('#revealHow').hidden=false;round.aiHistory=round.aiHistory||[];round.aiHistory.push({...round.ai,at:Date.now()});if(round.mode==='duel')countDuel(round);
     if(round.mode=='duel'||round.mode=='own'){T.an++;if(round.ai.ok)T.ai++;const k=(round.mode=='own'?'your '+round.sname:'hider '+round.hider)+' → '+$(round.mode=='own'?'#seeker2':'#seeker').value+(round.method?' · '+round.method:''),v=(T.s=T.s||{})[k]=T.s[k]||{n:0,ok:0};v.n++;if(round.ai.ok)v.ok++;save();score()}
     if(round.mode==='duel'){$('#res').innerHTML=aiLine();$('#next').hidden=false;if(round.ai.ok){aiAttempted=true;say('AI Seeker decoded the message chosen for this duel.','ok')}else{aiAttempted=false;say(g.toUpperCase()==='NONE'?'AI Seeker could not produce a defensible decoding. You can retry or change the model.':'AI Seeker failed to recover the message. You can retry or change the model.','bad')}}else if(g.toUpperCase()==='NONE'||s<.9){aiAttempted=false;if(round.done||['daily','train'].includes(round.mode))$('#res').innerHTML=$('#res').innerHTML.split('<section class="ai-attempt-history">')[0]+aiLine();say(g.toUpperCase()==='NONE'?'The AI found no defensible decoding. Retry or choose another vision model.':'The AI returned an incorrect answer. Retry or choose another vision model.','bad')}else if(round.done||['daily','train'].includes(round.mode)){$('#res').innerHTML=$('#res').innerHTML.split('<section class="ai-attempt-history">')[0]+aiLine();say('The AI recovered the message. You can try another model if you want to compare results.')}else say('The AI has locked in an answer. Finish your round to see it.');
+    if(round.mode==='own')$('#next').hidden=false;
   }catch(e){if(round===R){if(diagnostics){diagnostics.errors.push(e.message);if(diagnostics.seeker?.status==='running'){diagnostics.seeker.status='error';diagnostics.seeker.failureReason=e.message;diagnostics.seeker.error=e.message;diagnostics.seeker.durationMs=Date.now()-(diagnostics.seeker.startedAt||attemptStarted);diagnostics.seeker.tokens=tok-tokensBefore;recordSeekerOutcome(diagnostics.seeker,'primary');diagnostics.result={status:'error',success:false,exactMatch:null,similarity:null,failureReason:e.message}}renderDiagnostics()}aiAttempted=false;say(e.message,'bad')}}
   finally{aiInFlight=false;if(round===R&&['daily','train'].includes(round.mode)){aiAttempted=false;round.selectedModelConfirmed=false}busy(false)}
 };
@@ -225,7 +227,7 @@ $('#ai').onclick=async()=>{
 let independentInFlight=false;
 $('#independent').onclick=async()=>{
   const round=R;
-  if(!round||round.mode!=='duel'||independentInFlight||aiInFlight)return;
+  if(!round||round.mode!=='duel'||independentInFlight||robustnessInFlight||degradationInFlight||aiInFlight)return;
   if(diagnostics?.result?.status!=='completed')return say('Run the primary Seeker first so the independent result can be compared against it.','bad');
   if(!conn||!conn.apiKey)return say('Connect your Pollinations account first. This test makes one additional paid vision request.','bad');
   const model=$('#seekerAudit').value,primaryModel=diagnostics?.seeker?.model||$('#seeker').value;
@@ -233,14 +235,14 @@ $('#independent').onclick=async()=>{
   if(model===primaryModel)return say('Choose a different model from the primary Seeker. Independent validation requires a second model.','bad');
   if(diagnostics?.independentSeeker?.status==='completed')return say('An independent Seeker result is already recorded for this round.','bad');
   independentInFlight=true;
-  const started=Date.now(),before=tok;let prompt,png;
+  const started=Date.now(),before=tok;let prompt,png;busy(true,'Preparing the image for independent validation…');
   try{prompt=diagnostics.seeker?.prompt||buildSeekPrompt(round);png=round.png||await toPng(round.svg)}
-  catch(e){independentInFlight=false;return say('Could not prepare the image for the independent Seeker: '+e.message,'bad')}
+  catch(e){independentInFlight=false;busy(false);return say('Could not prepare the image for the independent Seeker: '+e.message,'bad')}
   const messages=[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:png}}]}];
   const blindAudit=auditBlindRequest({prompt:messages[0].content.find(part=>part.type==='text')?.text,secret:round.secret,scheme:round.scheme,imageAttached:messages.some(message=>message.content?.some(part=>part.type==='image_url'&&!!part.image_url?.url))});
   const record={status:'running',model,prompt,blindAudit,imageReceived:blindAudit.imageAttached,rawResponse:'',decodedMessage:'',method:'',durationMs:null,tokens:null,exactMatch:null,similarity:null,usage:null};
   if(diagnostics){diagnostics.independentSeeker=record;renderDiagnostics()}
-  busy(true,'A second, independent Seeker is analyzing the same image without hints…');
+  // UI lock was acquired before image preparation.
   try{
     if(!blindAudit.verified)throw Error('Independent blind Seeker payload audit failed.');
     let responseMeta=null;
@@ -272,7 +274,7 @@ const ROBUST_VARIANTS=[
 const robustnessModel=round=>$(round.mode==='own'?'#seeker2':'#seeker').value;
 const robustnessHtml=rows=>`<section class="card" style="margin-top:10px;padding:10px"><b>Image robustness results</b><br><small>Same SVG, same seeker model, three image encodings. Success = ≥90% normalized text similarity.</small><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:.88rem"><thead><tr><th align="left">Image</th><th align="left">AI guess</th><th>Similarity</th><th>Status</th><th>Image KB</th><th>Tokens</th><th>Pollen estimate</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.label)}</td><td>${esc(r.guess||'—')}</td><td align="center">${r.s==null?'—':Math.round(r.s*100)+'%'}</td><td align="center" class="${r.ok?'ok':'bad'}">${r.error?'Error':r.ok?'Recovered':'Missed'}</td><td align="center">${r.imageKB??'—'}</td><td align="center">${r.tokens??'—'}</td><td align="center">${r.estimatedPollen==null?'—':esc(formatPollenCost(r.estimatedPollen))}</td></tr>`).join('')}</tbody></table></div><small>JPEG quality is the browser canvas encoder setting, not a guaranteed file-size or perceptual-quality percentage. Results depend on model, prompt, and image content.</small></section>`;
 $('#robustness').onclick=async()=>{
-  const round=R;if(!round||robustnessInFlight||aiInFlight)return;
+  const round=R;if(!round||robustnessInFlight||independentInFlight||degradationInFlight||aiInFlight)return;
   if(!conn||!conn.apiKey)return say('Connect your Pollinations account first. This experiment makes 3 additional paid vision requests.','bad');
   const model=robustnessModel(round);if(!model)return say('Select a vision-capable seeker model first.','bad');
   if(!confirm('Run the robustness experiment? It sends 3 additional requests to the selected vision model and uses Pollen.'))return;
@@ -425,7 +427,7 @@ const refreshDegradationLab=()=>{
 };
 const degradationReport=rows=>'<div class="degradation-grid">'+rows.map(r=>'<article class="degradation-card"><div class="degradation-thumb"><img src="'+r.dataUrl+'" alt="'+esc(r.label)+' preview"></div><div class="degradation-card-body"><b>'+esc(r.label)+'</b><small>'+esc(r.description)+'</small><div class="degradation-result-row"><span class="'+(r.error?'bad':r.ok?'ok':'bad')+'">'+(r.error?'Request error':r.ok?'Recovered':'Not recovered')+'</span><strong>'+(r.similarity==null?'—':Math.round(r.similarity*100)+'%')+'</strong></div><p><small>Decoded: </small>'+esc(r.guess||'—')+'</p><small>'+((r.durationMs==null)?'—':Math.round(r.durationMs)+' ms')+' · '+(r.tokens??'—')+' tokens · '+(r.estimatedPollen==null?'Pollen estimate unavailable':esc(formatPollenCost(r.estimatedPollen)))+' · '+(r.imageKB??'—')+' KB</small></div></article>').join('')+'</div>';
 $('#degradationRun').onclick=async()=>{
- const round=R;if(!round||degradationInFlight||aiInFlight)return;
+ const round=R;if(!round||degradationInFlight||independentInFlight||robustnessInFlight||aiInFlight)return;
  if(!conn||!conn.apiKey)return say('Connect your Pollinations account first. This experiment makes five additional paid vision requests.','bad');
  const model=robustnessModel(round);if(!model)return say('Select a vision-capable seeker model first.','bad');
  if(!confirm('Run five image degradation tests? This sends 5 additional requests to '+model+' and uses Pollen.'))return;
