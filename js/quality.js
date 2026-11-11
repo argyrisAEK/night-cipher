@@ -1,7 +1,7 @@
 // Pure helpers for measuring blind Seeker recovery.
 const normalize = value => String(value ?? '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/\s+/g,' ');
 const commonPromptWords = new Set(['A','AN','AND','ARE','AS','AT','BE','BUT','BY','CAN','DO','FOR','FROM','HAS','HAVE','HOW','IN','IS','IT','ITS','ME','MY','NOT','OF','ON','OR','OUR','OUT','THE','THEM','THEN','THERE','THIS','TO','TWO','UP','US','WAS','WE','WERE','WHAT','WHEN','WHERE','WHO','WILL','WITH','YOU','YOUR','ONE','WAY']);
-export const normalizeMessage = normalizeMessageValue => normalize(normalizeMessageValue);
+export const normalizeMessage = value => normalize(value);
 
 export function messageSimilarity(a,b){
   a=normalize(a);b=normalize(b);
