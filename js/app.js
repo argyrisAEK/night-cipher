@@ -51,7 +51,7 @@ const score=()=>{
  $('#report').innerHTML=[details('Model leaderboard','Hider and Seeker performance',modelContent,true),details('Matchups','Exact recovery by Hider → Seeker pair',table(['Hider model / scheme','Seeker model','Exact','Win rate'],matchupRows,'No matchup results recorded yet.')),details('Quality & independent validation','Agreement and dual-model exact recovery',table(['Hider','Primary Seeker','Independent Seeker','Both exact','Agreement','Runs'],qualityRows,'No independent validation runs recorded yet.')),details('Stealth ratings','Average visual innocuousness by model',table(['Hider model','Mean rating','Ratings'],stealthRows,'No stealth ratings recorded yet.')),details('Robustness','Recovery across PNG and JPEG variants',table(['Seeker model','Image variant','Recovered','Recovery rate','Mean similarity'],robustRows,'No robustness tests recorded yet.'))] .join('');
  renderEvidence();
 };
-const say=(m,c='')=>{const research=!$('#researchMode').hidden,s=$(research?'#researchStatus':'#status');s.textContent=m;s.className=c};
+const say=(m,c='')=>{const research=!$('#researchMode').hidden,s=$(research?'#researchStatus':'#status');s.textContent=m;s.className=c;if(uiBusy)s.classList.add('is-busy');s.setAttribute('aria-busy',String(uiBusy))};
 let diagnostics=null;
 const modelStat=(bucket,model)=>{T[bucket]=T[bucket]||{};return T[bucket][model]=T[bucket][model]||{attempts:0,exact:0,failed:0,totalSimilarity:0,totalDurationMs:0,totalTokens:0}};
 const recordHiderOutcome=success=>{
@@ -122,7 +122,7 @@ function renderTries(){const t=$('#tries');if(!R||R.mode==='own'||R.done){t.text
 function renderHintLabel(){const total=R?.hints?.length||0;$('#hint').textContent=total?`Hint (${R.used}/${total} · −20)`:'Hint (−20)';}
 function syncButtons(){
   renderTries();renderHintLabel();
-  ['#go','#giveup','#hint','#ai','#next','#independent','#robustness','#degradationRun'].forEach(sel=>{const button=$(sel);if(button)button.disabled=uiBusy});
+  ['#go','#giveup','#hint','#ai','#next','#independent','#robustness','#degradationRun','#hide','#ohide'].forEach(sel=>{const button=$(sel);if(button)button.disabled=uiBusy});
   $('#after').hidden=!(R&&(R.done||R.mode==='duel'));
   const researchRound=!!(R&&(R.mode==='duel'||R.mode==='own')&&R.svg);
   $('#independent').hidden=!(researchRound&&R.mode==='duel');
@@ -138,7 +138,7 @@ function syncButtons(){
     $('#go').disabled=true;$('#giveup').disabled=true;$('#hint').disabled=true;$('#ai').disabled=true;$('#next').disabled=true;
   }
 }
-function busy(b,m){uiBusy=!!b;syncButtons();if(m)say(m)}
+function busy(b,m){uiBusy=!!b;syncButtons();const research=!$('#researchMode').hidden,s=$(research?'#researchStatus':'#status');if(s){s.classList.toggle('is-busy',uiBusy);s.setAttribute('aria-busy',String(uiBusy))}if(m)say(m)}
 function start(r){R=Object.assign({tries:0,used:0,done:false,ai:null,maxTries:3,noHints:false},r);if(R.diagnostics)diagnostics=R.diagnostics;renderDiagnostics();R.startedAt=performance.now();aiInFlight=false;aiAttempted=false;$('#roundModelPicker').hidden=true;$('#imgbox').innerHTML=`<img alt="Puzzle picture" src="${uri(R.svg)}">`;$('#res').innerHTML='';$('#robustnessReport').innerHTML='';$('#hints').innerHTML='';$('#guess').value='';$('#game').hidden=false;const hiderDuel=R.mode==='duel';$('#game').classList.toggle('hider-duel',hiderDuel);$('#duelRoles').hidden=!hiderDuel;$('#guess').hidden=hiderDuel;$('#guess').previousElementSibling.hidden=hiderDuel;$('#go').parentElement.hidden=hiderDuel;$('#hints').hidden=hiderDuel;$('#giveup').hidden=hiderDuel;$('#next').hidden=true;$('#next').textContent=hiderDuel?'New Duel':'Next ▶';$('#hint').hidden=hiderDuel||!!R.noHints;$('#hint').disabled=hiderDuel||!!R.noHints;$('#ai').hidden=false;$('#revealHow').hidden=hiderDuel;$('#revealHow').textContent='✨ How was it hidden?';syncButtons();say(hiderDuel?'AI Hider has hidden your chosen message. Now watch the AI Seeker try to decode it.':'Find the hidden message. '+R.maxTries+' tries.');if(!hiderDuel)$('#guess').focus()}
 function countDuel(round){if(!round||round.mode!=='duel'||round.duelCounted)return;round.duelCounted=true;T.n++;save();score()}
 function finish(ok){
