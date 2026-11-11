@@ -13,7 +13,12 @@ test('loads all game modes and the BYOP connect control', async ({ page }) => {
 });
 
 test('header and AI duel image copy describe the visual steganography game', async ({ page }) => {
-  await expect(page.locator('header .sub')).toContainText('A visual steganography game');
+  await expect(page.locator('header .sub')).toContainText('A visual steganography game and learning lab : solve hidden messages yourself or watch AI models hide and decode them.');
+  await page.locator('#howtoBtn').click();
+  await expect(page.locator('#howto')).toContainText('Pixel-level LSB');
+  await expect(page.locator('#howto')).toContainText('Interactive Cipher Walkthrough');
+  await expect(page.locator('#howto')).toContainText('Independent Seeker');
+  await expect(page.locator('#howto')).toContainText('export records as CSV or JSON');
   await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
   await expect(page.locator('#imgbox')).toContainText('AI Hider conceals your message in an image. AI Seeker then tries to decode it.');
 });
