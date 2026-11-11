@@ -35,7 +35,7 @@ export async function runSelfTest(ctx){
     let bad=[];for(let n=0;n<60;n++){const i=dailyIndex(n),q=TRAIN[i],w=dailyWord(n);if(DEC[i](P(q.g(w,hash32('night-cipher-art-'+n))))!==w)bad.push(n+':'+w);if(n&&i===dailyIndex(n-1))bad.push('repeat-scheme:'+n)}
     t('Daily puzzles: 60 seeded round-trips with no consecutive scheme repeats',!bad.length,bad.join(' '));
     t('Daily selection is deterministic',Array.from({length:30},(_,n)=>dailyIndex(n)).join(',')===Array.from({length:30},(_,n)=>dailyIndex(n)).join(','));
-    t('Similarity normalization',sim('BEE','B E E')===1&&sim('HONEY','HONAY')<.9&&sim('μέλι','ΜΕΛΙ')===1);
+    t('Similarity normalization preserves word boundaries',sim('BEE','B E E')===0&&sim('IRONMAIDEN','IRON MAIDEN')===0&&sim('HONEY','HONAY')<.9&&sim('μέλι','ΜΕΛΙ')===1);
     t('Vision detection accepts image input_modalities',supportsVisionInput({input_modalities:['text','image']}));
     t('Vision detection accepts max_reference_images metadata',supportsVisionInput({max_reference_images:1}));
     t('Vision detection rejects text-only models',!supportsVisionInput({input_modalities:['text']}));
