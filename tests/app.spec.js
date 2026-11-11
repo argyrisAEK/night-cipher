@@ -255,6 +255,8 @@ test('AI Hider and Seeker show an accessible animated busy state while requests 
   await hiderStarted;
   await expect(page.locator('#status')).toHaveClass(/is-busy/);
   await expect(page.locator('#status')).toHaveAttribute('aria-busy','true');
+  const spinnerContent=await page.locator('#status').evaluate(el=>getComputedStyle(el,'::before').content);
+  expect(spinnerContent).not.toBe('none');
   await expect(page.locator('#status')).toContainText('AI Hider is creating the image');
   releaseHider();
   await expect(page.locator('#imgbox img')).toBeVisible({timeout:10000});
