@@ -6,24 +6,36 @@
 <link rel="stylesheet" href="/styles.css">
 <script defer src="https://cdn.jsdelivr.net/npm/@pollinations/ui@0.1.0-alpha.20/dist/connect.js"></script>
 </head><body><div class="wrap">
-<header><div><h1>Night <span>Cipher</span></h1><p class="brand-tagline">Hidden in plain sight.</p><p class="sub">A visual steganography game: solve hidden messages yourself or watch AI models hide and decode them. <button id="howtoBtn" type="button" class="link">How to play</button></p></div>
+<header><div><h1>Night <span>Cipher</span></h1><p class="brand-tagline">Hidden in plain sight.</p><p class="sub">A visual steganography game and learning lab : solve hidden messages yourself or watch AI models hide and decode them. <button id="howtoBtn" type="button" class="link">How to play</button></p></div>
 <polli-connect app-key="pk_zERtArHJHymnUbNl" budget="3" expiry="7" models="text"></polli-connect></header>
 <dialog id="howto" aria-labelledby="howtoTitle">
 <h2 id="howtoTitle">How to play</h2>
-<p class="lead">Night Cipher has four ways to play: solve a hidden message yourself, or watch AI models compete in a hiding-and-decoding duel.</p>
+<p class="lead">Night Cipher is both a puzzle game and a hands-on learning lab. Decode visual messages, practise the ciphers, experiment with pixel-level hiding, or investigate how reliably AI models can hide and recover a secret.</p>
+<h3>Play a round</h3>
 <ol>
-<li><b>Study the picture.</b> The letters are hidden in something you can count or compare, like lit windows, bar heights, petals or dots. Look for a pattern rather than written text.</li>
-<li><b>In Learn and Daily, type your guess</b> on the right. In AI vs AI Duel, you choose the secret message; AI Hider conceals it in an image, then AI Seeker tries to decode it. You watch the contest.</li>
-<li><b>Learn the trick.</b> When the round ends, press “How was it hidden?” to see the method with the letters highlighted.</li>
+<li><b>Read the image, not the text.</b> Look for a visual pattern: count windows, compare heights, follow star sequences, inspect shapes or notice colour changes. Each pattern represents letters.</li>
+<li><b>Make your guess.</b> In Daily and Learn, enter the hidden message and use hints when you need them. Daily gives you a shared daily puzzle; Learn guides you through ten levels and ten different ciphers.</li>
+<li><b>Reveal and understand.</b> After the round, choose <b>How was it hidden?</b> to see the encoding explained and the relevant parts of the image annotated.</li>
 </ol>
-<h3>Four ways to play</h3>
+<h3>Game modes</h3>
 <ul class="modes">
-<li><b>📅 Daily</b> One puzzle a day, the same for everyone.</li>
-<li><b>🎓 Learn</b> Ten levels, each with a different hiding method.</li>
-<li><b>⚔ AI vs AI Duel 💰</b> Choose a secret message and watch two AI models compete: one hides it, the other tries to decode it.</li>
-<li><b>🕵 You hide, AI seeks 💰</b> Pick a word and a scheme and see whether an AI can crack it.</li>
+<li><b>📅 Daily</b> — solve the daily puzzle, build your streak and compare your result with the same daily challenge.</li>
+<li><b>🎓 Learn</b> — work through ten guided levels, practise each deterministic visual cipher and track your progress.</li>
+<li><b>⚔ AI vs AI Duel 💰</b> — choose a secret. The AI Hider embeds it in an image; a blind AI Seeker receives the image without the answer or hiding instructions and tries to decode it.</li>
+<li><b>🕵 You hide, AI seeks 💰</b> — choose your own word and one of the ten ciphers, then test whether a vision model can recover it.</li>
 </ul>
-<p class="note">💰 = uses your Pollen. Daily and Learn work without signing in; only the 💰 buttons need the sign-in button at the top right.</p>
+<h3>Explore the learning lab</h3>
+<ul class="modes">
+<li><b>🧩 Interactive Sandbox</b> — experiment with two kinds of encoding. In <b>Pixel-level LSB</b>, hide and recover UTF-8 text in an image’s RGB least-significant bits, inspect pixels, edit individual channel bits and export the result as PNG. In <b>Structural schemes</b>, change the message and cipher and inspect the live image plus its letter-by-letter encoding.</li>
+<li><b>🧭 Interactive Cipher Walkthrough</b> — learn all ten training ciphers step by step: observe the image, identify its visual rule, convert the pattern into letters and verify the decoded message.</li>
+</ul>
+<h3>Put AI to the test</h3>
+<ul class="modes">
+<li><b>🧪 Research Mode 💰</b> — compare Hider and Seeker models with recovery metrics, a model leaderboard and matchup matrix. Run an Independent Seeker check to compare a second model’s blind answer with the primary Seeker.</li>
+<li><b>🛡 Robustness tests 💰</b> — test whether a message survives different image encodings and controlled degradation such as JPEG compression, resizing, blur, noise and cropping.</li>
+<li><b>🔍 Evidence &amp; diagnostics</b> — inspect experiment outcomes, filter the local evidence log by model or result, and export records as CSV or JSON. Optional stealth judging rates how innocent an image appears.</li>
+</ul>
+<p class="note"><b>💰 AI calls use Pollen</b> from your connected Pollinations account. Model choices show live catalog pricing; models marked <b>PAID</b> are paid options, and extra validation or robustness runs make additional requests. Review the displayed cost and confirm before running them. Daily, Learn, Sandbox and Walkthrough run locally and do not require AI calls.</p>
 <button id="howtoClose" class="pri" type="button">Got it, let’s play</button>
 </dialog>
 <div id="setup" class="warn" hidden><b>Setup:</b> replace <code>pk_REPLACE_ME</code> (twice: the &lt;polli-connect&gt; tag and <code>APP_KEY</code>) with your App Key and add this page's URL as a Redirect URI.</div>
