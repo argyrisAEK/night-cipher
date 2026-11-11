@@ -183,21 +183,27 @@ test('built-in self-test passes completely, including the secret-leak detector',
 });
 
 
-test('all AI model selectors expose only the seven approved Pollinations models', async ({ page }) => {
-  const expected = [
+test('model selectors expose the approved Pollinations models, with paid frontier options only on Hider and Seekers', async ({ page }) => {
+  const approved = [
     'openai/gpt-6.1-sol',
     'openai/gpt-6-luna',
     'openai/gpt-6.1-terra',
     'openai/gpt-6-astra',
-    'anthropic/claude-fable-5.2',
-    'google/gemini-4-argon',
     'community/vendouple/gpt-6-luna',
     'community/vendouple/gpt-6-astra',
     'community/JustScriptzz/gpt-5.6-terra'
   ];
-  for (const selector of ['#hider', '#seeker', '#seeker2', '#seekerAudit', '#judgeModel']) {
+  const paid = ['anthropic/claude-fable-5.2', 'google/gemini-4-argon'];
+  const expectedBySelector = {
+    '#hider': [...approved, ...paid],
+    '#seeker': [...approved, ...paid],
+    '#seekerAudit': [...approved, ...paid],
+    '#seeker2': approved,
+    '#judgeModel': approved
+  };
+  for (const [selector, expected] of Object.entries(expectedBySelector)) {
     const actual = await page.locator(selector + ' option').evaluateAll(options => options.map(o => o.value));
-    expect(actual).toEqual(expected);
+    expect(actual, selector).toEqual(expected);
   }
 });
 
