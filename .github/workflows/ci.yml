@@ -25,22 +25,17 @@ jobs:
         run: node --check scripts/blind-seeker-run.mjs && node --check scripts/blind-seeker-score.mjs
       - name: Production build
         run: npm run build
-       - name: Install Playwright browser
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          for attempt in 1 2; do
-            echo "Playwright install attempt ${attempt}/2"
-            if npx playwright install --with-deps chromium; then
-              exit 0
-            fi
-            if [ "$attempt" -eq 1 ]; then
-              echo "Install failed; retrying once in 15 seconds..."
-              sleep 15
-            fi
-          done
-          echo "::error::Playwright installation failed after 2 attempts"
-          exit 1
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browser
+        timeout-minutes: 10
+        run: npx playwright install chromium
       - name: Browser regression tests
         run: npm test
       - name: Upload visual audit evidence

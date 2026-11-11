@@ -318,3 +318,38 @@ a{color:#c4b5fd}
   padding:7px 10px;
   font-size:.76rem;
 }
+
+
+/* Clear, accessible feedback while an AI request is in progress. */
+#status.is-busy,
+#researchStatus.is-busy{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#e1d9ff;
+  font-weight:600;
+  animation:nc-status-pulse 1.8s ease-in-out infinite;
+}
+#status.is-busy::before,
+#researchStatus.is-busy::before{
+  content:"";
+  display:inline-block;
+  flex:0 0 15px;
+  width:15px;
+  height:15px;
+  border:2px solid rgba(196,181,253,.28);
+  border-top-color:#c4b5fd;
+  border-right-color:#c4b5fd;
+  border-radius:50%;
+  box-sizing:border-box;
+  animation:nc-status-spin .8s linear infinite;
+  filter:drop-shadow(0 0 5px rgba(196,181,253,.35));
+}
+@keyframes nc-status-spin{to{transform:rotate(360deg)}}
+@keyframes nc-status-pulse{0%,100%{opacity:.78}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  #status.is-busy,
+  #researchStatus.is-busy,
+  #status.is-busy::before,
+  #researchStatus.is-busy::before{animation:none}
+}

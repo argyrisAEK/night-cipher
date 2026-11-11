@@ -19,6 +19,8 @@ test('header and AI duel image copy describe the visual steganography game', asy
   await expect(page.locator('#howto')).toContainText('Interactive Cipher Walkthrough');
   await expect(page.locator('#howto')).toContainText('Independent Seeker');
   await expect(page.locator('#howto')).toContainText('export records as CSV or JSON');
+  await page.locator('#howtoClose').click();
+  await expect(page.locator('#howto')).toBeHidden();
   await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
   await expect(page.locator('#imgbox')).toContainText('AI Hider conceals your message in an image. AI Seeker then tries to decode it.');
 });
@@ -173,7 +175,7 @@ test('first visit shows How to play once, and it can be reopened', async ({ page
   await page.addInitScript(() => { try { localStorage.removeItem('nc-howto-seen'); } catch {} });
   await page.reload();
   await expect(page.locator('#howto')).toBeVisible();
-  await expect(page.locator('#howto')).toContainText('Study the picture');
+  await expect(page.locator('#howto')).toContainText('Read the image, not the text.');
   await page.click('#howtoClose');
   await expect(page.locator('#howto')).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('nc-howto-seen'))).toBe('1');
@@ -222,6 +224,55 @@ test('AI model settings are tucked away by default and remain available in Advan
   await expect(page.locator('details.adv')).not.toContainText('catalog metadata');
   await page.locator('details.adv > summary').click();
   await expect(page.locator('#hider')).toBeHidden();
+});
+
+test('AI Hider and Seeker show an accessible animated busy state while requests are pending', async ({ page }) => {
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#11182b"/><rect x="100" y="100" width="50" height="70" fill="#f1c987"/><rect x="220" y="100" width="50" height="70" fill="#f1c987"/></svg>';
+  const scheme='The illuminated windows encode alphabet positions from left to right.';
+  let releaseHider,releaseSeeker,signalHider,signalSeeker;
+  const hiderGate=new Promise(resolve=>{releaseHider=resolve});
+  const seekerGate=new Promise(resolve=>{releaseSeeker=resolve});
+  const hiderStarted=new Promise(resolve=>{signalHider=resolve});
+  const seekerStarted=new Promise(resolve=>{signalSeeker=resolve});
+  await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({
+    json:{data:[{id:'openai/gpt-6.1-sol'},{id:'openai/gpt-6.1-terra',input_modalities:['image']}]}
+  }));
+  await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
+    const body=route.request().postDataJSON();
+    if(body.model==='openai/gpt-6.1-sol'){
+      signalHider();
+      await hiderGate;
+      return route.fulfill({json:{model:body.model,choices:[{message:{content:svg+'\nSCHEME: '+scheme},finish_reason:'stop'}],usage:{total_tokens:40,completion_tokens:20}}});
+    }
+    signalSeeker();
+    await seekerGate;
+    return route.fulfill({json:{model:body.model,choices:[{message:{content:'MESSAGE: LANTERN\nMETHOD: I decoded the illuminated window sequence.'},finish_reason:'stop'}],usage:{total_tokens:30,completion_tokens:15}}});
+  });
+  await page.reload();
+  await page.waitForFunction(()=>[...document.querySelectorAll('#hider option')].some(o=>o.value==='openai/gpt-6.1-sol'));
+  await page.evaluate(()=>{Object.defineProperty(document.querySelector('polli-connect'),'apiKey',{value:'test-key',configurable:true})});
+  await page.locator('#tabs button',{hasText:'AI vs AI Duel'}).click();
+  await page.fill('#msg','LANTERN');
+  await page.click('#hide');
+  await hiderStarted;
+  await expect(page.locator('#status')).toHaveClass(/is-busy/);
+  await expect(page.locator('#status')).toHaveAttribute('aria-busy','true');
+  const spinnerContent=await page.locator('#status').evaluate(el=>getComputedStyle(el,'::before').content);
+  expect(spinnerContent).not.toBe('none');
+  await expect(page.locator('#status')).toContainText('AI Hider is creating the image');
+  releaseHider();
+  await expect(page.locator('#imgbox img')).toBeVisible({timeout:10000});
+  await expect(page.locator('#status')).not.toHaveClass(/is-busy/);
+
+  await page.click('#ai');
+  await seekerStarted;
+  await expect(page.locator('#status')).toHaveClass(/is-busy/);
+  await expect(page.locator('#status')).toHaveAttribute('aria-busy','true');
+  await expect(page.locator('#status')).toContainText('AI seeker is studying the picture');
+  releaseSeeker();
+  await expect(page.locator('#res')).toContainText('AI seeker said: “LANTERN”',{timeout:10000});
+  await expect(page.locator('#status')).not.toHaveClass(/is-busy/);
+  await expect(page.locator('#status')).toHaveAttribute('aria-busy','false');
 });
 
 test('AI Hider authors the complete organic image and Seeker receives only the blind image', async ({ page }) => {
@@ -513,8 +564,8 @@ test('Duel Next returns to setup without starting or charging a new Hider reques
     calls++;
     const body=route.request().postDataJSON();
     const content=body.model==='openai/gpt-6.1-sol'
-      ? svg+'\\nSCHEME: A simple test encoding.'
-      : 'MESSAGE: NONE\\nMETHOD: No defensible pattern found.';
+      ? svg+'\nSCHEME: A simple test encoding.'
+      : 'MESSAGE: NONE\nMETHOD: No defensible pattern found.';
     await route.fulfill({json:{choices:[{message:{content},finish_reason:'stop'}],usage:{total_tokens:10}}});
   });
   await page.route('https://gen.pollinations.ai/v1/models', route => route.fulfill({json:{data:[{id:'openai/gpt-6.1-sol'}]}}));
@@ -537,7 +588,7 @@ test('Pollinations chat retries a rate-limited request once and accounts usage o
   await page.route('https://gen.pollinations.ai/v1/chat/completions', async route => {
     calls++;
     if(calls===1) return route.fulfill({status:429,headers:{'Retry-After':'0'},json:{error:{message:'rate limited'}}});
-    return route.fulfill({json:{model:'openai/gpt-6.1-terra',choices:[{message:{content:'MESSAGE: TEST\\nMETHOD: Test retry.'},finish_reason:'stop'}],usage:{total_tokens:12}}});
+    return route.fulfill({json:{model:'openai/gpt-6.1-terra',choices:[{message:{content:'MESSAGE: TEST\nMETHOD: Test retry.'},finish_reason:'stop'}],usage:{total_tokens:12}}});
   });
   const result=await page.evaluate(async()=>{
     const {createChat}=await import('/js/api.js');let tokens=0,usageCalls=0;
@@ -836,7 +887,7 @@ test('Daily and Learn require an explicit Seeker choice and disclose live model 
     requests.push(body);
     await route.fulfill({json:{
       model:body.model,
-      choices:[{message:{content:'MESSAGE: NONE\\nMETHOD: No defensible decoding was possible.'},finish_reason:'stop'}],
+      choices:[{message:{content:'MESSAGE: NONE\nMETHOD: No defensible decoding was possible.'},finish_reason:'stop'}],
       usage:{prompt_tokens:100,completion_tokens:10,total_tokens:110,prompt_tokens_details:{image_tokens:20}}
     }});
   });
@@ -893,7 +944,7 @@ test('Hider leakage audit runs on the original SVG before sanitization, includin
     const item = payloads[hiderCalls++];
     await route.fulfill({ json: {
       model: body.model,
-      choices: [{ message: { content: item.svg + '\\nSCHEME: A visual pattern encodes the message.' }, finish_reason: 'stop' }],
+      choices: [{ message: { content: item.svg + '\nSCHEME: A visual pattern encodes the message.' }, finish_reason: 'stop' }],
       usage: { total_tokens: 20, completion_tokens: 10 }
     } });
   });
