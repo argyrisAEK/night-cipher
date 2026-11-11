@@ -189,6 +189,8 @@ test('all AI model selectors expose only the seven approved Pollinations models'
     'openai/gpt-6-luna',
     'openai/gpt-6.1-terra',
     'openai/gpt-6-astra',
+    'anthropic/claude-fable-5.2',
+    'google/gemini-4-argon',
     'community/vendouple/gpt-6-luna',
     'community/vendouple/gpt-6-astra',
     'community/JustScriptzz/gpt-5.6-terra'
