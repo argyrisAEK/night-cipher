@@ -74,7 +74,8 @@ export function mountLsbLab(root) {
       image.height = Math.max(1, Math.round(bitmap.naturalHeight * factor));
       image.getContext('2d', { willReadFrequently: true }).drawImage(bitmap, 0, 0, image.width, image.height);
       URL.revokeObjectURL(url); loaded = true; selectedPixel = null; $('#lsbManualBits').disabled = true; currentName = selected.name.replace(/\.[^.]+$/, '') || 'image';
-      refreshCapacity(); say('Image loaded. Click a pixel to inspect its RGB values and least-significant bits.');
+      $('#lsbDecode').disabled = false; $('#lsbDecoded').value = '';
+      refreshCapacity(); say('Image loaded. Click a pixel to inspect it, write a message and press Encode, or press Decode to look for a hidden message.');
       pixelInfo.textContent = 'Select a pixel in the image to inspect its RGB channels.';
       const ctx = inspector.getContext('2d'); ctx.clearRect(0, 0, inspector.width, inspector.height);
     };
