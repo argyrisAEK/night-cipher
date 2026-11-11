@@ -21,17 +21,21 @@ export async function runSelfTest(ctx){
   const uiSelectors=['#status','#score','#report','#profile','#bestTime','#achievementCount','#achievements','#codexPreview','#imgbox','#res','#hints','#game','#msg','#hide','#ai','#hint','#go','#giveup','#next','#robustness','#robustnessReport'];
   const uiBackup=uiSelectors.map(sel=>{const e=$(sel);return e?{sel,html:e.innerHTML,text:e.textContent,value:e.value,hidden:e.hidden,disabled:e.disabled,className:e.className}:null}).filter(Boolean);
   document.body.insertAdjacentHTML('afterbegin','<div class="wrap"><div class="card"><h3>Self-test</h3><pre id="st" style="white-space:pre-wrap">Running…</pre></div></div>');
-  const t=(n,ok,d='')=>out.push(`${ok?'✅':'❌'} ${n}${d?' — '+esc(d):''}`);
+  const stage=name=>{const e=$('#st');if(e)e.textContent='Running self-test — '+out.length+' checks completed\nCurrent: '+name+'\n\n'+out.slice(-8).join('\n');};
+  const t=(n,ok,d='')=>{out.push((ok?'✅ ':'❌ ')+n+(d?' — '+esc(d):''));stage('next check');};
+  const withTimeout=(promise,label,ms=8000)=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error(label+' timed out after '+ms+'ms')),ms);Promise.resolve(promise).then(v=>{clearTimeout(timer);resolve(v)},e=>{clearTimeout(timer);reject(e)});});
   try{
     for(let i=0;i<TRAIN.length;i++){
-      const q=TRAIN[i],svg=q.g(q.m),got=DEC[i](P(svg));t(`Level ${q.n}: decoder round-trip`,got===q.m,got);
-      try{const u=await toPng(svg),im=new Image();await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=u});t(`Level ${q.n}: PNG render`,im.width===1024&&im.height>0,`${im.width}×${im.height}`)}catch(e){t(`Level ${q.n}: PNG render`,false,e.message)}
-      try{const jpg85=await toRaster(svg,'image/jpeg',.85),jpg55=await toRaster(svg,'image/jpeg',.55);t(`Level ${q.n}: JPEG degradation encoders`,jpg85.startsWith('data:image/jpeg')&&jpg55.startsWith('data:image/jpeg'))}catch(e){t(`Level ${q.n}: JPEG degradation encoders`,false,e.message)}
+      const q=TRAIN[i],svg=q.g(q.m);
+      stage('Level '+q.n+' — decoder round-trip');
+      const got=DEC[i](P(svg));t('Level '+q.n+': decoder round-trip',got===q.m,got);
+      try{stage('Level '+q.n+' — PNG conversion');const u=await withTimeout(toPng(svg),'Level '+q.n+' PNG conversion');const im=new Image();await withTimeout(new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=()=>reject(new Error('PNG image load failed'));im.src=u}),'Level '+q.n+' PNG image load');t('Level '+q.n+': PNG render',im.width===1024&&im.height>0,im.width+'×'+im.height)}catch(e){t('Level '+q.n+': PNG render',false,e.message)}
+      try{stage('Level '+q.n+' — JPEG quality .85');const jpg85=await withTimeout(toRaster(svg,'image/jpeg',.85),'Level '+q.n+' JPEG .85');stage('Level '+q.n+' — JPEG quality .55');const jpg55=await withTimeout(toRaster(svg,'image/jpeg',.55),'Level '+q.n+' JPEG .55');t('Level '+q.n+': JPEG degradation encoders',jpg85.startsWith('data:image/jpeg')&&jpg55.startsWith('data:image/jpeg'))}catch(e){t('Level '+q.n+': JPEG degradation encoders',false,e.message)}
     }
     let bad=[];for(let n=0;n<60;n++){const i=dailyIndex(n),q=TRAIN[i],w=dailyWord(n);if(DEC[i](P(q.g(w,hash32('night-cipher-art-'+n))))!==w)bad.push(n+':'+w);if(n&&i===dailyIndex(n-1))bad.push('repeat-scheme:'+n)}
     t('Daily puzzles: 60 seeded round-trips with no consecutive scheme repeats',!bad.length,bad.join(' '));
     t('Daily selection is deterministic',Array.from({length:30},(_,n)=>dailyIndex(n)).join(',')===Array.from({length:30},(_,n)=>dailyIndex(n)).join(','));
-    t('Similarity normalization',sim('BEE','B E E')===1&&sim('HONEY','HONAY')<.9&&sim('μέλι','ΜΕΛΙ')===1);
+    t('Similarity normalization preserves word boundaries',sim('BEE','B E E')===0&&sim('IRONMAIDEN','IRON MAIDEN')===0&&sim('HONEY','HONAY')<.9&&sim('μέλι','ΜΕΛΙ')===1);
     t('Vision detection accepts image input_modalities',supportsVisionInput({input_modalities:['text','image']}));
     t('Vision detection accepts max_reference_images metadata',supportsVisionInput({max_reference_images:1}));
     t('Vision detection rejects text-only models',!supportsVisionInput({input_modalities:['text']}));
@@ -58,20 +62,29 @@ export async function runSelfTest(ctx){
     t('SCHEME detector catches an encoded complete secret phrase',hasSecretLeak('Encoded payload: '+utf8Base64('TRUST THE QUIET STARS'),'TRUST THE QUIET STARS',{strictWords:false}));
     t('SVG detector remains strict about complete secret words in attributes',hasSecretLeak('<svg xmlns="http://www.w3.org/2000/svg"><g id="stars"/></svg>','TRUST THE QUIET STARS'));
     t('Leakage detector avoids substring false positives in prose',!hasSecretLeak('Use a honeycomb-like arrangement of petals.','HONEY'));
-    for(let i=0;i<TRAIN.length;i++){const q=TRAIN[i],a=annotate(q.g(q.m),i);t(`Reveal ${q.n}: highlights the encoded letters`,DEC[i](P(a))===q.m&&[...q.m].every(c=>a.includes('>'+c+'<')))}
+    for(let i=0;i<TRAIN.length;i++){const q=TRAIN[i];stage('Reveal '+q.n+' — annotation check');const a=annotate(q.g(q.m),i);t(`Reveal ${q.n}: highlights the encoded letters`,DEC[i](P(a))===q.m&&[...q.m].every(c=>a.includes('>'+c+'<')))}
     if(conn){
       Object.defineProperty(conn,'apiKey',{value:'sk_test_only',configurable:true});
       window.fetch=async()=>new Response(JSON.stringify({choices:[{message:{content:'mock response'}}],usage:{total_tokens:7}}),{status:200});
       const before=getTokens(),result=await chat('mock-model',[{role:'user',content:'test'}],20,10000);
       t('Chat transport uses mocked fetch and parses response',result==='mock response'&&getTokens()===before+7);
     }else t('Chat transport mock',false,'Pollinations connector element unavailable');
-  }catch(e){t('Self-test execution',false,e.message)}
+  }catch(e){t('Self-test execution',false,e&&e.stack?e.stack:e.message)}
   finally{
-    window.fetch=originalFetch;setTokens(originalTok);setState(originalT);setRound(originalR);
-    if(conn){try{if(keyDesc)Object.defineProperty(conn,'apiKey',keyDesc);else delete conn.apiKey}catch{}}
-    try{originalStorage===null?localStorage.removeItem('nc'):localStorage.setItem('nc',originalStorage)}catch{}
-    score();syncButtons();
-    for(const x of uiBackup){const e=$(x.sel);if(!e)continue;e.innerHTML=x.html;e.value=x.value;e.hidden=x.hidden;e.disabled=x.disabled;e.className=x.className}
-    $('#st').innerHTML=out.join('\n')+`\n\n${out.filter(l=>l.startsWith('✅')).length}/${out.length} passed. The API test used a local mock; no live API call was made. App data and connector key were restored.`;
+    const cleanupErrors=[];
+    const restore=(label,fn)=>{try{fn()}catch(e){cleanupErrors.push(label+': '+(e&&e.message?e.message:String(e)))}};
+    restore('fetch restoration',()=>{window.fetch=originalFetch});
+    restore('token restoration',()=>setTokens(originalTok));
+    restore('app state restoration',()=>setState(originalT));
+    restore('round restoration',()=>setRound(originalR));
+    if(conn)restore('connector key restoration',()=>{if(keyDesc)Object.defineProperty(conn,'apiKey',keyDesc);else delete conn.apiKey});
+    restore('localStorage restoration',()=>{originalStorage===null?localStorage.removeItem('nc'):localStorage.setItem('nc',originalStorage)});
+    restore('score refresh',()=>score());
+    restore('button synchronization',()=>syncButtons());
+    for(const x of uiBackup)restore('UI restoration '+x.sel,()=>{const e=$(x.sel);if(!e)return;e.innerHTML=x.html;e.value=x.value;e.hidden=x.hidden;e.disabled=x.disabled;e.className=x.className});
+    if(cleanupErrors.length)out.push('❌ Self-test cleanup — '+cleanupErrors.join('; '));
+    const passed=out.filter(l=>l.startsWith('✅')).length;
+    const report=out.join('\n')+'\n\n'+passed+'/'+out.length+' passed; '+(out.length-passed)+' failed. The API test used a local mock; no live API call was made. App data and connector key restoration was attempted.';
+    const el=$('#st');if(el)el.textContent=report;
   }
 }
